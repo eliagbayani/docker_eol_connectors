@@ -1,11 +1,13 @@
 # FROM jenkins/jenkins:2.414.3-jdk17
 FROM jenkins/jenkins:2.462.3-jdk11
+# USER root
+# RUN chown -R jenkins:jenkins /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 
 # Docker official Jenkins:
 # -- https://hub.docker.com/r/jenkins/jenkins
-# Jenkions and JDK versions:
+# Jenkins and JDK versions:
 # -- https://www.jenkins.io/doc/book/platform-information/support-policy-java/
 
 
