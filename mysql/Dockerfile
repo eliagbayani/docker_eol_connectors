@@ -3,6 +3,18 @@ FROM mysql:8.4.3-oraclelinux9
 
 # FROM mysql:8.4.3-oracle
 
+# If you want to edit /etc/my.cnf
+# - this case enable the [includedir] provision
+# !includedir /etc/mysql/conf.d
+# RUN sed -i 's/!includedir /etc/mysql/conf.d/includedir /etc/mysql/conf.d' /etc/my.cnf
+
+# RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+
+# RUN sed -i 's/\;extension=mysqli/extension=mysqli/g' /usr/local/etc/php/php.ini-production
+
+COPY my.cnf /etc/my.cnf
+
+
 # Required. This is important:
 # Without it, will have an error: Plugin 'mysql_native_password' is not loaded
 COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/

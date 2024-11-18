@@ -2,6 +2,7 @@
 FROM jenkins/jenkins:2.462.3-jdk11
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 
+
 # Docker official Jenkins:
 # -- https://hub.docker.com/r/jenkins/jenkins
 # Jenkions and JDK versions:
