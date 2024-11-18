@@ -1,5 +1,7 @@
 # version: "3.7"
 services:
+  env_file:
+    - ./.env
   web:
     build:
       context: ./apache-php
@@ -29,8 +31,8 @@ services:
     restart: unless-stopped
 
     # where we put environment variables. Put in .gitignore
-    env_file:
-      - ./.env
+    # env_file:
+    #   - ./.env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -40,6 +42,21 @@ services:
       - ${MYSQL_DATA_DIR}:/var/lib/mysql
     ports:
       - 4001:3306
+
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile    
+    restart: on-failure
+    environment:
+      JAVA_OPTS: -Dhudson.footerURL=http://dev_connectors.eol.org
+    volumes:
+      - ${JENKINS_HOME}:/var/jenkins_home
+    ports:
+      - 8080:8080
+      - 50000:50000
+
+
 
 # ============================================== copied template
     # image: mysql:8.0.12
