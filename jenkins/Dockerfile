@@ -1,7 +1,11 @@
 # FROM jenkins/jenkins:2.414.3-jdk17
 FROM jenkins/jenkins:2.462.3-jdk11
-# USER root
-# RUN chown -R jenkins:jenkins /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home
+
+# ARG JENKINS_HOME_USER_ID=0
+# ARG JENKINS_HOME_GROUP_ID=0
+# RUN groupadd -g $JENKINS_HOME_GROUP_ID jenkins && \
+#     useradd -m jenkins -u $JENKINS_HOME_USER_ID -g $JENKINS_HOME_GROUP_ID
+
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 

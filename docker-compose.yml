@@ -50,16 +50,14 @@ services:
 
 
   jenkins:
-    # command: chown -R jenkins:jenkins /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home    
-    # command: mkdir /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home
-    # command: chmod 777 /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home
     build:
       context: ./jenkins
       dockerfile: Dockerfile    
     # restart: on-failure
     env_file: ./.env
     volumes:
-      - ${JENKINS_HOME}:/var/jenkins_home
+      # - ${JENKINS_HOME}:/var/jenkins_home
+      - ./jenkins-home:/var/jenkins_home
     ports:
       - 8080:8080
       - 50000:50000
@@ -70,8 +68,8 @@ services:
         # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
         # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
 
-volumes:
-  jenkins_home:
+# volumes:
+#   jenkins-home:
 
 
 # ============================================== copied template
