@@ -18,7 +18,6 @@ COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
 
 
 
-
 # ============================================== copied template
 # I got an error: ERROR [db internal] load metadata for docker.io/library/mysql:8.0-debian   
 # vi ~/.docker/config.json
