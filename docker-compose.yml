@@ -1,5 +1,6 @@
 # version: "3.7"
 services:
+  # MySQL service
   db:
     build:
       context: ./mysql
@@ -28,7 +29,7 @@ services:
     # command: mysql -uroot -pmy173 Employees < /home/eli.sql
     # entrypoint: entrypoint
 
-
+  # Apache and PHP service
   web:
     build:
       context: ./apache-php
@@ -60,7 +61,7 @@ services:
       - db
     # https://geshan.com.np/blog/2024/02/docker-compose-depends-on/
 
-
+  # Jenkins service
   jenkins:
     build:
       context: ./jenkins
@@ -77,16 +78,16 @@ services:
       - ${WEBROOT_PATH}:/webroot
       - usr_local:/usr_local
       - usr_lib:/usr_lib
+    links:
+      - web
 
     ports:
       - 8081:8080
       - 50000:50000
     environment:
       JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties"
-
-
-        # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
-        # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
+      # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
+      # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
 
 volumes:
   usr_local:
