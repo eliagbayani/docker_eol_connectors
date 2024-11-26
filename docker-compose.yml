@@ -24,6 +24,9 @@ services:
       - ${MYSQL_DATA_DIR}:/var/lib/mysql
     ports:
       - 4001:3306
+    network_mode: bridge
+    # networks:
+    #   - db_network
 
     # command: echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';" > /home/eli.sql
     # command: mysql -uroot -pmy173 Employees < /home/eli.sql
@@ -50,12 +53,31 @@ services:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${APACHE_CONFIG}:/etc/apache2/sites-enabled
-      - usr_local:/usr/local
-      - usr_lib:/usr/lib
+      # - usr_local:/usr/local
+      # - usr_lib:/usr/lib
+      - usr_php:/usr
+
+      - ./resources/jenkins.default:/etc/default/jenkins
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # - /var/run/docker.sock:/var/run/docker.sock 
+      - /usr/bin/docker:/usr/bin/docker
+
       # this is the path where php binary is located 
       # /usr/local/bin/php
       # /usr/lib/aarch64-linux-gnu/libxml2.so.2.9.14
       # find /path/ -type f -name file-to-search
+
+      # find / -iname *libxml2.so*
+      # /usr_php/local/bin$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr_php/lib/aarch64-linux-gnu
+      # /usr_php/local/bin$ ./php -v
+
+    network_mode: "bridge"
+    # networks:
+    #   db_network:
+    #   app_network:
+    #   jen_network:
+    
 
     links:
       - db
@@ -76,11 +98,12 @@ services:
       # - ${JENKINS_HOME}:/var/jenkins_home
       - ./jenkins-home:/var/jenkins_home
       - ${WEBROOT_PATH}:/webroot
-      - usr_local:/usr_local
-      - usr_lib:/usr_lib
+      # - usr_local:/usr_local
+      # - usr_lib:/usr_lib
+      - usr_php:/usr_php
     links:
       - web
-
+      - db
     ports:
       - 8081:8080
       - 50000:50000
@@ -88,11 +111,22 @@ services:
       JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties"
       # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
       # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
+    network_mode: "bridge"
+    # networks:
+    #   app_network:
+    #   jen_network:
+    command: php /webroot/test2.php
 
 volumes:
-  usr_local:
-  usr_lib:
+  usr_php:
+  # usr_local:
+  # usr_lib:
     # external: true
+
+# networks:
+#   db_network:
+#   app_network:
+#   jen_network:
 
 # ============================================== copied template
     # image: mysql:8.0.12
