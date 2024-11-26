@@ -1,6 +1,5 @@
-# version: "3.7"
 services:
-  # MySQL service
+  # =================== MySQL service ===================
   db:
     build:
       context: ./mysql
@@ -25,14 +24,11 @@ services:
     ports:
       - 4001:3306
     network_mode: bridge
-    # networks:
-    #   - db_network
-
     # command: echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';" > /home/eli.sql
     # command: mysql -uroot -pmy173 Employees < /home/eli.sql
     # entrypoint: entrypoint
 
-  # Apache and PHP service
+  # =================== Apache and PHP service ===================
   web:
     build:
       context: ./apache-php
@@ -53,9 +49,8 @@ services:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${APACHE_CONFIG}:/etc/apache2/sites-enabled
-      # - usr_php:/usr
 
-      - ./resources/jenkins.default:/etc/default/jenkins
+      # - ./resources/jenkins.default:/etc/default/jenkins
       - /var/run/docker.sock:/var/run/docker.sock
 
       # - /var/run/docker.sock:/var/run/docker.sock 
@@ -71,32 +66,21 @@ services:
       # /usr_php/local/bin$ ./php -v
 
     network_mode: "bridge"
-    # networks:
-    #   db_network:
-    #   app_network:
-    #   jen_network:
-    
-
     links:
       - db
     # https://geshan.com.np/blog/2024/02/docker-compose-depends-on/
 
-  # Jenkins service
+  # =================== Jenkins service ===================
   jenkins:
     build:
       context: ./jenkins
       dockerfile: Dockerfile    
     # restart: on-failure
     env_file: ./.env
-
-    # volumes_from:
-    #   - web:rw
-
     volumes:
       # - ${JENKINS_HOME}:/var/jenkins_home
       - ./jenkins-home:/var/jenkins_home
       - ${WEBROOT_PATH}:/webroot
-      # - usr_php:/usr_php
     links:
       - web
       - db
@@ -108,18 +92,7 @@ services:
       # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
       # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
     network_mode: "bridge"
-    # networks:
-    #   app_network:
-    #   jen_network:
 
-# volumes:
-#   usr_php:
-    # external: true
-
-# networks:
-#   db_network:
-#   app_network:
-#   jen_network:
 
 # ============================================== copied template
     # image: mysql:8.0.12
@@ -143,7 +116,6 @@ services:
     #   MYSQL_PASSWORD: <user_password>
     # ports:
     #   - 3306:3306
-
 
   # db:
   #   build:
