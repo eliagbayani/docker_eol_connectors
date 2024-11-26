@@ -53,9 +53,7 @@ services:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${APACHE_CONFIG}:/etc/apache2/sites-enabled
-      # - usr_local:/usr/local
-      # - usr_lib:/usr/lib
-      - usr_php:/usr
+      # - usr_php:/usr
 
       - ./resources/jenkins.default:/etc/default/jenkins
       - /var/run/docker.sock:/var/run/docker.sock
@@ -98,9 +96,7 @@ services:
       # - ${JENKINS_HOME}:/var/jenkins_home
       - ./jenkins-home:/var/jenkins_home
       - ${WEBROOT_PATH}:/webroot
-      # - usr_local:/usr_local
-      # - usr_lib:/usr_lib
-      - usr_php:/usr_php
+      # - usr_php:/usr_php
     links:
       - web
       - db
@@ -116,10 +112,8 @@ services:
     #   app_network:
     #   jen_network:
 
-volumes:
-  usr_php:
-  # usr_local:
-  # usr_lib:
+# volumes:
+#   usr_php:
     # external: true
 
 # networks:
