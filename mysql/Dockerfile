@@ -17,6 +17,12 @@ COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
 # seems being ignored now...
 
 
+COPY migration.sql /docker-entrypoint-initdb.d/migration.sql
+
+# works OK but the pw is exposed
+RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';" > /docker-entrypoint-initdb.d/eli.sql
+
+
 
 # ============================================== copied template
 # I got an error: ERROR [db internal] load metadata for docker.io/library/mysql:8.0-debian   
