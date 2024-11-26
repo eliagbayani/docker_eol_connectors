@@ -115,7 +115,6 @@ services:
     # networks:
     #   app_network:
     #   jen_network:
-    command: php /webroot/test2.php
 
 volumes:
   usr_php:
