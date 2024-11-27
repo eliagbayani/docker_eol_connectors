@@ -54,7 +54,6 @@ RUN apt install -y vim
 # RUN apt install -y php8.0-mysql
 
 # install other modules in PHP
-# RUN apt-get update 
 RUN apt-get upgrade -y
 # RUN apt-get install -y build-essential libtool autoconf unzip wget libcurl4-gnutls-dev 
 # RUN apt-get install -y vi

@@ -7,16 +7,15 @@ FROM mysql:8.4.3-oraclelinux9
 # !includedir /etc/mysql/conf.d
 # RUN sed -i 's/\;extension=mysqli/extension=mysqli/g' /usr/local/etc/php/php.ini-production
 
-# Just overwrite the entier my.cnf, since updating above didn't work.
+# Just overwrite the entire my.cnf, since updating above didn't work.
 # this one worked OK
 COPY my.cnf /etc/my.cnf
 
 # Required. This is important:
 # Without it, will have an error: Plugin 'mysql_native_password' is not loaded
 COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
-# seems being ignored now...
 
-
+# Initial migration of test table.
 COPY migration.sql /docker-entrypoint-initdb.d/migration.sql
 
 # works OK. From: https://stackoverflow.com/questions/29261811/use-docker-compose-env-variable-in-dockerbuild-file
@@ -36,4 +35,3 @@ RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY '"${MRP_FRO
 
 # RUN cd /home
 # RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'myXXX';" > eli.sql
-
