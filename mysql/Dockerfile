@@ -19,9 +19,10 @@ COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
 
 COPY migration.sql /docker-entrypoint-initdb.d/migration.sql
 
-# works OK but the pw is exposed
-RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';" > /docker-entrypoint-initdb.d/eli.sql
-
+# works OK. From: https://stackoverflow.com/questions/29261811/use-docker-compose-env-variable-in-dockerbuild-file
+# Passing vars from compose file to container during build.
+ARG MRP_FROM_COMPOSE
+RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY '"${MRP_FROM_COMPOSE}"';" > /docker-entrypoint-initdb.d/eli.sql
 
 
 # ============================================== copied template

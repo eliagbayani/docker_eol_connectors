@@ -1,10 +1,6 @@
 services:
   # =================== MySQL service ===================
   db:
-    build:
-      context: ./mysql
-      dockerfile: Dockerfile
-    restart: unless-stopped
     # where we put environment variables. Put in .gitignore
     env_file:
       - ./.env
@@ -13,6 +9,12 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PW}
+    build:
+      context: ./mysql
+      args:
+        MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
+      dockerfile: Dockerfile
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW" ]
       # 'localhost' or 'db' works just the same
