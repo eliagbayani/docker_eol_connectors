@@ -72,14 +72,16 @@ services:
 
   # =================== Jenkins service ===================
   jenkins:
+    env_file: ./.env
     build:
       context: ./jenkins
+      args:
+        JENKINS_HOME_FROM_COMPOSE: ${JENKINS_HOME}
       dockerfile: Dockerfile    
     # restart: on-failure
-    env_file: ./.env
     volumes:
-      # - ${JENKINS_HOME}:/var/jenkins_home
-      - ./jenkins-home:/var/jenkins_home
+      - ${JENKINS_HOME}:/var/jenkins_home
+      # - ./jenkins-home:/var/jenkins_home
       - ${WEBROOT_PATH}:/webroot
     links:
       - web
@@ -89,8 +91,6 @@ services:
       - 50000:50000
     environment:
       JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties"
-      # - "-Dhudson.footerURL=http://dev_connectors.eol.org"
-      # - "-Djava.util.logging.config.file=/var/jenkins_home/log.properties"
     network_mode: "bridge"
 
 
