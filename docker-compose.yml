@@ -26,10 +26,6 @@ services:
     ports:
       - 4001:3306
     network_mode: bridge
-    # command: docker-entrypoint.sh
-    # command: mysql -uroot -pmy173 Employees < echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';"
-    # entrypoint: entrypoint
-    # command: echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY 'my173';" > /docker-entrypoint-initdb.d/eli.sql
 
 
   # =================== Apache and PHP service ===================
