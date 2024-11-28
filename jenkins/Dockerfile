@@ -4,11 +4,9 @@ FROM jenkins/jenkins:2.462.3-jdk11
 # ---------------- start sol'n for permission error
 ARG JENKINS_HOME_FROM_COMPOSE
 USER root
-# RUN mkdir jenkins-home
-# RUN chown 1000 jenkins-home
-RUN mkdir ${JENKINS_HOME_FROM_COMPOSE}
-RUN chown 1000 ${JENKINS_HOME_FROM_COMPOSE}
-RUN chmod 777 ${JENKINS_HOME_FROM_COMPOSE}
+# RUN mkdir ${JENKINS_HOME_FROM_COMPOSE}
+# RUN chown 1000 ${JENKINS_HOME_FROM_COMPOSE}
+# RUN chmod 777 ${JENKINS_HOME_FROM_COMPOSE}
 USER jenkins
 # ---------------- -end-
 
