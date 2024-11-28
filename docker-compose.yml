@@ -76,13 +76,13 @@ services:
     build:
       context: ./jenkins
       args:
-        JENKINS_HOME_FROM_COMPOSE: ${JENKINS_HOME}
+        JENKINS_HOME_FROM_COMPOSE: "" #${JENKINS_HOME}
       dockerfile: Dockerfile    
     # restart: on-failure
     volumes:
       # - ${JENKINS_HOME}:/var/jenkins_home
-      - jenkins_home:/var/jenkins_home
-      - ${WEBROOT_PATH}:/webroot
+      - ${PWD}/jenkins_home:/var/jenkins_home
+      - ${WEBROOT_PATH}:/webroot      
     links:
       - web
       - db
