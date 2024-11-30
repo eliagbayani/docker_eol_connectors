@@ -25,7 +25,7 @@ services:
       - ${MYSQL_DATA_DIR}:/var/lib/mysql
     ports:
       - 4001:3306
-    network_mode: bridge
+    # network_mode: bridge
 
 
   # =================== Apache and PHP service ===================
@@ -52,8 +52,6 @@ services:
 
       # - ./resources/jenkins.default:/etc/default/jenkins
       - /var/run/docker.sock:/var/run/docker.sock
-
-      # - /var/run/docker.sock:/var/run/docker.sock 
       - /usr/bin/docker:/usr/bin/docker
 
       # this is the path where php binary is located 
@@ -65,7 +63,7 @@ services:
       # /usr_php/local/bin$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr_php/lib/aarch64-linux-gnu
       # /usr_php/local/bin$ ./php -v
 
-    network_mode: "bridge"
+    # network_mode: "bridge"
     links:
       - db
     # https://geshan.com.np/blog/2024/02/docker-compose-depends-on/
@@ -91,7 +89,7 @@ services:
       - 50000:50000
     environment:
       JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties"
-    network_mode: "bridge"
+    # network_mode: "bridge"
 volumes:
   jenkins_home:
 
