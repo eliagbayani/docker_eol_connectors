@@ -46,13 +46,15 @@ services:
     ports:
       - "81:80"
     volumes:
-      - ${WEBROOT_PATH}:/var/www/html
+      - ${WEBROOT_PATH}:/html
       - ${APACHE_LOGS}:/var/log/apache2
-      - ${APACHE_CONFIG}:/etc/apache2/sites-enabled
+      - ${VOLUMES_LOCAL}:/Volumes
 
       # - ./resources/jenkins.default:/etc/default/jenkins
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
+
+      # these 2 lines were running for the longest time
+      # - /var/run/docker.sock:/var/run/docker.sock
+      # - /usr/bin/docker:/usr/bin/docker
 
       # this is the path where php binary is located 
       # /usr/local/bin/php

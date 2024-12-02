@@ -11,12 +11,9 @@ FROM php:8.2-apache
 RUN docker-php-ext-install mysqli
 
 # works ok!
-# COPY apache2.conf /etc/apache2/
-# -> this one works but it overwrites the entire apache2.conf
-# COPY apache2_added.conf /etc/apache2/sites-available/
-# -> this is best practice. Only add per line for additional configs
-# -> but since we declare /etc/apache2/sites-available/ as a volume, we cannot COPY to it anymore
-# -> so we just put apache2_added.conf readily to the host volume apache2_config 
+# We need these 2 files bec. we moved the default DocumentRoot to /html instead of default /var/www/html
+COPY apache2.conf /etc/apache2/
+COPY 000-default.conf  /etc/apache2/sites-available/
 
 
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
