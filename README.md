@@ -32,3 +32,5 @@ A docker-compose file with three services:
 
       5. Then run 'Build Now'
       6. This should output the same information as: http://localhost:81/test.php
+
+6. $ docker-compose down
