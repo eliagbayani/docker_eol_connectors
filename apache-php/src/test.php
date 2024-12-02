@@ -4,7 +4,7 @@ $user = 'root';
 $pass = 'root_pw';
 $db = 'Employees';
 if($mysqli = new mysqli($host, $user, $pass, $db)) {
-    echo "\nDatabase connected. OK\n";
+    echo "\nEmployees database connected. OK\n";
     $result = $mysqli->query("SELECT * FROM employees_tbl;"); 
     // echo "<br>Rows: " . mysqli_num_rows($result); //same effect
     echo "<br>Rows: " . $result->num_rows;
