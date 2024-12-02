@@ -25,14 +25,13 @@ services:
       - ${MYSQL_DATA_DIR}:/var/lib/mysql
     ports:
       - 4001:3306
-    # network_mode: bridge
-
 
   # =================== Apache and PHP service ===================
   web:
     build:
       context: ./apache-php
       dockerfile: Dockerfile
+    # restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -43,32 +42,20 @@ services:
       APACHE_RUN_GROUP: www-data
       APACHE_PID_FILE: /var/run/apache2/apache2.pid
       APACHE_LOG_DIR: /var/log/apache2
-    ports:
-      - "81:80"
+      TARGET_PATH: ${WEBROOT_PATH}
     volumes:
       - ${WEBROOT_PATH}:/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${VOLUMES_LOCAL}:/Volumes
+    # command: cp ${PWD}/apache-php/src/test.php ${WEBROOT_PATH}
+    # entrypoint: [".docker-entrypoint.sh"]
+    # command: ${PWD}/apache-php/docker-entrypoint.sh #works OK
+    entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK
 
-      # - ./resources/jenkins.default:/etc/default/jenkins
-
-      # these 2 lines were running for the longest time
-      # - /var/run/docker.sock:/var/run/docker.sock
-      # - /usr/bin/docker:/usr/bin/docker
-
-      # this is the path where php binary is located 
-      # /usr/local/bin/php
-      # /usr/lib/aarch64-linux-gnu/libxml2.so.2.9.14
-      # find /path/ -type f -name file-to-search
-
-      # find / -iname *libxml2.so*
-      # /usr_php/local/bin$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr_php/lib/aarch64-linux-gnu
-      # /usr_php/local/bin$ ./php -v
-
-    # network_mode: "bridge"
+    ports:
+      - "81:80"
     links:
       - db
-    # https://geshan.com.np/blog/2024/02/docker-compose-depends-on/
 
   # =================== Jenkins service ===================
   jenkins:
@@ -80,7 +67,6 @@ services:
       dockerfile: Dockerfile    
     # restart: on-failure
     volumes:
-      # - ${JENKINS_HOME}:/var/jenkins_home
       - ${PWD}/jenkins_home:/var/jenkins_home
       - ${WEBROOT_PATH}:/webroot      
     links:
@@ -95,38 +81,4 @@ services:
 volumes:
   jenkins_home:
 
-# ============================================== copied template
-    # image: mysql:8.0.12
-    # image: mysql:8.4.3-oraclelinux9
-
-    # command: mysqld --default-authentication-plugin=mysql_native_password
-    #  -> this gives error
-
-    # command: --default-authentication-plugin=mysql_native_password
-    # command: mysql -uroot -pmyXXX --default-authentication-plugin=mysql_native_password
-
-  # database:
-  #   image: mysql:8.0.40-debian
-  #   restart: always
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: example
-    # environment:
-    #   MYSQL_ROOT_PASSWORD: <root_password>
-    #   MYSQL_DATABASE: <database_name>
-    #   MYSQL_USER: <user_name>
-    #   MYSQL_PASSWORD: <user_password>
-    # ports:
-    #   - 3306:3306
-
-  # db:
-  #   build:
-  #     context: ./mysql
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD=root
-  #     - MYSQL_ROOT_HOST=%
-  #   ports:
-  #     - "3306:3306"
-  #   volumes:
-  #     - ./data:/var/lib/mysql
-  #   command: --default-authentication-plugin=mysql_native_password
+  # =================== END ===================

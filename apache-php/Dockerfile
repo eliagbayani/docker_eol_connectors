@@ -15,7 +15,10 @@ RUN docker-php-ext-install mysqli
 COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/
 
+COPY /src/test.php /var/www/html/
+# COPY ./src/test.php /html/
 
+# Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
 
 # during dev only
@@ -37,6 +40,8 @@ COPY 000-default.conf  /etc/apache2/sites-available/
 # RUN sed -i 's/\;extension=php_mysqli.dll/extension=php_mysqli.dll/g' /usr/local/etc/php/php.ini-development
 
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+
+
 
 # WORKDIR /var/www/html
 
