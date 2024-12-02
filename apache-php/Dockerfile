@@ -16,7 +16,7 @@ COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/
 
 COPY /src/test.php /var/www/html/
-# COPY ./src/test.php /html/
+COPY /src/info.php /var/www/html/
 
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini

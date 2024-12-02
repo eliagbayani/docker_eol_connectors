@@ -1,12 +1,12 @@
 #!/bin/sh
-# ARG TARGET_PATH
+
+# current working dir is /var/www/html; declared as WORKING_DIR in Dockerfile for apache-php
 echo ${PWD}
 echo ${TARGET_PATH}
 ls -lt
-cp test.php ${TARGET_PATH} #not msg
+cp test.php ${TARGET_PATH}
+cp info.php ${TARGET_PATH}
 
-# systemctl restart apache2
-# /etc/init.d/apache2 restart
-
+# This will continue the container. Without it the container will exit.
 apache2-foreground
 
