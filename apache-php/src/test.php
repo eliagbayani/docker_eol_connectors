@@ -1,7 +1,7 @@
 <?php
 $host = 'db';
 $user = 'root';
-$pass = 'my173';
+$pass = 'root_pw';
 $db = 'Employees';
 if($mysqli = new mysqli($host, $user, $pass, $db)) {
     echo "\nDatabase connected. OK\n";
