@@ -32,7 +32,7 @@ CREATE TABLE `employees_tbl` (
 --  Records of `employees_tbl`
 -- ----------------------------
 BEGIN;
-INSERT INTO `employees_tbl` VALUES ('Jen', 'Hammock', '1'), ('Katja', 'Schulz', '1'), ('Jeremy', 'Rice', '3'), ('Eli', 'Agbayani', '4');
+INSERT INTO `employees_tbl` VALUES ('Jen', 'Hammock', '1'), ('Katja', 'Schulz', '2'), ('Jeremy', 'Rice', '3'), ('Eli', 'Agbayani', '4');
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
