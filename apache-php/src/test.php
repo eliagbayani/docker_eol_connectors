@@ -6,7 +6,7 @@ $db = 'Employees';
 if($mysqli = new mysqli($host, $user, $pass, $db)) {
     echo "\nDatabase connected. OK\n";
     $result = $mysqli->query("SELECT * FROM employees_tbl;"); 
-    echo "<br>Rows: " . mysqli_num_rows($result);
+    // echo "<br>Rows: " . mysqli_num_rows($result); //same effect
     echo "<br>Rows: " . $result->num_rows;
     while($r = $result->fetch_assoc()) {
         echo "<br>\n";

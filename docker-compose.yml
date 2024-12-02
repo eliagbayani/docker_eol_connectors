@@ -47,11 +47,8 @@ services:
       - ${WEBROOT_PATH}:/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${VOLUMES_LOCAL}:/Volumes
-    # command: cp ${PWD}/apache-php/src/test.php ${WEBROOT_PATH}
-    # entrypoint: [".docker-entrypoint.sh"]
     command: ${PWD}/apache-php/docker-entrypoint.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK
-
     ports:
       - "81:80"
     links:
