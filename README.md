@@ -25,10 +25,10 @@ A docker-compose file with three services:
       4. Enter these lines:
      
             <code>
-            cd /webroot
-            php -v
-            php test.php               
+               cd /webroot
+               php -v
+               php test.php               
             </code>
 
       5. Then run 'Build Now'
-      6. This should output the same data as: http://localhost:81/test.php
+      6. This should output the same information as: http://localhost:81/test.php
