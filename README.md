@@ -40,4 +40,12 @@ A docker-compose file with three services:
       6. Then run **Build Now**
       7. This should output the same information as: http://localhost:81/test.php
 
-7. To stop containers run: `$ docker-compose down`
+7. To test MySQL from host:
+        
+         Host = localhost
+         Port = 4001
+         User Name = root
+         Password = {MYSQL_ROOT_PW}
+               
+        
+9. To stop containers run: `$ docker-compose down`
