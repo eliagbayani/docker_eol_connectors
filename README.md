@@ -12,8 +12,9 @@ A docker-compose file with three services:
 1. Download the file, open the folder.
 2. Rename the .env_sample to .env and enter your information.
 3. $ docker-compose up
-4. To test Apache + PHP + MySQL: Go to browser: http://localhost:81/test.php
+4. To test Apache + PHP + MySQL:
       - Edit test.php from your WEBROOT_PATH with the MYSQL_ROOT_PW you entered in your .env file.
+      - Go to browser: http://localhost:81/test.php
 5. To test Jenkins:
 
    1. Go to browser: http://localhost:8081
