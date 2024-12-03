@@ -10,10 +10,10 @@ A docker-compose file with three services:
 ## Steps
 
 1. Download the file, open the folder.
-2. Rename the .env_sample to .env and enter your information.
+2. Rename the **.env_sample** to **.env** and enter your information.
 3. $ docker-compose up
 4. To test Apache + PHP + MySQL:
-      - Edit test.php from your WEBROOT_PATH. Enter the MYSQL_ROOT_PW you entered in your .env file.
+      - Edit test.php from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your **.env** file.
         
               $pass = 'root_pw';
         
@@ -25,15 +25,15 @@ A docker-compose file with three services:
    3. To test PHP + MySQL + Jenkins
 
       1. Create a New Item
-      2. Choose 'Freestyle project'
-      3. Under 'Build Steps', choose 'Execute shell'
+      2. Choose **'Freestyle project'**
+      3. Under **'Build Steps'**, choose **'Execute shell'**
       4. Enter these three lines:
 
               cd /webroot 
               php -v 
               php test.php
   
-      5. Then run 'Build Now'
+      5. Then run **'Build Now'**
       6. This should output the same information as: http://localhost:81/test.php
 
 6. $ docker-compose down
