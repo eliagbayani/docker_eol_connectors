@@ -40,4 +40,4 @@ A docker-compose file with three services:
       6. Then run **Build Now**
       7. This should output the same information as: http://localhost:81/test.php
 
-7. $ docker-compose down
+7. To stop container run: `$ docker-compose down`
