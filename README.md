@@ -15,7 +15,7 @@ A docker-compose file with three services:
 4. To test Apache + PHP + MySQL:
       - Edit test.php from your WEBROOT_PATH. Enter the MYSQL_ROOT_PW you entered in your .env file.
         
-              <code>$pass = 'root_pw';</code>
+              $pass = 'root_pw';
         
       - Go to browser: http://localhost:81/test.php
 5. To test Jenkins:
@@ -28,14 +28,12 @@ A docker-compose file with three services:
       2. Choose 'Freestyle project'
       3. Under 'Build Steps', choose 'Execute shell'
       4. Enter these lines:
-
-        <code>
+         
            cd /webroot
            php -v
-           php test.php               
-        </code>
-
-      5. Then run 'Build Now'
-      6. This should output the same information as: http://localhost:81/test.php
+           php test.php
+      
+      6. Then run 'Build Now'
+      7. This should output the same information as: http://localhost:81/test.php
 
 6. $ docker-compose down
