@@ -9,7 +9,7 @@ A docker-compose file with three services:
 
 ## Steps
 
-1. Download the file, open the folder.
+1. Download the zip file, unzip, open the folder.
 2. Rename the `.env_sample` to `.env` and enter your information.
    - For Mac, to see the hidden files press `cmd+shit+period`.
 4. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
