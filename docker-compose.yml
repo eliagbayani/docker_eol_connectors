@@ -75,7 +75,7 @@ services:
     environment:
       JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties"
     # network_mode: "bridge"
-volumes:
-  jenkins_home:
+# volumes:
+#   jenkins_home:
 
   # =================== END ===================
