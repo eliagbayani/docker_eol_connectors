@@ -25,7 +25,7 @@ A docker-compose file with three services:
    2. Follow instructions to initialize your Jenkins.
    3. To test PHP + MySQL + Jenkins
 
-      1. Create a New Item
+      1. From **Dashboard**, create a **New Item**
       2. Choose **Freestyle project**
       3. Under **Build Steps**, choose **Execute shell**
       4. Enter these three lines:
