@@ -11,15 +11,16 @@ A docker-compose file with three services:
 
 1. Download the file, open the folder.
 2. Rename the `.env_sample` to `.env` and enter your information.
-3. $ docker-compose up
-4. To test Apache + PHP + MySQL:
+   - For Mac, to see the hidden files press `cmd+shit+period`.
+4. $ docker-compose up
+5. To test Apache + PHP + MySQL:
       - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
         
               $pass = 'root_pw';
         
       - Go to browser: http://localhost:81/test.php
         - You should see a list of four names.
-5. To test Jenkins:
+6. To test Jenkins:
 
    1. Go to browser: http://localhost:8081
    2. Follow instructions to initialize your Jenkins.
@@ -39,4 +40,4 @@ A docker-compose file with three services:
       6. Then run **Build Now**
       7. This should output the same information as: http://localhost:81/test.php
 
-6. $ docker-compose down
+7. $ docker-compose down
