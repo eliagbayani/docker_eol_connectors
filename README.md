@@ -28,12 +28,12 @@ A docker-compose file with three services:
       2. Choose **'Freestyle project'**
       3. Under **'Build Steps'**, choose **'Execute shell'**
       4. Enter these three lines:
-
-              cd /webroot 
-              php -v 
-              php test.php
-  
-      5. Then run **'Build Now'**
-      6. This should output the same information as: http://localhost:81/test.php
+               ```
+               cd /webroot 
+               php -v 
+               php test.php
+               ```
+      6. Then run **'Build Now'**
+      7. This should output the same information as: http://localhost:81/test.php
 
 6. $ docker-compose down
