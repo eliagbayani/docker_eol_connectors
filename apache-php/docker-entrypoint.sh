@@ -5,7 +5,7 @@ echo ${PWD}
 echo ${TARGET_PATH}
 ls -lt
 
-[ -f ${TARGET_PATH}/test.php ]    && echo "File exists already (test.php)"    || cp test.php ${TARGET_PATH}
+[ -f ${TARGET_PATH}/test.php ]    && echo "File already exists (test.php)"    || cp test.php ${TARGET_PATH}
 
 cp info.php ${TARGET_PATH}
 
