@@ -27,7 +27,7 @@ A docker-compose file with three services:
       1. Create a New Item
       2. Choose 'Freestyle project'
       3. Under 'Build Steps', choose 'Execute shell'
-      4. Enter these lines:
+      4. Enter these three lines:
 
               cd /webroot 
               php -v 
