@@ -38,7 +38,7 @@ A docker-compose file with three services:
       5. Then run **Build Now**
       6. This should output the same information as: http://localhost:81/test.php
 
-7. To test MySQL from host:
+7. To test MySQL from the host:
    ```sh
    Host = localhost
    Port = 4001
