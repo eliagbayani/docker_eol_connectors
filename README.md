@@ -15,9 +15,9 @@ A docker-compose file with three services:
 4. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
 5. To test Apache + PHP + MySQL:
       - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
-        
-              $pass = 'root_pw';
-        
+        ```sh
+        $pass = 'root_pw';
+        ```
       - Go to browser: http://localhost:81/test.php
         - You should see a list of four names.
 6. To test Jenkins:
@@ -30,23 +30,20 @@ A docker-compose file with three services:
       2. Choose **Freestyle project**
       3. Under **Build Steps**, choose **Execute shell**
       4. Enter these three lines:
-        
-               cd /webroot 
-               php -v 
-               php test.php
-
-        
-         
-      6. Then run **Build Now**
-      7. This should output the same information as: http://localhost:81/test.php
+         ```sh
+         cd /webroot
+         php -v
+         php test.php
+         ```
+      5. Then run **Build Now**
+      6. This should output the same information as: http://localhost:81/test.php
 
 7. To test MySQL from host:
-        
-         Host = localhost
-         Port = 4001
-         User Name = root
-         Password = {MYSQL_ROOT_PW}
-               
-        
+   ```sh
+   Host = localhost
+   Port = 4001
+   User Name = root
+   Password = {MYSQL_ROOT_PW}
+   ```
 8. - To remove containers run: `$ docker-compose down`
-   - To stop containers run: `$ docker-compose stop` 
+   - To stop containers run: `$ docker-compose stop`
