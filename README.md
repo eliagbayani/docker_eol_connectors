@@ -48,4 +48,5 @@ A docker-compose file with three services:
          Password = {MYSQL_ROOT_PW}
                
         
-9. To stop containers run: `$ docker-compose down`
+8. - To remove containers run: `$ docker-compose down`
+   - To stop containers run: `$ docker-compose stop` 
