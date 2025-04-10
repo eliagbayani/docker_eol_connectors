@@ -1,5 +1,11 @@
 # FROM jenkins/jenkins:2.414.3-jdk17
-FROM jenkins/jenkins:2.462.3-jdk11
+
+# FROM jenkins/jenkins:2.462.3-jdk11
+# -> worked OK but Java 11 is no longer supported. Java 11 end of life in Jenkins.
+
+FROM jenkins/jenkins:jdk17
+# -> https://hub.docker.com/layers/jenkins/jenkins/jdk17/images/sha256-3f445a481e471c4342c08d3545c0350283060ad9d41be779941a6bf850075222
+
 
 # ---------------- start sol'n for permission error
 # ARG JENKINS_HOME_FROM_COMPOSE
