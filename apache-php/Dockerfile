@@ -24,6 +24,9 @@ RUN apt upgrade -y
 RUN apt install -y vim
 # -y is always confirmation to proceed
 
+# install zip packages:
+RUN apt install zip unzip
+
 # install other modules in PHP
 RUN apt-get upgrade -y
 
