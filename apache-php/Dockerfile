@@ -24,8 +24,11 @@ RUN apt upgrade -y
 RUN apt install -y vim
 # -y is always confirmation to proceed
 
-# install zip packages:
+# install zip packages, curl, etc:
 RUN apt install zip unzip
+RUN apt-get install curl
+RUN apt-get install iputils-ping -y
+RUN apt install wget -y
 
 # install other modules in PHP
 RUN apt-get upgrade -y
