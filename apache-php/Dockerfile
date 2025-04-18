@@ -14,7 +14,13 @@ COPY /src/info.php /var/www/html/
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
 
-RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+# This one works OK but we need to enter values to php.ini so we used the one below this.
+# RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+
+# We need to do this bec. we needed to update php.ini with our own values e.g. upload_max_filesize
+COPY php.ini.txt /usr/local/etc/php/php.ini
+
+
 
 # WORKDIR /var/www/html
 

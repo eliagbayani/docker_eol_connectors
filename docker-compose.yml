@@ -44,7 +44,7 @@ services:
       APACHE_LOG_DIR: /var/log/apache2
       TARGET_PATH: ${WEBROOT_PATH}
     volumes:
-      - ${WEBROOT_PATH}:/html
+      - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
       - ${VOLUMES_LOCAL}:/Volumes
     command: ${PWD}/apache-php/docker-entrypoint.sh #works OK
@@ -70,7 +70,8 @@ services:
     # restart: on-failure
     volumes:
       - ${PWD}/jenkins_home:/var/jenkins_home
-      - ${WEBROOT_PATH}:/webroot
+      # - ${WEBROOT_PATH}:/webroot
+      - ${WEBROOT_PATH}:/var/www/html
     links:
       - web
       - db
