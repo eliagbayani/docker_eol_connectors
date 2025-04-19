@@ -41,5 +41,10 @@ RUN apt install -y php8.2-fpm
 
 RUN a2enconf php8.2-fpm
 
+
+## trying to fix Jenkins /tmp permissions
+# RUN chown -R root:jenkins /var/tmp
+# RUN chown -R jenkins /tmp
+
 # drop back to the regular jenkins user - good practice
 USER jenkins
