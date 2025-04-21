@@ -35,6 +35,8 @@ RUN apt install zip unzip
 RUN apt-get install curl
 RUN apt-get install iputils-ping -y
 RUN apt install wget -y
+# RUN apt-get install file -y       # - already installed
+
 
 # install other modules in PHP
 RUN apt-get upgrade -y
