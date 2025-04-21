@@ -23,6 +23,8 @@ COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy
 # if we want to install via apt
 USER root
 RUN apt-get update
+RUN apt-get install file -y     # - important addition
+
 
 # install PHP 8.2 from: https://php.watch/articles/install-php82-ubuntu-debian
 RUN dpkg -l | grep php | tee packages.txt
@@ -34,10 +36,15 @@ RUN apt update
 # Expand the curly braces with all extensions necessary.
 # RUN apt install php8.2 php8.2-cli php8.2-{bz2,curl,mbstring,intl}
 RUN apt install -y php8.2 php8.2-cli php8.2-bz2 php8.2-curl php8.2-mbstring php8.2-intl php8.2-mysqli
-
 RUN apt install -y php8.2-fpm
 # OR
 # RUN apt install libapache2-mod-php8.2
+
+# sudo yum install php php-common 
+# sudo yum install php php-cgi .... { , , , , , , }
+RUN apt install -y php8.2-mysqlnd php8.2-pdo php8.2-xml php8.2-bcmath
+# php8.2-pear - not located
+# php8.2-json - not located
 
 RUN a2enconf php8.2-fpm
 
@@ -45,6 +52,12 @@ RUN a2enconf php8.2-fpm
 ## trying to fix Jenkins /tmp permissions
 # RUN chown -R root:jenkins /var/tmp
 # RUN chown -R jenkins /tmp
+
+
+# - just proof of variable passing
+ARG JENKINS_TMP_FROM_COMPOSE    
+RUN echo " to display value only: "${JENKINS_TMP_FROM_COMPOSE}""
+
 
 # drop back to the regular jenkins user - good practice
 USER jenkins
