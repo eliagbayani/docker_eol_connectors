@@ -63,9 +63,10 @@ services:
   jenkins:
     env_file: ./.env
     build:
-      context: ./jenkins
       args:
         JENKINS_HOME_FROM_COMPOSE: "" #${JENKINS_HOME}
+        JENKINS_TMP_FROM_COMPOSE: ${JENKINS_TMP}
+      context: ./jenkins
       dockerfile: Dockerfile
     # restart: on-failure
     volumes:
@@ -80,6 +81,8 @@ services:
 
       # - ${JENKINS_TMP}:/jenkins_tmp
       - ${PWD}/jenkins_tmp:/jenkins_tmp
+
+      - ${VOLUMES_LOCAL}:/Volumes
 
     links:
       - web
