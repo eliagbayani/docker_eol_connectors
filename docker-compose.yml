@@ -79,8 +79,8 @@ services:
       # - ${WEBROOT_PATH}:/webroot
       - ${WEBROOT_PATH}:/var/www/html
 
-      # - ${JENKINS_TMP}:/jenkins_tmp
-      - ${PWD}/jenkins_tmp:/jenkins_tmp
+      - ${JENKINS_TMP}:/jenkins_tmp
+      # - ${PWD}/jenkins_tmp:/jenkins_tmp     # -> works OK also
 
       - ${VOLUMES_LOCAL}:/Volumes
 
