@@ -43,6 +43,15 @@ RUN apt install -y php8.2-fpm
 # sudo yum install php php-common 
 # sudo yum install php php-cgi .... { , , , , , , }
 RUN apt install -y php8.2-mysqlnd php8.2-pdo php8.2-xml php8.2-bcmath
+
+
+# install zip packages, curl, etc:
+RUN apt install -y php8.2-zip 
+# php8.2-unzip
+# RUN apt-get install iputils-ping -y
+# RUN apt install -y php8.2-wget
+
+
 # php8.2-pear - not located
 # php8.2-json - not located
 
