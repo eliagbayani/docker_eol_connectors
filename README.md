@@ -49,5 +49,15 @@ A docker-compose file with three services:
    - To stop containers run: `$ docker-compose stop`
 
 8. Other commands:
+
    - To stop a service from compose: `docker stop {container id of that service}`
    - To restart a service from compose: `docker compose restart {service name}`
+   - To see all running containers: `docker ps`
+
+9. Login to a container:
+   option 1: `docker start -i {container id}`
+   -> by default logins as root
+   option 2: `docker exec -it -u john {container id} bash`
+   -> login as user john
+   option 3: `docker exec -it {container id} bash`
+   -> login as root
