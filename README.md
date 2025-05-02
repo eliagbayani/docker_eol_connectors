@@ -12,15 +12,15 @@ A docker-compose file with three services:
 1. Download the zip file, unzip, open the folder.
 2. Rename the file `.env_sample` to `.env` and enter your information.
    - For Mac, to see the hidden files press `cmd+shift+period`.
-4. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
-5. To test Apache + PHP + MySQL:
-      - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
-        ```sh
-        $pass = 'root_pw';
-        ```
-      - Go to browser: http://localhost:81/test.php
-        - You should see a list of four names.
-6. To test Jenkins:
+3. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
+4. To test Apache + PHP + MySQL:
+   - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
+     ```sh
+     $pass = 'root_pw';
+     ```
+   - Go to browser: http://localhost:81/test.php
+     - You should see a list of four names.
+5. To test Jenkins:
 
    1. Go to browser: http://localhost:8081
    2. Follow instructions to initialize your Jenkins.
@@ -38,12 +38,16 @@ A docker-compose file with three services:
       5. Then run **Build Now**
       6. This should output the same information as: http://localhost:81/test.php
 
-7. To test MySQL from the host:
+6. To test MySQL from the host:
    ```sh
    Host = localhost
    Port = 4001
    User Name = root
    Password = {MYSQL_ROOT_PW}
    ```
-8. - To remove containers run: `$ docker-compose down`
+7. - To remove containers run: `$ docker-compose down`
    - To stop containers run: `$ docker-compose stop`
+
+8. Other commands:
+   - To stop a service from compose: `docker stop {container id of that service}`
+   - To restart a service from compose: `docker compose restart {service name}`

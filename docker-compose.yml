@@ -58,7 +58,7 @@ services:
     # https://medium.com/@gladevise/accessing-the-hosts-localhost-from-inside-a-docker-container-c5935e275953
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
+  
   # =================== Jenkins service ===================
   jenkins:
     env_file: ./.env
