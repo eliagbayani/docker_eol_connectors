@@ -55,9 +55,10 @@ A docker-compose file with three services:
    - To see all running containers: `docker ps`
 
 9. Login to a container:
-   option 1: `docker start -i {container id}`
-   -> by default logins as root
-   option 2: `docker exec -it -u john {container id} bash`
-   -> login as user john
-   option 3: `docker exec -it {container id} bash`
-   -> login as root
+
+   - option 1: `docker start -i {container id}`
+     -> by default logins as root
+   - option 2: `docker exec -it -u john {container id} bash`
+     -> login as user john
+   - option 3: `docker exec -it {container id} bash`
+     -> login as root
