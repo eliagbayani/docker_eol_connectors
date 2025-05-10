@@ -14,8 +14,8 @@ COPY my.cnf /etc/my.cnf
 # Without it, will have an error: Plugin 'mysql_native_password' is not loaded
 COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
 
-# Initial migration of test table. Creates an Employees database.
-COPY migration.sql /docker-entrypoint-initdb.d/migration.sql
+# Initial migration of eol_development tables and a test employees table. Creates the eol_development database.
+COPY eol_development.sql /docker-entrypoint-initdb.d/eol_development.sql
 
 # works OK. From: https://stackoverflow.com/questions/29261811/use-docker-compose-env-variable-in-dockerbuild-file
 # Passing vars from compose file to container during build.
