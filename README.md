@@ -12,6 +12,7 @@ A docker-compose file with three services:
 1. Download the zip file, unzip, open the folder.
 2. Rename the file `.env_sample` to `.env` and enter your information.
    - For Mac, to see the hidden files press `cmd+shift+period`.
+   - Make sure that MYSQL_DATA_DIR folder is empty, so that the required database/tables will be created.
 3. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
 4. To test Apache + PHP + MySQL:
    - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
