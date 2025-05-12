@@ -32,7 +32,7 @@ A docker-compose file with three services:
       3. Under **Build Steps**, choose **Execute shell**
       4. Enter these three lines:
          ```sh
-         cd /webroot
+         cd /var/www/html
          php -v
          php test.php
          ```
