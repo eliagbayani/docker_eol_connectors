@@ -1,4 +1,4 @@
-# docker_eol_connectors
+# Docker for EOL Connectors
 
 For machines that will host the EOL connectors.
 A docker-compose file with three services:
