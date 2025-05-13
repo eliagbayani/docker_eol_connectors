@@ -7,12 +7,13 @@ echo "PWD: " + ${PWD}
 echo "TARGET_PATH: " + ${TARGET_PATH}
 ls -lt
 
-# ========== Here copy test.php if it has not yet:
+# ========== Here copy test.php, does not overwrite. Also copies info.php, it overwrites.
 [ -f ${TARGET_PATH}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${TARGET_PATH}
 cp /tmp/info.php ${TARGET_PATH}
 
 # ========== Here add all symlinks needed
-cd {WEBROOT_PATH}
+# cd ${TARGET_PATH} #not needed
+echo "symlimk start... ${MY_ENV}"
 ln -s /Volumes/AKiTiO4/web/eoearth_images/ eoearth_images
 ln -s /Volumes/AKiTiO4/webroot/eoearth/ eoearth 
 ln -s /Volumes/AKiTiO4/webroot/maps_test/ maps_test 
@@ -31,6 +32,7 @@ ln -s /Volumes/AKiTiO4/web/cp_new/ cp_new
 ln -s /Volumes/OWC_Express/CKAN_info/api_results/ ckan_api_results 
 ln -s /Volumes/AKiTiO4/webroot/FreshData/ FreshData 
 ln -s /Volumes/Thunderbolt4/wikimedia_cache/ wikimedia_cache 
+echo "symlimk end... ${MY_ENV}"
 
 # ========== This will continue the container. Without it, the container will exit.
 apache2-foreground
