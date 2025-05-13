@@ -48,6 +48,7 @@ A docker-compose file with three services:
    ```
 7. - To remove containers run: `$ docker-compose down`
    - To stop containers run: `$ docker-compose stop`
+   - To test a command without changing your application stack state.: `$ docker compose --dry-run up --build -d`
 
 8. Other commands:
 
