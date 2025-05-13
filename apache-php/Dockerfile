@@ -16,12 +16,10 @@ COPY /src/info.php /tmp/info.php
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
 
 # This one works OK but we need to enter values to php.ini so we used the one below this.
-# RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+### RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
 
 # We need to do this bec. we needed to update php.ini with our own values e.g. upload_max_filesize
 COPY php.ini.txt /usr/local/etc/php/php.ini
-
-
 
 # WORKDIR /var/www/html
 
@@ -36,8 +34,6 @@ RUN apt install zip unzip
 RUN apt-get install curl
 RUN apt-get install iputils-ping -y
 RUN apt install wget -y
-# RUN apt-get install file -y       # - already installed
-
 
 # install other modules in PHP
 RUN apt-get upgrade -y
