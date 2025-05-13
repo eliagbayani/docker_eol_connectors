@@ -14,24 +14,19 @@ cp /tmp/info.php ${TARGET_PATH}
 # ========== Here add all symlinks needed
 # cd ${TARGET_PATH} #not needed
 echo "symlimk start... ${MY_ENV}"
-ln -s /Volumes/AKiTiO4/web/eoearth_images/ eoearth_images
-ln -s /Volumes/AKiTiO4/webroot/eoearth/ eoearth 
-ln -s /Volumes/AKiTiO4/webroot/maps_test/ maps_test 
-ln -s /Volumes/AKiTiO4/webroot/LiteratureEditor/ LiteratureEditor 
-ln -s /Volumes/AKiTiO4/webroot/eol_maps/ eol_maps 
-ln -s /opt/homebrew/var/www/eol_php_code/applications/opendata/ opendata 
-ln -s /Volumes/AKiTiO4/other_files/opendata_uploads/ opendata_uploads 
-ln -s /Volumes/AKiTiO4/other_files/ other_files 
-ln -s /Volumes/AKiTiO4/d_w_h/dynamic_working_hierarchy-master/ d_w_h 
-ln -s /Volumes/AKiTiO4/webroot/Leaflet_Cluster_map/ Leaflet_Cluster_map 
-ln -s /Volumes/Crucial_2TB/other_files2/ other_files2 
-ln -s /Volumes/AKiTiO4/web/cp/ cp 
-ln -s /Volumes/AKiTiO4/z_web_docs_backup/data/ data 
-ln -s /Volumes/AKiTiO4/webroot/effechecka/ effechecka 
-ln -s /Volumes/AKiTiO4/web/cp_new/ cp_new 
-ln -s /Volumes/OWC_Express/CKAN_info/api_results/ ckan_api_results 
-ln -s /Volumes/AKiTiO4/webroot/FreshData/ FreshData 
-ln -s /Volumes/Thunderbolt4/wikimedia_cache/ wikimedia_cache 
+ln -s /extra/cache_LiteratureEditor/ cache_LiteratureEditor
+ln -s /extra/ckan_resources/ uploaded_resources
+ln -s /extra/eoearth_img/eoearth_images/ eoearth_images
+ln -s /extra/LiteratureEditor_img/LiteratureEditor_images/ LiteratureEditor_images
+ln -s /extra/map_data_final/ map_data
+ln -s /extra/eol_connector_data_files/ eol_connector_data_files
+ln -s /extra/dumps/ dumps
+ln -s /extra/Pensoft_annotator/ Pensoft_annotator
+ln -s /extra/other_files/ other_files
+ln -s /extra/map_data_dwca/ map_data2
+ln -s /extra/wikimedia_cache/ wikimedia_cache
+ln -s /var/www/html/eol_php_code/applications/opendata/ opendata
+ln -s /extra/gnfinder/ gnfinder
 echo "symlimk end... ${MY_ENV}"
 
 # ========== This will continue the container. Without it, the container will exit.
