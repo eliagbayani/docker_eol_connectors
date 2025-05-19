@@ -25,6 +25,12 @@ USER root
 RUN apt-get update
 RUN apt-get install file -y     # - important addition
 
+# install zip packages, curl, etc:
+RUN apt install zip unzip -y
+RUN apt-get install curl -y
+# RUN apt-get install iputils-ping -y
+RUN apt install wget -y
+
 
 # install PHP 8.2 from: https://php.watch/articles/install-php82-ubuntu-debian
 RUN dpkg -l | grep php | tee packages.txt
