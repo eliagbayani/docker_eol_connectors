@@ -53,7 +53,9 @@ A docker-compose file with three services:
 8. Other commands:
 
    - To stop a service from compose: `docker stop {container id of that service}`
-   - To restart a service from compose: `docker compose restart {service name}`
+   - To restart a service from compose: `docker-compose restart {service name}`
+     This does not need to delete the container nor the image anymore.
+
    - To see all running containers: `docker ps`
 
 9. Login to a container:

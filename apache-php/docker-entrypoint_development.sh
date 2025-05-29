@@ -32,6 +32,7 @@ ln -s /Volumes/AKiTiO4/web/cp_new/ cp_new
 ln -s /Volumes/OWC_Express/CKAN_info/api_results/ ckan_api_results 
 ln -s /Volumes/AKiTiO4/webroot/FreshData/ FreshData 
 ln -s /Volumes/Thunderbolt4/wikimedia_cache/ wikimedia_cache 
+ln -s /Volumes/Crucial_4TB/Pensoft_annotator/ Pensoft_annotator
 echo "symlimk end... ${MY_ENV}"
 
 # ========== This will continue the container. Without it, the container will exit.
