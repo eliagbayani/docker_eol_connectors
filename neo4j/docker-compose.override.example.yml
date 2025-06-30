@@ -1,0 +1,7 @@
+services:
+  # Put here memory limit that can be a different value on your laptop than 
+  # on your desktop or production server.
+  neo4j:
+    environment:
+      - NEO4J_server_memory_heap_initial__size=6G
+      - NEO4J_server_memory_heap_max__size=6G

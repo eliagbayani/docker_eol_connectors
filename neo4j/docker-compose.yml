@@ -1,0 +1,25 @@
+services:
+  neo4j:
+    env_file: ./.env
+    container_name: neo4j
+    image: neo4j:latest
+    ports:
+      - 7494:7474
+      - 7697:7687
+    environment:
+      - NEO4J_AUTH=neo4j/${MY_NEO4J_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      # - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+      - NEO4J_PLUGINS=["apoc"]
+      # - NEO4J_server.config.strict_validation.enabled=false
+    volumes:
+      # - ./neo4j_db/data:/data
+      # - ./neo4j_db/logs:/logs
+      # - ./neo4j_db/import:/var/lib/neo4j/import
+      # - ./neo4j_db/plugins:/plugins
+      - ${PATH_NEO4J_DATA}:/data
+      - ${PATH_NEO4J_LOGS}:/logs
+      - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
+      - ${PATH_NEO4J_PLUGINS}:/plugins
