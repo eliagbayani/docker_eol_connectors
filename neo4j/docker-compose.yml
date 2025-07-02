@@ -1,8 +1,11 @@
 services:
   neo4j:
     env_file: ./.env
+    
     container_name: neo4j
-    image: neo4j:latest
+    # image: neo4j:latest
+    image: neo4j:enterprise-bullseye
+
     ports:
       - 7494:7474
       - 7697:7687
@@ -14,6 +17,9 @@ services:
       # - NEO4J_PLUGINS=["apoc", "graph-data-science"]
       - NEO4J_PLUGINS=["apoc"]
       # - NEO4J_server.config.strict_validation.enabled=false
+
+      # for the Enterprise edition only
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
     volumes:
       # - ./neo4j_db/data:/data
       # - ./neo4j_db/logs:/logs
