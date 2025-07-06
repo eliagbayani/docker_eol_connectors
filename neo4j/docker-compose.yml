@@ -4,7 +4,11 @@ services:
     
     container_name: neo4j
     # image: neo4j:latest
-    image: neo4j:enterprise-bullseye
+    # image: neo4j:enterprise-bullseye
+    # image: neo4j:ubi9 #https://hub.docker.com/layers/library/neo4j/ubi9/images/sha256-7e3f6b03f983c132eb594901aeed538331c1d3cd75fef09f0f5a3de150d4e6d5
+    # image: neo4j:enterprise-ubi9 #https://hub.docker.com/layers/library/neo4j/enterprise-ubi9/images/sha256-ea33aab418688b5f11cfb035b129b01465a4a0cfdd662585520533a762f67d65
+    image: neo4j:5.26.8-enterprise-ubi9 #https://hub.docker.com/layers/library/neo4j/5.26.8-enterprise-ubi9/images/sha256-278e58c04f5b46738a115379934c189d5fd08ffa54b386f68658877d9cc8c8af
+    # -> this ver. worked with neo4j-admin import
 
     ports:
       - 7494:7474
@@ -25,7 +29,17 @@ services:
       # - ./neo4j_db/logs:/logs
       # - ./neo4j_db/import:/var/lib/neo4j/import
       # - ./neo4j_db/plugins:/plugins
+
+      # - ${PWD}/neo4j_db/data:/data
+      # - ${PWD}/neo4j_db/logs:/logs
+      # - ${PWD}/neo4j_db/import:/var/lib/neo4j/import
+      # - ${PWD}/neo4j_db/plugins:/plugins
+
       - ${PATH_NEO4J_DATA}:/data
       - ${PATH_NEO4J_LOGS}:/logs
       - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
       - ${PATH_NEO4J_PLUGINS}:/plugins
+
+
+    # command: ${PWD}/sh/docker-entrypoint_neo4j.sh #works OK
+    # command: ls -lt ${PATH_NEO4J_SH}/docker-entrypoint_neo4j.sh #works OK
