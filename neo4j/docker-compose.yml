@@ -39,7 +39,3 @@ services:
       - ${PATH_NEO4J_LOGS}:/logs
       - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
       - ${PATH_NEO4J_PLUGINS}:/plugins
-
-
-    # command: ${PWD}/sh/docker-entrypoint_neo4j.sh #works OK
-    # command: ls -lt ${PATH_NEO4J_SH}/docker-entrypoint_neo4j.sh #works OK
