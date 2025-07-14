@@ -105,4 +105,9 @@ services:
     # volumes:
     #   jenkins_home:
 
+
+    # Solution: for sometimes --build get corrupted.
+    # sudo rm  ~/.docker/config.json 
+    # Rerun restart 
+
     # =================== END ===================
