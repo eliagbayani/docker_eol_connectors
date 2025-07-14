@@ -35,5 +35,10 @@ ln -s /Volumes/Thunderbolt4/wikimedia_cache/ wikimedia_cache
 ln -s /Volumes/Crucial_4TB/Pensoft_annotator/ Pensoft_annotator
 echo "symlimk end... ${MY_ENV}"
 
+# We may need it when we go back to Neo4j tasks:
+# chmod -R 777 ${TARGET_PATH}/php_neo4j/
+# chmod -R 777 ${TARGET_PATH}/php_neo4j/.
+
+
 # ========== This will continue the container. Without it, the container will exit.
 apache2-foreground
