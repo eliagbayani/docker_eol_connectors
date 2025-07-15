@@ -19,6 +19,9 @@ FROM jenkins/jenkins:jdk17
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 
+COPY --chown=jenkins:jenkins /src/gnparser /bin/gnparser
+# todo: try to download and extract gnparser
+
 # from: https://php.watch/articles/install-php82-ubuntu-debian
 # if we want to install via apt
 USER root

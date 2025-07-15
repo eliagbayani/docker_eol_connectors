@@ -11,6 +11,8 @@ COPY 000-default.conf  /etc/apache2/sites-available/
 # these 2 php files will be used in docker-entrypoint.sh
 COPY /src/test.php /tmp/test.php    
 COPY /src/info.php /tmp/info.php    
+COPY /src/gnparser /tmp/gnparser
+
 
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
