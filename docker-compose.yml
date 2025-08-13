@@ -24,7 +24,7 @@ services:
     volumes:
       - ${MYSQL_DATA_DIR}:/var/lib/mysql
     ports:
-      - 4001:3306
+      - ${MYSQL_PORTS} # 4001:3306
 
   # =================== Apache and PHP service ===================
   web:
