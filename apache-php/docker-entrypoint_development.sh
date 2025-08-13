@@ -43,7 +43,8 @@ echo "symlimk end... ${MY_ENV}"
 # chmod -R 777 ${TARGET_PATH}/php_neo4j/.
 
 # ========== Here copy gnparser, does not overwrite. gnparser from: gnparser-v1.11.6-linux-arm.tar.gz
-[ -f /bin/gnparser ]    && echo "File already exists (gnparser)"    || cp /tmp/gnparser /bin/
+# [ -f /bin/gnparser ]    && echo "File already exists (gnparser)"    || cp /tmp/gnparser /bin/
+
 
 
 # ========== This will continue the container. Without it, the container will exit.
