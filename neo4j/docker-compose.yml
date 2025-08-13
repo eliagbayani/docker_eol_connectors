@@ -11,8 +11,8 @@ services:
     # -> this ver. worked with neo4j-admin import
 
     ports:
-      - 7494:7474
-      - 7697:7687
+      - ${PORT_7474}
+      - ${PORT_7687}
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
