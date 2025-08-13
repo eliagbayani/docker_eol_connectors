@@ -52,7 +52,7 @@ services:
     command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK
     ports:
-      - "81:80"
+      - ${WEB_PORTS}
     links:
       - db
     # Sol'n so u can curl local webserver from host. 
@@ -91,10 +91,8 @@ services:
       - web
       - db
     ports:
-      - 8081:8080
+      - ${JENKINS_PORTS}
       - 50000:50000
-      # - 7471:7494
-      # - 7681:7697
 
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
