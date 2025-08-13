@@ -7,3 +7,5 @@ jenkins-home/
 jenkins_home copy/log.properties
 z_backup/
 neo4j/docker-compose.override.yml
+apache-php/src/gnparser
+jenkins/src/gnparser

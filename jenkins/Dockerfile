@@ -19,8 +19,10 @@ FROM jenkins/jenkins:jdk17
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 
-COPY --chown=jenkins:jenkins /src/gnparser /bin/gnparser
-# todo: try to download and extract gnparser
+# --------------------------------------------------- this works but now moved below. With downloading file.
+# COPY --chown=jenkins:jenkins /src/gnparser /bin/gnparser         
+# ---------------------------------------------------
+
 
 # from: https://php.watch/articles/install-php82-ubuntu-debian
 # if we want to install via apt
@@ -77,5 +79,19 @@ ARG JENKINS_TMP_FROM_COMPOSE
 RUN echo " to display value only: "${JENKINS_TMP_FROM_COMPOSE}""
 
 
+# =============================================================================
+ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
+RUN wget -O /tmp/downloaded.tar.gz ${ZIP_URL}
+RUN chmod 775 /tmp/downloaded.tar.gz
+RUN tar -xvzf /tmp/downloaded.tar.gz -C /tmp
+RUN rm /tmp/downloaded.tar.gz
+RUN cp /tmp/gnparser /bin/gnparser
+RUN rm /tmp/gnparser
+# =============================================================================
+
+
+
+
 # drop back to the regular jenkins user - good practice
 USER jenkins
+
