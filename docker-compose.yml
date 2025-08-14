@@ -8,7 +8,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
       MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
       MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PW}
+      MYSQL_PASSWORD: ${MYSQL_USER_PW}
     build:
       context: ./mysql
       args:
