@@ -52,8 +52,6 @@ RUN cp /tmp/gnparser /bin/gnparser
 RUN rm /tmp/gnparser
 # =============================================================================
 
-
-
 EXPOSE 81
 
 # restart apache

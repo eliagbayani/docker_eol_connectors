@@ -45,7 +45,5 @@ echo "symlimk end... ${MY_ENV}"
 # ========== Here copy gnparser, does not overwrite. gnparser from: gnparser-v1.11.6-linux-arm.tar.gz
 # [ -f /bin/gnparser ]    && echo "File already exists (gnparser)"    || cp /tmp/gnparser /bin/
 
-
-
 # ========== This will continue the container. Without it, the container will exit.
 apache2-foreground

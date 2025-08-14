@@ -1,8 +1,8 @@
 <?php
-$host = 'db';               //do not change
-$user = 'root';             //do not change
-$pass = 'root_password';    //use value from .env file {MYSQL_ROOT_PW}
-$db = 'eol_development';    //do not change
+$host = 'db';                   //do not change. This is the Docker service name in docker-compose.yml.
+$user = 'root';                 //do not change
+$pass = 'mysql_root_password';  //use value from .env file {MYSQL_ROOT_PW}
+$db = 'eol_development';        //do not change
 if($mysqli = new mysqli($host, $user, $pass, $db)) {
     echo "\nEmployees database connected. OK\n";
     $result = $mysqli->query("SELECT * FROM employees_tbl;"); 
