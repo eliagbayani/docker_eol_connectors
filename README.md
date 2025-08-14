@@ -23,7 +23,7 @@ A docker-compose file with three services:
      - You should see a list of four names.
 5. To test Jenkins:
 
-   1. Go to browser: http://localhost:8081
+   1. Go to browser, open Jenkins: http://localhost:8081
    2. Follow instructions to initialize your Jenkins.
    3. To test PHP + MySQL + Jenkins
 
