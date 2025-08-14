@@ -39,7 +39,7 @@ A docker-compose file with three services:
       5. Then run **Build Now**
       6. This should output the same information as: http://localhost:81/test_development.php
 
-6. To test MySQL from the host:
+6. To test MySQL from the host. Use these credentials:
    ```sh
    Host = localhost
    Port = 4001
@@ -50,10 +50,13 @@ A docker-compose file with three services:
    - To stop containers run: `$ docker-compose stop`
    - To test a command without changing your application stack state.: `$ docker compose --dry-run up --build -d`
 
+   To re-create stuff:
+
+   - Recreate containers even if their configuration and image haven't changed: `docker-compose up --build --force-recreate`
+   - Do not use cache when building the image: `docker-compose build --no-cache`
+
 8. Other commands:
 
-   - Do not use cache when building the image: `docker-compose build --no-cache`
-   - Recreate containers even if their configuration and image haven't changed: `docker-compose up --force-recreate`
    - To stop a service from compose: `docker stop {container id of that service}`
    - To restart a service from compose: `docker-compose restart {service name}`
 
