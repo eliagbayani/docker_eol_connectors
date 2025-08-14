@@ -52,6 +52,8 @@ A docker-compose file with three services:
 
 8. Other commands:
 
+   - Do not use cache when building the image: `docker-compose build --no-cache`
+   - Recreate containers even if their configuration and image haven't changed: `docker-compose up --force-recreate`
    - To stop a service from compose: `docker stop {container id of that service}`
    - To restart a service from compose: `docker-compose restart {service name}`
 
