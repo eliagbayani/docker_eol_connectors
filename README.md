@@ -17,7 +17,7 @@ A docker-compose file with three services:
 4. To test Apache + PHP + MySQL:
    - Edit `test_develoment.php or test_production.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
      ```sh
-     $pass = 'root_password';
+     $pass = 'mysql_root_password';
      ```
    - Go to browser: http://localhost:81/test_development.php
      - You should see a list of four names.
