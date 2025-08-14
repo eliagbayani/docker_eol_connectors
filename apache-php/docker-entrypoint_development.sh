@@ -7,8 +7,8 @@ echo "PWD: " + ${PWD}
 echo "TARGET_PATH: " + ${TARGET_PATH}
 ls -lt
 
-# ========== Here copy test.php, does not overwrite. Also copies info.php, it overwrites.
-[ -f ${TARGET_PATH}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${TARGET_PATH}
+# ========== Here copy test_{environment}.php, does not overwrite. Also copies info.php, it overwrites.
+[ -f ${TARGET_PATH}/test_${MY_ENV}.php ]    && echo "File already exists (test_"${MY_ENV}".php)"    || cp /tmp/test_${MY_ENV}.php ${TARGET_PATH}
 cp /tmp/info.php ${TARGET_PATH}
 
 # ========== Here add all symlinks needed

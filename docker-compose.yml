@@ -13,6 +13,7 @@ services:
       context: ./mysql
       args:
         MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
@@ -30,6 +31,8 @@ services:
   web:
     build:
       context: ./apache-php
+      args:
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     # restart: always
     depends_on:

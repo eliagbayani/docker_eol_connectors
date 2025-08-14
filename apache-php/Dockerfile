@@ -9,7 +9,8 @@ COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/
 
 # these 2 php files will be used in docker-entrypoint.sh
-COPY /src/test.php /tmp/test.php    
+ARG ENVIRONMENT_FROM_COMPOSE
+COPY /src/test_${ENVIRONMENT_FROM_COMPOSE}.php /tmp/test_${ENVIRONMENT_FROM_COMPOSE}.php    
 COPY /src/info.php /tmp/info.php    
 
 # Is needed for other MySQL version.

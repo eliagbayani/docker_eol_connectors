@@ -15,11 +15,11 @@ A docker-compose file with three services:
    - Make sure that MYSQL_DATA_DIR folder is empty, so that the required database/tables will be created.
 3. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
 4. To test Apache + PHP + MySQL:
-   - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
+   - Edit `test_develoment.php or test_production.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
      ```sh
      $pass = 'root_password';
      ```
-   - Go to browser: http://localhost:81/test.php
+   - Go to browser: http://localhost:81/test_development.php
      - You should see a list of four names.
 5. To test Jenkins:
 
@@ -34,10 +34,10 @@ A docker-compose file with three services:
          ```sh
          cd /var/www/html
          php -v
-         php test.php
+         php test_development.php
          ```
       5. Then run **Build Now**
-      6. This should output the same information as: http://localhost:81/test.php
+      6. This should output the same information as: http://localhost:81/test_development.php
 
 6. To test MySQL from the host:
    ```sh
