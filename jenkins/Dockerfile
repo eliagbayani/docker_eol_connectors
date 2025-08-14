@@ -1,11 +1,9 @@
 # FROM jenkins/jenkins:2.414.3-jdk17
-
 # FROM jenkins/jenkins:2.462.3-jdk11
 # -> worked OK but Java 11 is no longer supported. Java 11 end of life in Jenkins.
 
 FROM jenkins/jenkins:jdk17
 # -> https://hub.docker.com/layers/jenkins/jenkins/jdk17/images/sha256-3f445a481e471c4342c08d3545c0350283060ad9d41be779941a6bf850075222
-
 
 # ---------------- start sol'n for permission error
 # ARG JENKINS_HOME_FROM_COMPOSE
@@ -19,11 +17,6 @@ FROM jenkins/jenkins:jdk17
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 
-# --------------------------------------------------- this works but now moved below. With downloading file.
-# COPY --chown=jenkins:jenkins /src/gnparser /bin/gnparser         
-# ---------------------------------------------------
-
-
 # from: https://php.watch/articles/install-php82-ubuntu-debian
 # if we want to install via apt
 USER root
@@ -35,7 +28,6 @@ RUN apt install zip unzip -y
 RUN apt-get install curl -y
 # RUN apt-get install iputils-ping -y
 RUN apt install wget -y
-
 
 # install PHP 8.2 from: https://php.watch/articles/install-php82-ubuntu-debian
 RUN dpkg -l | grep php | tee packages.txt
@@ -55,29 +47,23 @@ RUN apt install -y php8.2-fpm
 # sudo yum install php php-cgi .... { , , , , , , }
 RUN apt install -y php8.2-mysqlnd php8.2-pdo php8.2-xml php8.2-bcmath
 
-
 # install zip packages, curl, etc:
 RUN apt install -y php8.2-zip 
-# php8.2-unzip
 # RUN apt-get install iputils-ping -y
 # RUN apt install -y php8.2-wget
-
 
 # php8.2-pear - not located
 # php8.2-json - not located
 
 RUN a2enconf php8.2-fpm
 
-
 ## trying to fix Jenkins /tmp permissions
 # RUN chown -R root:jenkins /var/tmp
 # RUN chown -R jenkins /tmp
 
-
 # - just proof of variable passing
 ARG JENKINS_TMP_FROM_COMPOSE    
 RUN echo " to display value only: "${JENKINS_TMP_FROM_COMPOSE}""
-
 
 # =============================================================================
 ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
@@ -89,9 +75,5 @@ RUN cp /tmp/gnparser /bin/gnparser
 RUN rm /tmp/gnparser
 # =============================================================================
 
-
-
-
 # drop back to the regular jenkins user - good practice
 USER jenkins
-

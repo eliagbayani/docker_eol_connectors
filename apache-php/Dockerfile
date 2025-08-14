@@ -11,8 +11,6 @@ COPY 000-default.conf  /etc/apache2/sites-available/
 # these 2 php files will be used in docker-entrypoint.sh
 COPY /src/test.php /tmp/test.php    
 COPY /src/info.php /tmp/info.php    
-# COPY /src/gnparser /tmp/gnparser # -> working OK but moved below with downloading file.
-
 
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
@@ -39,8 +37,6 @@ RUN apt install wget -y
 
 # install other modules in PHP
 RUN apt-get upgrade -y
-
-
 
 # =============================================================================
 ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
