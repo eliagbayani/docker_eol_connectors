@@ -160,7 +160,7 @@ services:
       context: ./python
       dockerfile: Dockerfile
     ports:
-      - "8003:8000" # Example port for a web application
+      - "8009:8009" # 8000:8000 Example port for a web application
     depends_on:
       neo4j:
         condition: service_healthy # Ensure Neo4j is ready before starting the app
