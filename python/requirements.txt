@@ -1,0 +1,2 @@
+neo4j # Neo4j Python driver
+# Other Python dependencies for your application; like Flask, FastAPI, etc.
