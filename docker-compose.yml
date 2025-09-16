@@ -78,12 +78,8 @@ services:
       # - ${PWD}/jenkins_home:/var/jenkins_home
       # -> works OK
 
-      # - ${JENKINS_HOME}:/var/jenkins_home
-      # -> rw permissions error
-
       - ${JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
-
 
       # - ${WEBROOT_PATH}:/webroot
       - ${WEBROOT_PATH}:/var/www/html
