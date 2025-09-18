@@ -15,6 +15,7 @@ services:
         MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
+    image: mysql:8.4.3-oraclelinux9
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW" ]
@@ -34,6 +35,7 @@ services:
       args:
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
+    image: php:8.2-apache
     # restart: always
     depends_on:
       db:
@@ -74,6 +76,7 @@ services:
         PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
       dockerfile: Dockerfile
+    image: jenkins/jenkins:2.525-jdk21
     # restart: on-failure
     volumes:
       # - ${PWD}/jenkins_home:/var/jenkins_home
