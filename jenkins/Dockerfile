@@ -26,6 +26,19 @@ USER root
 RUN apt-get update
 RUN apt-get install file -y     # - important addition
 
+# --------------------------- START python
+RUN apt-get install python3-full python3-pip -y 
+# Add any other Python-related packages or tools you need, e.g. python-pyset python3-flake8 etc.
+RUN apt update
+# ARG PYTHON_APP_DIR_FROM_COMPOSE
+# COPY /src_python/test2.py ${PYTHON_APP_DIR_FROM_COMPOSE}/test2.py
+RUN mkdir /usr/src/app      
+# works OK
+RUN pip install --break-system-packages neo4j 
+# works ok
+ENV PYTHONUNBUFFERED=1
+# --------------------------- END python
+
 # install zip packages, curl, etc:
 RUN apt install zip unzip -y
 RUN apt-get install curl -y

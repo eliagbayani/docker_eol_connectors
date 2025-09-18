@@ -71,6 +71,7 @@ services:
       args:
         JENKINS_HOME_FROM_COMPOSE: "" #${JENKINS_HOME}
         JENKINS_TMP_FROM_COMPOSE: ${JENKINS_TMP}
+        PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
       dockerfile: Dockerfile
     # restart: on-failure
@@ -90,6 +91,9 @@ services:
       - ${VOLUMES_LOCAL}:/Volumes
       - ${EXTRA_PATH}:/extra
 
+      # for python
+      - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+
     links:
       - web
       - db
@@ -101,15 +105,21 @@ services:
     #   - "host.docker.internal:host-gateway"
 
     environment:
-      JAVA_OPTS: "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
-    # network_mode: "bridge"
-    # volumes:
-    #   jenkins_home:
+      - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
+
+      # for python:
+      - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
+
+  # network_mode: "bridge"
+  # volumes:
+  #   jenkins_home:
 
 
-    # Solution: for sometimes --build get corrupted.
-    # sudo rm  ~/.docker/config.json 
-    # Rerun restart 
+  # Solution: for sometimes --build get corrupted.
+  # sudo rm  ~/.docker/config.json 
+  # Rerun restart 
   # =================== Neo4j service ===================
   neo4j:
     env_file: ./.env
@@ -153,22 +163,22 @@ services:
       timeout: 30s
       retries: 5
 
-  # =================== Python service ===================
-  python:
-    env_file: ./.env
-    build:
-      context: ./python
-      dockerfile: Dockerfile
-    ports:
-      - "8009:8009" # 8000:8000 Example port for a web application
-    depends_on:
-      neo4j:
-        condition: service_healthy # Ensure Neo4j is ready before starting the app
-    environment:
-      - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
-      - NEO4J_USERNAME=neo4j
-      - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
-    volumes:
-      # - .:/app # Mount your application code
-      - ${PYTHON_APP}:/app
+      # =================== Python service ===================
+      # python:
+      #   env_file: ./.env
+      #   build:
+      #     context: ./python
+      #     dockerfile: Dockerfile
+      #   ports:
+      #     - "8009:8009" # 8000:8000 Example port for a web application
+      #   depends_on:
+      #     neo4j:
+      #       condition: service_healthy # Ensure Neo4j is ready before starting the app
+      #   environment:
+      #     - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
+      #     - NEO4J_USERNAME=neo4j
+      #     - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
+      #   volumes:
+      #     - ${PYTHON_APP}:/usr/src/app # Mount your application code
+      
   # ========================= END =========================
