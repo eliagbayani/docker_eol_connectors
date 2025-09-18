@@ -13,11 +13,12 @@ driver = GraphDatabase.driver(uri, auth=(user, password))
 
 
 def create_node(tx, name):
-    tx.run("CREATE (a:Person {name: $name})", name=name)
+    tx.run("CREATE (a:Girl1 {name: $name})", name=name)
 
 
 with driver.session() as session:
-    session.write_transaction(create_node, "Alice")
+    session.execute_write(create_node, "Alice")
+    # DeprecationWarning: write_transaction has been renamed to execute_write
 
 print("Node 'Alice' created in Neo4j.")
 driver.close()
