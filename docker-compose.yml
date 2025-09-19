@@ -80,7 +80,7 @@ services:
     # restart: on-failure
     volumes:
       # - ${PWD}/jenkins_home:/var/jenkins_home
-      # -> works OK
+      # -> works OK, but better implementation below
 
       - ${JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
