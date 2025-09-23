@@ -32,7 +32,10 @@ RUN apt-get install python3-full python3-pip -y
 RUN apt update
 # ARG PYTHON_APP_DIR_FROM_COMPOSE
 # COPY /src_python/test2.py ${PYTHON_APP_DIR_FROM_COMPOSE}/test2.py
-RUN mkdir /usr/src/app      
+
+# RUN mkdir /usr/src/app #gives error if folder already exists
+RUN [ -d /usr/src/app ] && echo "Folder exists" || mkdir /usr/src/app
+
 # works OK
 RUN pip install --break-system-packages neo4j 
 # works ok
