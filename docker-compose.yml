@@ -78,6 +78,13 @@ services:
       dockerfile: Dockerfile
     image: jenkins/jenkins:2.525-jdk21
     # restart: on-failure
+
+    # these 2 lines was added to run Docker commands from the host
+    # but did not work
+    # privileged: true # Required for Docker-in-Docker scenarios in Jenkins
+    # user: root # Run Jenkins as root for easier Docker access within Jenkins
+
+
     volumes:
       # - ${PWD}/jenkins_home:/var/jenkins_home
       # -> works OK, but better implementation below
@@ -96,6 +103,9 @@ services:
 
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+      # Allow Jenkins to interact with Docker daemon
+      # but did not work
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
 
     links:
       - web
@@ -111,9 +121,9 @@ services:
       - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
 
       # for python:
-      - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
-      - NEO4J_USERNAME=neo4j
-      - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
+      - NEO4J_URI=${MY_NEO4J_URI}
+      - NEO4J_USERNAME=${MY_NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD}
 
   # network_mode: "bridge"
   # volumes:
@@ -153,11 +163,20 @@ services:
 
       # for the Enterprise edition only
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+
+
+      # for python: neo4j-admin
+      - NEO_USERNAME=${MY_NEO4J_USERNAME}
+      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
+      - NEO_DATABASE=${MY_NEO4J_DATABASE}
+
     volumes:
       - ${PATH_NEO4J_DATA}:/data
       - ${PATH_NEO4J_LOGS}:/logs
       - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
       - ${PATH_NEO4J_PLUGINS}:/plugins
+      # for python
+      - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
 
     # --- below here is new: 
     healthcheck:
