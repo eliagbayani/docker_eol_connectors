@@ -121,9 +121,9 @@ services:
       - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
 
       # for python:
-      - NEO4J_URI=${MY_NEO4J_URI}
-      - NEO4J_USERNAME=${MY_NEO4J_USERNAME}
-      - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD}
+      - NEO_URI=${MY_NEO4J_URI}
+      - NEO_USERNAME=${MY_NEO4J_USERNAME}
+      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
 
   # network_mode: "bridge"
   # volumes:
@@ -165,7 +165,7 @@ services:
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
 
 
-      # for python: neo4j-admin
+      # for python: neo4j-admin --- Cannot use "NEO4J_" as it is reserved.
       - NEO_USERNAME=${MY_NEO4J_USERNAME}
       - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
       - NEO_DATABASE=${MY_NEO4J_DATABASE}
