@@ -106,5 +106,5 @@ A docker-compose file with three services:
        username: your_username
        password: your_password
        URI: bolt://neo4j:7687
-       Hello from Python and Neo4j!
+       -Python accessing Neo4j OK-
        ```
