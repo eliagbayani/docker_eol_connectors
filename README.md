@@ -78,29 +78,33 @@ A docker-compose file with three services:
 
 10. To test your Neo4j database server, go to browser open: http://localhost:7474/browser/
 
-11. To test Neo4j + Python + Python driver for Neo4j
+11. To test Neo4j + Python + Python driver for Neo4j:
 
-12. Copy these 4 files from: https://github.com/eliagbayani/eol_python_code
+    1. Copy these 4 files from: https://github.com/eliagbayani/eol_python_code
+       ```sh
+       neo4j_credentials.py
+       neo4j_functions.py
+       test1.py
+       test2.py
+       ```
+    2. Load it to your {PYTHON_APP} folder you declared in your .env file.
+    3. Open Jenkins: http://localhost:8081
+    4. From **Dashboard**, create a **New Item**
+    5. Choose **Freestyle project**
+    6. Under **Build Steps**, choose **Execute shell**
+    7. Enter these three lines:
+       ```sh
+       cd /usr/src/app
+       python3 -V
+       python3 test1.py
+       python3 test2.py
+       ```
+    8. Then run **Build Now**
+    9. You should see this output:
 
-    ```sh
-    neo4j_credentials.py
-    neo4j_functions.py
-    test1.py
-    test2.py
-    ```
-
-13. Load it to your {PYTHON_APP} folder you declared in your .env file.
-14. From **Dashboard**, create a **New Item**
-15. Choose **Freestyle project**
-16. Under **Build Steps**, choose **Execute shell**
-17. Enter these three lines:
-
-    ```sh
-    cd /usr/src/app
-    python3 -V
-    python3 test1.py
-    python3 test2.py
-    ```
-
-18. Then run **Build Now**
-19. This should output the same information as: http://localhost:81/test_development.php
+       ```sh
+       username: your_username
+       password: your_password
+       URI: bolt://neo4j:7687
+       Hello from Python and Neo4j!
+       ```
