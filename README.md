@@ -1,7 +1,7 @@
 # Docker for EOL Connectors
 
 For machines that will host the EOL connectors.
-A docker-compose file with three services:
+A docker-compose file with four services:
 
 1. Apache/2.4.62 + PHP 8.2.26
 2. MySQL 8.4.3
