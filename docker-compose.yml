@@ -72,6 +72,7 @@ services:
       # args:
       context: ./neo4j
       dockerfile: Dockerfile
+    image: neo4j:5.26.12-enterprise-ubi9
     ports:
       - ${PORT_7474}
       - ${PORT_7687}
