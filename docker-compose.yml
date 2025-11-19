@@ -118,7 +118,7 @@ services:
         PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
       dockerfile: Dockerfile
-    image: jenkins/jenkins:2.525-jdk21
+    image: jenkins/jenkins:2.538-jdk21
     # restart: on-failure
 
     # these 2 lines was added to run Docker commands from the host
