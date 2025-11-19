@@ -55,6 +55,7 @@ A docker-compose file with four services:
    To re-create stuff:
 
    - Recreate containers even if their configuration and image haven't changed: `docker-compose up --build --force-recreate`
+   - For specific service: `docker-compose up {service name} --build --force-recreate`
    - Do not use cache when building the image: `docker-compose build --no-cache`
    - Builds the images if they don’t exist, starts the containers in detached mode, forces recreation of the containers, and rebuilds the images even if they exist.: `docker-compose up -d --force-recreate --build`
 
