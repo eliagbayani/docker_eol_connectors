@@ -31,6 +31,7 @@ echo "symlimk start... ${MY_ENV}"
 [ -d ${TARGET_PATH}/Leaflet_Cluster_map ]       && echo "Symlink already exists (Leaflet_Cluster_map)"    || ln -s /Volumes/AKiTiO4/webroot/Leaflet_Cluster_map/ Leaflet_Cluster_map
 [ -d ${TARGET_PATH}/other_files2 ]              && echo "Symlink already exists (other_files2)"           || ln -s /Volumes/Crucial_2TB/other_files2/ other_files2
 [ -d ${TARGET_PATH}/cache_LiteratureEditor ]    && echo "Symlink already exists (cache_LiteratureEditor)" || ln -s /Volumes/Crucial_2TB/cache_LiteratureEditor/ cache_LiteratureEditor
+[ -d ${TARGET_PATH}/gnfinder ]                  && echo "Symlink already exists (gnfinder)"               || ln -s /Volumes/Crucial_4TB/gnfinder/ gnfinder
 
 # These 2 are real folders for PHP 8, not symlinks.
 # [ -d ${TARGET_PATH}/LiteratureEditor ]  && echo "Symlink already exists (LiteratureEditor)" || ln -s /Volumes/AKiTiO4/webroot/LiteratureEditor/ LiteratureEditor
