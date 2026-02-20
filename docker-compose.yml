@@ -98,6 +98,7 @@ services:
       - ${PATH_NEO4J_DATA}:/data
       - ${PATH_NEO4J_LOGS}:/logs
       - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
+      - ${PATH_NEO4J_IMPORT2}:/var/lib/neo4j/import2
       - ${PATH_NEO4J_PLUGINS}:/plugins
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
