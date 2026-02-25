@@ -18,4 +18,19 @@ if($mysqli = new mysqli($host, $user, $pass, $db)) {
 echo "<hr>";
 $out = shell_exec("gnparser 'Gadus morhua Linnaeus, 1758' -f pretty");
 echo "\n<pre>$out</pre>\n";
+
+echo "<hr>";
+$yaml_string = "
+name: 'singular: null'
+plural: null
+fields:
+    price: 'label: Preis'
+    company_id:
+        label: null
+        placeholder: null
+";
+$array_output = yaml_parse($yaml_string);
+echo "\n<pre>\n";
+print_r($array_output);
+echo "\n</pre>\n";
 ?>
