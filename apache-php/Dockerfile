@@ -39,6 +39,12 @@ RUN apt install wget -y
 # install other modules in PHP
 RUN apt-get upgrade -y
 
+# Install required system dependencies for the YAML extension
+RUN apt-get update -y 
+RUN apt-get install libyaml-dev -y
+# Install the yaml PECL extension and enable it
+RUN pecl install yaml && docker-php-ext-enable yaml
+
 # =============================================================================
 ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
 RUN wget -O /tmp/downloaded.tar.gz ${ZIP_URL}

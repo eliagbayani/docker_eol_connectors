@@ -75,6 +75,9 @@ RUN apt install -y php8.2-zip
 # RUN apt-get install iputils-ping -y
 # RUN apt install -y php8.2-wget
 
+RUN apt install -y php8.2-yaml 
+# works OK
+
 # php8.2-pear - not located
 # php8.2-json - not located
 
