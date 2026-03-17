@@ -43,7 +43,8 @@ RUN apt-get upgrade -y
 RUN apt-get update -y 
 RUN apt-get install libyaml-dev -y
 # Install the yaml PECL extension and enable it
-RUN pecl install yaml && docker-php-ext-enable yaml
+#RUN pecl install yaml && docker-php-ext-enable yaml
+# -> above line had an error
 
 # =============================================================================
 ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
