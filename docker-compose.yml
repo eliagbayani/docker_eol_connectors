@@ -166,6 +166,7 @@ services:
       - NEO_URI=${MY_NEO4J_URI}
       - NEO_USERNAME=${MY_NEO4J_USERNAME}
       - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
+      - NEO_DATABASE=${MY_NEO4J_DATABASE}
 
   # network_mode: "bridge"
   # volumes:
