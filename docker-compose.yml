@@ -194,5 +194,4 @@ services:
   #     - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
   #   volumes:
   #     - ${PYTHON_APP}:/usr/src/app # Mount your application code
-      
   # ========================= END =========================
