@@ -1,4 +1,5 @@
 <?php
+echo "<hr>"; //=============================================================
 $host = 'db';                   //do not change. This is the Docker service name in docker-compose.yml.
 $user = 'root';                 //do not change
 $pass = 'mysql_root_password';  //use value from .env file {MYSQL_ROOT_PW}
@@ -15,11 +16,11 @@ if($mysqli = new mysqli($host, $user, $pass, $db)) {
     echo "<br>\n";
     $result->close(); //or $result->free();
 }
-echo "<hr>";
+echo "<hr>"; //=============================================================
 $out = shell_exec("gnparser 'Gadus morhua Linnaeus, 1758' -f pretty");
 echo "\n<pre>$out</pre>\n";
 
-echo "<hr>";
+echo "<hr>"; //=============================================================
 $yaml_string = "
 name: 'singular: null'
 plural: null
