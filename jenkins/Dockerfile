@@ -8,10 +8,10 @@
 # FROM jenkins/jenkins:2.525-jdk21
 # -> https://hub.docker.com/layers/jenkins/jenkins/2.525-jdk21/images/sha256-6959d893305279906614a2dfb46891f8cb6bddffe390f5c73704924dabd23912
 
-# FROM jenkins/jenkins:2.538-jdk21
+FROM jenkins/jenkins:2.538-jdk21
 # -> https://hub.docker.com/layers/jenkins/jenkins/2.538-jdk21/images/sha256-4ce8e89ff3e6c9392fa82b08de98f5b3965c0228f43b90b82cfc2813a1f91f3f
 
-FROM jenkins/jenkins:2.560-jdk21
+# FROM jenkins/jenkins:2.560-jdk21
 # https://hub.docker.com/layers/jenkins/jenkins/2.560-jdk21/images/sha256-b86cbf6e32bbdb55361b4289a8885e6b06547a95899904af4eb8ffb9c26fcad5
 
 # ---------------- start sol'n for permission error
