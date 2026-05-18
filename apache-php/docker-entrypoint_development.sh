@@ -25,10 +25,10 @@ echo "symlimk start... ${MY_ENV}"
 [ -d ${TARGET_PATH}/cp ]                && echo "Symlink already exists (cp)"               || ln -s /Volumes/AKiTiO4/web/cp/ cp
 [ -d ${TARGET_PATH}/effechecka ]        && echo "Symlink already exists (effechecka)"       || ln -s /Volumes/AKiTiO4/webroot/effechecka/ effechecka
 [ -d ${TARGET_PATH}/cp_new ]            && echo "Symlink already exists (cp_new)"           || ln -s /Volumes/AKiTiO4/web/cp_new/ cp_new
-[ -d ${TARGET_PATH}/ckan_api_results ]  && echo "Symlink already exists (ckan_api_results)" || ln -s /Volumes/OWC_Express/CKAN_info/api_results/ ckan_api_results
-[ -d ${TARGET_PATH}/wikimedia_cache ]   && echo "Symlink already exists (wikimedia_cache)"  || ln -s /Volumes/Thunderbolt4/wikimedia_cache/ wikimedia_cache
-[ -d ${TARGET_PATH}/Pensoft_annotator ]         && echo "Symlink already exists (Pensoft_annotator)"      || ln -s /Volumes/Crucial_4TB/Pensoft_annotator/ Pensoft_annotator
+[ -d ${TARGET_PATH}/ckan_api_results ]  && echo "Symlink already exists (ckan_api_results)" || ln -s /Volumes/AKiTiO4/CKAN_info/api_results/ ckan_api_results
+[ -d ${TARGET_PATH}/wikimedia_cache ]   && echo "Symlink already exists (wikimedia_cache)"  || ln -s /Volumes/AKiTiO4/wikimedia_cache/ wikimedia_cache
 [ -d ${TARGET_PATH}/Leaflet_Cluster_map ]       && echo "Symlink already exists (Leaflet_Cluster_map)"    || ln -s /Volumes/AKiTiO4/webroot/Leaflet_Cluster_map/ Leaflet_Cluster_map
+[ -d ${TARGET_PATH}/Pensoft_annotator ]         && echo "Symlink already exists (Pensoft_annotator)"      || ln -s /Volumes/Crucial_4TB/Pensoft_annotator/ Pensoft_annotator
 [ -d ${TARGET_PATH}/other_files2 ]              && echo "Symlink already exists (other_files2)"           || ln -s /Volumes/Crucial_2TB/other_files2/ other_files2
 [ -d ${TARGET_PATH}/cache_LiteratureEditor ]    && echo "Symlink already exists (cache_LiteratureEditor)" || ln -s /Volumes/Crucial_2TB/cache_LiteratureEditor/ cache_LiteratureEditor
 [ -d ${TARGET_PATH}/gnfinder ]                  && echo "Symlink already exists (gnfinder)"               || ln -s /Volumes/Crucial_4TB/gnfinder/ gnfinder
