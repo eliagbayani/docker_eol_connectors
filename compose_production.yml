@@ -1,0 +1,200 @@
+services:
+  # =================== MySQL service ===================
+  db:
+    # where we put environment variables. Put in .gitignore
+    env_file:
+      - ./.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
+      MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_USER_PW}
+    build:
+      context: ./mysql
+      args:
+        MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
+      dockerfile: Dockerfile
+    image: mysql:8.4.3-oraclelinux9
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW"]
+      # 'localhost' or 'db' works just the same
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+    ports:
+      - ${MYSQL_PORTS} # 4001:3306
+
+  # =================== Apache and PHP service ===================
+  web:
+    build:
+      context: ./apache-php
+      args:
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
+      dockerfile: Dockerfile
+    image: php:8.2-apache
+    # restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    # Below was working. I needed it if I want to restart Apache in terminal mode in Docker.
+    environment:
+      APACHE_RUN_DIR: /etc/apache2
+      APACHE_RUN_USER: www-data
+      APACHE_RUN_GROUP: www-data
+      APACHE_PID_FILE: /var/run/apache2/apache2.pid
+      APACHE_LOG_DIR: /var/log/apache2
+      TARGET_PATH: ${WEBROOT_PATH}
+      MY_ENV: ${MY_ENVIRONMENT}
+    volumes:
+      - ${WEBROOT_PATH}:/var/www/html
+      - ${APACHE_LOGS}:/var/log/apache2
+      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
+      - ${EXTRA_PATH}:/extra
+    command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
+    # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
+    ports:
+      - ${WEB_PORTS} # 81:80
+    links:
+      - db
+    # Sol'n so u can curl local webserver from host.
+    # Use 'host.docker.internal' instead of 'localhost' in PHP script.
+    # https://medium.com/@gladevise/accessing-the-hosts-localhost-from-inside-a-docker-container-c5935e275953
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  # =================== Neo4j service ===================
+  neo4j:
+    env_file: ./.env
+    build:
+      # args:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    image: neo4j:5.26.12-enterprise-ubi9
+    ports:
+      - ${PORT_7474}
+      - ${PORT_7687}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NEO4J_AUTH=neo4j/${MY_NEO4J_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      # - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+      - NEO4J_PLUGINS=["apoc"]
+      # - NEO4J_server.config.strict_validation.enabled=false
+
+      # for the Enterprise edition only
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+
+      # for python: neo4j-admin --- Cannot use "NEO4J_" as it is reserved.
+      - NEO_USERNAME=${MY_NEO4J_USERNAME}
+      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
+      - NEO_DATABASE=${MY_NEO4J_DATABASE}
+    volumes:
+      - ${PATH_NEO4J_DATA}:/data
+      - ${PATH_NEO4J_LOGS}:/logs
+      - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
+      - ${PATH_NEO4J_IMPORT2}:/var/lib/neo4j/import2
+      - ${PATH_NEO4J_PLUGINS}:/plugins
+      # for python
+      - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+    # --- below here is new:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1",
+        ]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+
+  # =================== Jenkins service ===================
+  jenkins:
+    env_file: ./.env
+    build:
+      args:
+        JENKINS_HOME_FROM_COMPOSE: ${JENKINS_HOME}
+        JENKINS_TMP_FROM_COMPOSE: ${JENKINS_TMP}
+        PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
+      context: ./jenkins
+      dockerfile: Dockerfile
+    image: jenkins/jenkins:2.538-jdk21
+    # restart: on-failure
+
+    # these 2 lines was added to run Docker commands from the host
+    # but did not work
+    # privileged: true # Required for Docker-in-Docker scenarios in Jenkins
+    # user: root # Run Jenkins as root for easier Docker access within Jenkins
+
+    volumes:
+      # - ${PWD}/jenkins_home:/var/jenkins_home
+      # -> works OK, but better implementation below
+
+      - ${JENKINS_HOME}:/var/jenkins_home:rw
+      # -> works OK; better implementation
+
+      # - ${WEBROOT_PATH}:/webroot
+      - ${WEBROOT_PATH}:/var/www/html
+
+      - ${JENKINS_TMP}:/jenkins_tmp
+      # - ${PWD}/jenkins_tmp:/jenkins_tmp     # -> works OK also
+
+      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
+      - ${EXTRA_PATH}:/extra
+
+      # for python
+      - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+      # Allow Jenkins to interact with Docker daemon
+      # but did not work
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    links:
+      - web
+      - db
+    ports:
+      - ${JENKINS_PORTS} # 8081:8080
+      - ${JENKINS_PORTS_COMMUNICATION} # 50000:50000 # Jenkins default port for communication
+
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+    environment:
+      - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
+
+      # for python:
+      - NEO_URI=${MY_NEO4J_URI}
+      - NEO_USERNAME=${MY_NEO4J_USERNAME}
+      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
+      - NEO_DATABASE=${MY_NEO4J_DATABASE}
+
+  # network_mode: "bridge"
+  # volumes:
+  #   jenkins_home:
+
+  # Solution: for sometimes --build get corrupted.
+  # sudo rm  ~/.docker/config.json
+  # Rerun restart
+
+  # =================== Python service ===================
+  # python:
+  #   env_file: ./.env
+  #   build:
+  #     context: ./python
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8009:8009" # 8000:8000 Example port for a web application
+  #   depends_on:
+  #     neo4j:
+  #       condition: service_healthy # Ensure Neo4j is ready before starting the app
+  #   environment:
+  #     - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
+  #     - NEO4J_USERNAME=neo4j
+  #     - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
+  #   volumes:
+  #     - ${PYTHON_APP}:/usr/src/app # Mount your application code
+  # ========================= END =========================
