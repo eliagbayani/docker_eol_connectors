@@ -18,7 +18,7 @@ services:
     image: mysql:8.4.3-oraclelinux9
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW" ]
+      test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW"]
       # 'localhost' or 'db' works just the same
       interval: 5s
       timeout: 5s
@@ -60,7 +60,7 @@ services:
       - ${WEB_PORTS} # 81:80
     links:
       - db
-    # Sol'n so u can curl local webserver from host. 
+    # Sol'n so u can curl local webserver from host.
     # Use 'host.docker.internal' instead of 'localhost' in PHP script.
     # https://medium.com/@gladevise/accessing-the-hosts-localhost-from-inside-a-docker-container-c5935e275953
     extra_hosts:
@@ -102,9 +102,13 @@ services:
       - ${PATH_NEO4J_PLUGINS}:/plugins
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
-    # --- below here is new: 
+    # --- below here is new:
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1",
+        ]
       interval: 5s
       timeout: 30s
       retries: 5
@@ -172,10 +176,9 @@ services:
   # volumes:
   #   jenkins_home:
 
-
   # Solution: for sometimes --build get corrupted.
-  # sudo rm  ~/.docker/config.json 
-  # Rerun restart 
+  # sudo rm  ~/.docker/config.json
+  # Rerun restart
 
   # =================== Python service ===================
   # python:
