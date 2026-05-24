@@ -10,3 +10,5 @@ neo4j/docker-compose.override.yml
 apache-php/src/gnparser
 jenkins/src/gnparser
 neo4j_standalone/docker-compose.override.yml
+.env.development
+.env.production
