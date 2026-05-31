@@ -70,7 +70,7 @@ A docker-compose file with four services:
    - option 2: `docker exec -it -u john {container id} bash`
      -> login as user john
    - option 3: `docker exec -it {container id} bash`
-     -> login as root
+     -> login as root, opens bash
 
 10. To test your Neo4j database server, go to browser open: http://localhost:7474/browser/
 
