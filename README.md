@@ -12,7 +12,7 @@ A docker-compose file with four services:
 ## Steps
 
 1. Download the zip file, unzip, open the folder.
-2. Rename the file `.env_sample` to `.env` and enter your information.
+2. Rename the file `.env.sample` to `.env` and enter your information.
    - For Mac, to see the hidden files press `cmd+shift+period`.
    - Make sure that MYSQL_DATA_DIR folder is empty, so that the required database/tables will be created.
 3. From terminal, within the folder where `docker-compose.yml` is located run: `$ docker-compose up`
@@ -24,11 +24,9 @@ A docker-compose file with four services:
    - Go to browser: http://localhost:81/test_development.php
      - You should see a list of four names.
 5. To test Jenkins:
-
    1. Go to browser, open Jenkins: http://localhost:8081
    2. Follow instructions to initialize your Jenkins.
    3. To test PHP + MySQL + Jenkins
-
       1. From **Dashboard**, create a **New Item**
       2. Choose **Freestyle project**
       3. Under **Build Steps**, choose **Execute shell**
@@ -53,14 +51,12 @@ A docker-compose file with four services:
    - To test a command without changing your application stack state.: `$ docker compose --dry-run up --build -d`
 
    To re-create stuff:
-
    - Recreate containers even if their configuration and image haven't changed: `docker-compose up --build --force-recreate`
    - For specific service: `docker-compose up {service name} --build --force-recreate`
    - Do not use cache when building the image: `docker-compose build --no-cache`
    - Builds the images if they don’t exist, starts the containers in detached mode, forces recreation of the containers, and rebuilds the images even if they exist.: `docker-compose up -d --force-recreate --build`
 
 8. Other commands:
-
    - To stop a service from compose: `docker stop {container id of that service}`
    - To restart a service from compose: `docker-compose restart {service name}`
 
@@ -69,7 +65,6 @@ A docker-compose file with four services:
    - To see all running containers: `docker ps`
 
 9. Login to a container:
-
    - option 1: `docker start -i {container id}`
      -> by default logins as root
    - option 2: `docker exec -it -u john {container id} bash`
@@ -80,7 +75,6 @@ A docker-compose file with four services:
 10. To test your Neo4j database server, go to browser open: http://localhost:7474/browser/
 
 11. To test Neo4j + Python + Python driver for Neo4j:
-
     1. Copy these 4 files from: https://github.com/eliagbayani/eol_python_code
        ```sh
        neo4j_credentials.py
