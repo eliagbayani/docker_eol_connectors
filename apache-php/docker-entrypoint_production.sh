@@ -25,7 +25,7 @@ echo "symlimk start... ${MY_ENV}"
 [ -d ${TARGET_PATH}/other_files ]               && echo "Symlink already exists (other_files)"          || ln -s /extra/other_files/ other_files
 [ -d ${TARGET_PATH}/map_data2 ]                 && echo "Symlink already exists (map_data2)"            || ln -s /extra/map_data_dwca/ map_data2
 [ -d ${TARGET_PATH}/wikimedia_cache ]           && echo "Symlink already exists (wikimedia_cache)"      || ln -s /extra/wikimedia_cache/ wikimedia_cache
-[ -d ${TARGET_PATH}/opendata ]                  && echo "Symlink already exists (opendata)"             || ln -s /var/www/html/eol_php_code/applications/opendata/ opendata
+[ -d ${TARGET_PATH}/opendata ]                  && echo "Symlink already exists (opendata)"             || ln -s /var/www/html/eol_php8_code/applications/opendata/ opendata
 [ -d ${TARGET_PATH}/gnfinder ]                  && echo "Symlink already exists (gnfinder)"             || ln -s /extra/gnfinder/ gnfinder
 echo "symlimk end... ${MY_ENV}"
 

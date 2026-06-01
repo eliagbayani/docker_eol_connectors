@@ -14,7 +14,7 @@ cp /tmp/info.php ${TARGET_PATH}
 # ========== Here add all symlinks needed
 # cd ${TARGET_PATH} #not needed
 echo "symlimk start... ${MY_ENV}"
-[ -d ${TARGET_PATH}/opendata ]          && echo "Symlink already exists (opendata)"         || ln -s /opt/homebrew/var/www/eol_php_code/applications/opendata/ opendata 
+[ -d ${TARGET_PATH}/opendata ]          && echo "Symlink already exists (opendata)"         || ln -s /var/www/html/eol_php8_code/applications/opendata/ opendata 
 [ -d ${TARGET_PATH}/eoearth_images ]    && echo "Symlink already exists (eoearth_images)"   || ln -s /Volumes/AKiTiO4/web/eoearth_images/ eoearth_images
 [ -d ${TARGET_PATH}/eoearth ]           && echo "Symlink already exists (eoearth)"          || ln -s /Volumes/AKiTiO4/webroot/eoearth/ eoearth
 [ -d ${TARGET_PATH}/maps_test ]         && echo "Symlink already exists (maps_test)"        || ln -s /Volumes/AKiTiO4/webroot/maps_test/ maps_test
