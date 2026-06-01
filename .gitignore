@@ -12,3 +12,5 @@ jenkins/src/gnparser
 neo4j_standalone/docker-compose.override.yml
 .env.development
 .env.production
+.env.production z
+.env.development z
