@@ -3,11 +3,10 @@
 For machines that will host the EOL connectors.
 A docker-compose file with four services:
 
-1. Apache/2.4.62 + PHP 8.2.26
-2. MySQL 8.4.3
-3. Jenkins 2.538-jdk21
-4. Neo4j 5.26.8-enterprise
-5. Python 3.11.2
+1. jenkins: (Jenkins 2.538-jdk21, PHP 8.2.26, Python 3.11.2)
+2. web: (Apache/2.4.62 + PHP 8.2.26)
+3. db: (MySQL 8.4.3)
+4. neo4j: (Neo4j 5.26.8-enterprise - for TraitBank 1.0)
 
 ## Steps
 
