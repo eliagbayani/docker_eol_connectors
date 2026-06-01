@@ -1,7 +1,6 @@
 services:
   # =================== MySQL service ===================
   db:
-    # where we put environment variables. Put in .gitignore
     env_file:
       - ./.env
     environment:
