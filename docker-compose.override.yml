@@ -4,12 +4,12 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s, for development only
+      # - ${VOLUMES_LOCAL}:/Volumes #for development only
+      - /Volumes:/Volumes #for development only
   # =================== Jenkins service ===================
   jenkins:
     env_file: ./.env
     volumes:
-      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s, for development only
+      # - ${VOLUMES_LOCAL}:/Volumes #for development only
+      - /Volumes:/Volumes #for development only
 
-# volumes:
-#   ${VOLUMES_LOCAL}:
