@@ -10,8 +10,10 @@ COPY 000-default.conf  /etc/apache2/sites-available/
 
 # these 2 php files will be used in docker-entrypoint.sh
 ARG ENVIRONMENT_FROM_COMPOSE
-COPY /src/test_${ENVIRONMENT_FROM_COMPOSE}.php /tmp/test_${ENVIRONMENT_FROM_COMPOSE}.php    
-COPY /src/info.php /tmp/info.php    
+# Below works OK. But we don't have test_development.php nor test_production.php anymore. Only test.php.
+# COPY /src/test_${ENVIRONMENT_FROM_COMPOSE}.php /tmp/test_${ENVIRONMENT_FROM_COMPOSE}.php
+COPY /src/test.php /tmp/test.php
+COPY /src/info.php /tmp/info.php
 
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
