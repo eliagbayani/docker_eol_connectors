@@ -51,7 +51,7 @@ services:
     volumes:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
-      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
+      # - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
       - ${EXTRA_PATH}:/extra
     command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
@@ -143,7 +143,7 @@ services:
       - ${JENKINS_TMP}:/jenkins_tmp
       # - ${PWD}/jenkins_tmp:/jenkins_tmp     # -> works OK also
 
-      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
+      # - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
       - ${EXTRA_PATH}:/extra
 
       # for python

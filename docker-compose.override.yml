@@ -1,0 +1,15 @@
+services:
+  # =================== Apache and PHP service ===================
+  web:
+    env_file:
+      - ./.env
+    volumes:
+      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s, for development only
+  # =================== Jenkins service ===================
+  jenkins:
+    env_file: ./.env
+    volumes:
+      - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s, for development only
+
+# volumes:
+#   ${VOLUMES_LOCAL}:
