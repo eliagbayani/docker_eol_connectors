@@ -40,7 +40,7 @@ A docker-compose file with four services:
       5. Then run **Build Now**
       6. This should output the same information as: http://localhost:81/test.php
 
-6. To test MySQL from the host. Use these credentials:
+6. To test MySQL from the host machine. Use these credentials:
    ```sh
    Host = localhost
    Port = 4001
