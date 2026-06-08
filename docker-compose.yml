@@ -15,7 +15,7 @@ services:
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     # image: eagbayani/db-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${DB_IMAGE}:${DB_TAG}
+    image: ${REGISTRY}/${REGISTRY_DB_IMAGE}:${REGISTRY_DB_TAG}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW"]
@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${WEB_IMAGE}:${WEB_TAG}
+    image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG}
     # restart: always
     depends_on:
       db:
@@ -126,7 +126,7 @@ services:
       dockerfile: Dockerfile
     # image: jenkins/jenkins:2.538-jdk21
     # image: eagbayani/jenkins-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${JENKINS_IMAGE}:${JENKINS_TAG}
+    image: ${REGISTRY}/${REGISTRY_JENKINS_IMAGE}:${REGISTRY_JENKINS_TAG}
     # restart: on-failure
 
     # these 2 lines was added to run Docker commands from the host
