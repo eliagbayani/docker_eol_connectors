@@ -14,7 +14,8 @@ services:
         MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
-    image: mysql:8.4.3-oraclelinux9
+    # image: eagbayani/db-service:1.0
+    image: ${REGISTRY}/${DB_IMAGE}:${DB_TAG}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PW"]
@@ -34,7 +35,9 @@ services:
       args:
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
-    image: php:8.2-apache
+    # image: php:8.2-apache
+    # image: eagbayani/web-service:1.0
+    image: ${REGISTRY}/${WEB_IMAGE}:${WEB_TAG}
     # restart: always
     depends_on:
       db:
@@ -122,7 +125,9 @@ services:
         PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
       dockerfile: Dockerfile
-    image: jenkins/jenkins:2.538-jdk21
+    # image: jenkins/jenkins:2.538-jdk21
+    # image: eagbayani/jenkins-service:1.0
+    image: ${REGISTRY}/${JENKINS_IMAGE}:${JENKINS_TAG}
     # restart: on-failure
 
     # these 2 lines was added to run Docker commands from the host
