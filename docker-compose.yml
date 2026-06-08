@@ -4,10 +4,16 @@ services:
     env_file:
       - ./.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
+      # MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
+      # MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
+      # MYSQL_USER: ${MYSQL_USER}
+      # MYSQL_PASSWORD: ${MYSQL_USER_PW}
+
+      MYSQL_ROOT_PW: ${MYSQL_ROOT_PW}
       MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
       MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_USER_PW}
+      MYSQL_USER_PW: ${MYSQL_USER_PW}
+
     build:
       context: ./mysql
       args:
@@ -80,7 +86,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - NEO4J_AUTH=neo4j/${MY_NEO4J_PASSWORD}
+      - NEO4J_AUTH=neo4j/${NEO_PASSWORD}
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
       - NEO4J_apoc_import_file_use__neo4j__config=true
@@ -92,9 +98,9 @@ services:
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
 
       # for python: neo4j-admin --- Cannot use "NEO4J_" as it is reserved.
-      - NEO_USERNAME=${MY_NEO4J_USERNAME}
-      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
-      - NEO_DATABASE=${MY_NEO4J_DATABASE}
+      - NEO_USERNAME=${NEO_USERNAME}
+      - NEO_PASSWORD=${NEO_PASSWORD}
+      - NEO_DATABASE=${NEO_DATABASE}
     volumes:
       - ${PATH_NEO4J_DATA}:/data
       - ${PATH_NEO4J_LOGS}:/logs
@@ -170,10 +176,10 @@ services:
       - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
 
       # for python:
-      - NEO_URI=${MY_NEO4J_URI}
-      - NEO_USERNAME=${MY_NEO4J_USERNAME}
-      - NEO_PASSWORD=${MY_NEO4J_PASSWORD}
-      - NEO_DATABASE=${MY_NEO4J_DATABASE}
+      - NEO_URI=${NEO_URI}
+      - NEO_USERNAME=${NEO_USERNAME}
+      - NEO_PASSWORD=${NEO_PASSWORD}
+      - NEO_DATABASE=${NEO_DATABASE}
 
   # network_mode: "bridge"
   # volumes:
@@ -197,7 +203,7 @@ services:
   #   environment:
   #     - NEO4J_URI=bolt://neo4j:7687 # 7687 Connect to Neo4j service by its name
   #     - NEO4J_USERNAME=neo4j
-  #     - NEO4J_PASSWORD=${MY_NEO4J_PASSWORD} # Replace with the same strong password
+  #     - NEO4J_PASSWORD=${NEO_PASSWORD} # Replace with the same strong password
   #   volumes:
   #     - ${PYTHON_APP}:/usr/src/app # Mount your application code
   # ========================= END =========================
