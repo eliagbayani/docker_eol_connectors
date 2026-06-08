@@ -14,7 +14,7 @@ services:
         MRP_FROM_COMPOSE: ${MYSQL_ROOT_PW}
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
-    # image: eagbayani/db-service:1.0
+    # image: eagbayani/db-service:1.0 #for Docker Hub
     image: ${REGISTRY}/${DB_IMAGE}:${DB_TAG}
     restart: unless-stopped
     healthcheck:
@@ -36,7 +36,7 @@ services:
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     # image: php:8.2-apache
-    # image: eagbayani/web-service:1.0
+    # image: eagbayani/web-service:1.0 #for Docker Hub
     image: ${REGISTRY}/${WEB_IMAGE}:${WEB_TAG}
     # restart: always
     depends_on:
@@ -70,10 +70,9 @@ services:
   # =================== Neo4j service ===================
   neo4j:
     env_file: ./.env
-    build:
-      # args:
-      context: ./neo4j
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./neo4j
+    #   dockerfile: Dockerfile
     image: neo4j:5.26.12-enterprise-ubi9
     ports:
       - ${PORT_7474}
@@ -126,7 +125,7 @@ services:
       context: ./jenkins
       dockerfile: Dockerfile
     # image: jenkins/jenkins:2.538-jdk21
-    # image: eagbayani/jenkins-service:1.0
+    # image: eagbayani/jenkins-service:1.0 #for Docker Hub
     image: ${REGISTRY}/${JENKINS_IMAGE}:${JENKINS_TAG}
     # restart: on-failure
 
