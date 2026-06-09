@@ -1,10 +1,16 @@
 <?php
-echo "<hr>"; //=============================================================
 $host = 'db';                   //DO NOT change. This is the Docker service name in docker-compose.yml.
+$port = 4001;
+
+$host = 'host.docker.internal'; //DO NOT change. To be used in K8s cluster setup.
+$port = 30306;
+
 $user = 'root';                 //DO NOT change
 $pass = 'mysql_root_password';  //CHANGE THIS. Use value from .env file {MYSQL_ROOT_PASSWORD}
+
 $db = 'eol_xxx';                //CHANGE THIS. Replace xxx with either 'development' or 'production'. Without the quotes.
-if($mysqli = new mysqli($host, $user, $pass, $db)) {
+
+if($mysqli = new mysqli($host, $user, $pass, $db, $port)) {
     echo "\nEmployees database connected. OK\n";
     $result = $mysqli->query("SELECT * FROM employees_tbl;"); 
     echo "<br>Rows: " . mysqli_num_rows($result); //same effect
