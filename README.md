@@ -18,7 +18,7 @@ A docker-compose file with four services:
    - For development: `$ docker-compose up`
    - For production: `$ docker-compose -f docker-compose.yml up`
 4. To test Apache + PHP + MySQL:
-   - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PW** you entered in your `.env` file.
+   - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PASSWORD** you entered in your `.env` file.
      ```sh
      $pass = 'mysql_root_password';
      ```
@@ -45,7 +45,7 @@ A docker-compose file with four services:
    Host = localhost
    Port = 4001
    User Name = root
-   Password = {MYSQL_ROOT_PW}
+   Password = {MYSQL_ROOT_PASSWORD}
    ```
 7. - To remove containers run: `$ docker-compose down`
    - To stop containers run: `$ docker-compose stop`

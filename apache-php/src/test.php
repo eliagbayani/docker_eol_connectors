@@ -2,7 +2,7 @@
 echo "<hr>"; //=============================================================
 $host = 'db';                   //DO NOT change. This is the Docker service name in docker-compose.yml.
 $user = 'root';                 //DO NOT change
-$pass = 'mysql_root_password';  //CHANGE THIS. Use value from .env file {MYSQL_ROOT_PW}
+$pass = 'mysql_root_password';  //CHANGE THIS. Use value from .env file {MYSQL_ROOT_PASSWORD}
 $db = 'eol_xxx';                //CHANGE THIS. Replace xxx with either 'development' or 'production'. Without the quotes.
 if($mysqli = new mysqli($host, $user, $pass, $db)) {
     echo "\nEmployees database connected. OK\n";
