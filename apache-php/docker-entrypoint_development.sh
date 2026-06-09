@@ -10,8 +10,8 @@ ls -lt
 # ========== Here copy test_{environment}.php, does not overwrite. Also copies info.php, it overwrites.
 # Below works OK. But now commented since we don't have test_development.php or test_production.php anymore. We only have test.php.
 # [ -f ${TARGET_PATH}/test_${MY_ENV}.php ]    && echo "File already exists (test_"${MY_ENV}".php)"    || cp /tmp/test_${MY_ENV}.php ${TARGET_PATH}
-[ -f ${TARGET_PATH}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${TARGET_PATH}
-cp /tmp/info.php ${TARGET_PATH}
+[ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
+cp /tmp/info.php ${PWD}
 
 # ========== Here add all symlinks needed
 # cd ${TARGET_PATH} #not needed
