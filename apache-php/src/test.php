@@ -1,9 +1,13 @@
 <?php
+/* This is to be used with plain Docker implementation:
 $host = 'db';                   //DO NOT change. This is the Docker service name in docker-compose.yml.
 $port = 4001;
+*/
 
+/* This is to be used for Kubernetes implementation:
 $host = 'host.docker.internal'; //DO NOT change. To be used in K8s cluster setup.
 $port = 30306;
+*/
 
 $user = 'root';                 //DO NOT change
 $pass = 'mysql_root_password';  //CHANGE THIS. Use value from .env file {MYSQL_ROOT_PASSWORD}
