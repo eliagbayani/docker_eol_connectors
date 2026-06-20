@@ -20,8 +20,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 --  Table structure for `employees_tbl`
 -- ----------------------------
-DROP TABLE IF EXISTS `employees_tbl`;
-CREATE TABLE `employees_tbl` (
+CREATE TABLE IF NOT EXISTS `employees_tbl` (
   `emp_id` int NOT NULL AUTO_INCREMENT,
   `first_name` varchar(255) NOT NULL,
   `last_name` varchar(255) NOT NULL,
@@ -29,3 +28,4 @@ CREATE TABLE `employees_tbl` (
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
