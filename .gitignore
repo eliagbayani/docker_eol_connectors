@@ -16,3 +16,5 @@ neo4j_standalone/docker-compose.override.yml
 .env.development z
 readmeli.txt
 readmeli_main.txt
+mysql/x eol_development.sql
+mysql/x eol_production.sql
