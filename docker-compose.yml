@@ -55,8 +55,8 @@ services:
       APACHE_RUN_GROUP: www-data
       APACHE_PID_FILE: /var/run/apache2/apache2.pid
       APACHE_LOG_DIR: /var/log/apache2
-      TARGET_PATH: ${WEBROOT_PATH}
-      MY_ENV: ${MY_ENVIRONMENT}
+      TARGET_PATH: ${WEBROOT_PATH} #used only in entrypoint sh
+      MY_ENV: ${MY_ENVIRONMENT} #used only in entrypoint sh
     volumes:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
