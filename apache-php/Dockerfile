@@ -15,7 +15,13 @@ ARG ENVIRONMENT_FROM_COMPOSE
 COPY /src/test.php /tmp/test.php
 COPY /src/info.php /tmp/info.php
 
+# ----- this is original
 COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
+# ----- this is for K8s
+###COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# ADD THIS LINE TO FIX THE PERMISSION:
+###RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 
 # Is needed for other MySQL version.
 # COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
