@@ -1,0 +1,26 @@
+# Exclude git tracking data (highly recommended)
+.git
+.gitignore
+
+# Exclude local environment files containing secrets
+.env
+.env.local
+
+# Exclude heavy local dependencies (Composer/Node installs them inside Docker instead)
+vendor/
+node_modules/
+
+# Exclude Docker setup files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Exclude IDE/Editor files and OS junk
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Exclude PHP test caches or logs
+.phpunit.result.cache
+logs/
