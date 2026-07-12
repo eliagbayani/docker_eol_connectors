@@ -14,13 +14,15 @@ ARG ENVIRONMENT_FROM_COMPOSE
 # COPY /src/test_${ENVIRONMENT_FROM_COMPOSE}.php /tmp/test_${ENVIRONMENT_FROM_COMPOSE}.php
 COPY /src/test.php /tmp/test.php
 COPY /src/info.php /tmp/info.php
+COPY /src/list.php /tmp/list.php
 
-# ----- this is original
-COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
-# ----- this is for K8s
-###COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+### ----- this is original
+# COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
+### ----- this is for K8s
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # ADD THIS LINE TO FIX THE PERMISSION:
-###RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 
 # Is needed for other MySQL version.
@@ -65,11 +67,11 @@ RUN rm /tmp/downloaded.tar.gz
 RUN cp /tmp/gnparser /bin/gnparser
 RUN rm /tmp/gnparser
 # =============================================================================
-
+# Step 1: Set the working directory inside the container
+WORKDIR /var/www/html
+# Step 2: Copy your PHP source files into the container's working directory
+COPY ./src /var/www/html
+# Step 3: Secure your files by setting the correct web server permissions
+RUN chown -R www-data:www-data /var/www/html
+# =============================================================================
 EXPOSE 81
-
-# restart apache
-# Usage: apache2 {start|stop|graceful-stop|restart|reload|force-reload}
-# RUN /etc/init.d/apache2 reload 
-# CMD [ "/etc/init.d/apache2", "start" ]
-# ENTRYPOINT [ "/etc/init.d/apache2", "start" ]
