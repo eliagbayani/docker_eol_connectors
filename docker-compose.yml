@@ -65,11 +65,11 @@ services:
     # command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
 
-    # this is the orig
-    command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT}.sh
+    ### this is the orig
+    # command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT}.sh
 
-    # this is for K8s
-    ### command: /usr/local/bin/docker-entrypoint.sh
+    ### this is for K8s
+    command: /usr/local/bin/docker-entrypoint.sh
 
     ports:
       - ${WEB_PORTS} # 81:80
