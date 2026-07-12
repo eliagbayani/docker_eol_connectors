@@ -7,7 +7,7 @@
 .env.local
 
 # Exclude heavy local dependencies (Composer/Node installs them inside Docker instead)
-vendor/
+#vendor/
 node_modules/
 
 # Exclude Docker setup files themselves

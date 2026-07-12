@@ -18,11 +18,10 @@ COPY /src/list.php /tmp/list.php
 
 
 ### ----- this is original
-# COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
+COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
 ### ----- this is for K8s
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# ADD THIS LINE TO FIX THE PERMISSION:
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# RUN chmod +x /usr/local/bin/docker-entrypoint.sh #to fix permissions
 
 
 # Is needed for other MySQL version.
