@@ -43,7 +43,7 @@ services:
       dockerfile: Dockerfile
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG}
+    # image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG} #works OK
     # restart: always
     depends_on:
       db:
