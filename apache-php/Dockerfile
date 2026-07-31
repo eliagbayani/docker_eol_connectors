@@ -50,12 +50,13 @@ RUN apt install wget -y
 # install other modules in PHP
 RUN apt-get upgrade -y
 
-# Install required system dependencies for the YAML extension
-RUN apt-get update -y 
-RUN apt-get install libyaml-dev -y
-# Install the yaml PECL extension and enable it
-#RUN pecl install yaml && docker-php-ext-enable yaml
-# -> above line had an error
+# Install PHP YAML extension (yaml_parse, yaml_emit, etc.)
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends libyaml-dev $PHPIZE_DEPS \
+    && pecl install yaml-2.2.4 \
+    && docker-php-ext-enable yaml \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS \
+    && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
