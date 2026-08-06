@@ -36,36 +36,45 @@ COPY php.ini.txt /usr/local/etc/php/php.ini
 # WORKDIR /var/www/html
 
 # Update other OS stuff
-RUN apt update
-RUN apt upgrade -y
-RUN apt install -y vim
-# -y is always confirmation to proceed
-
-# install zip packages, curl, etc:
-RUN apt install zip unzip
-RUN apt-get install curl
-RUN apt-get install iputils-ping -y
-RUN apt install wget -y
-
-# install other modules in PHP
-RUN apt-get upgrade -y
-
-# Install PHP YAML extension (yaml_parse, yaml_emit, etc.)
-RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends libyaml-dev $PHPIZE_DEPS \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        wget \
+        zip \
+        unzip \
+        file \
+        iputils-ping \
+        vim \
+        libyaml-dev \
+        $PHPIZE_DEPS \
     && pecl install yaml-2.2.4 \
     && docker-php-ext-enable yaml \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
+
 # =============================================================================
-ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
-RUN wget -O /tmp/downloaded.tar.gz ${ZIP_URL}
-RUN chmod 775 /tmp/downloaded.tar.gz
-RUN tar -xvzf /tmp/downloaded.tar.gz -C /tmp
-RUN rm /tmp/downloaded.tar.gz
-RUN cp /tmp/gnparser /bin/gnparser
-RUN rm /tmp/gnparser
+# gnparser — arch follows image platform (amd64 → linux-x86, arm64 → linux-arm)
+# Override: --build-arg GNPARSER_URL=... or set GNPARSER_URL in .env for Compose
+ARG GNPARSER_VERSION=1.15.0
+ARG TARGETARCH
+ARG GNPARSER_URL=
+RUN set -eux; \
+    if [ -n "${GNPARSER_URL}" ]; then \
+      URL="${GNPARSER_URL}"; \
+    else \
+      case "${TARGETARCH}" in \
+        amd64) GNPARSER_ARCH=x86 ;; \
+        arm64) GNPARSER_ARCH=arm ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac; \
+      URL="https://github.com/gnames/gnparser/releases/download/v${GNPARSER_VERSION}/gnparser-v${GNPARSER_VERSION}-linux-${GNPARSER_ARCH}.tar.gz"; \
+    fi; \
+    wget -qO /tmp/gnparser.tar.gz "${URL}"; \
+    tar -xzf /tmp/gnparser.tar.gz -C /tmp; \
+    mv /tmp/gnparser /usr/local/bin/gnparser; \
+    chmod 755 /usr/local/bin/gnparser; \
+    rm -f /tmp/gnparser.tar.gz
 # =============================================================================
 # Step 1: Set the working directory inside the container
 WORKDIR /var/www/html

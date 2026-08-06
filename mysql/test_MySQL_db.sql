@@ -27,5 +27,12 @@ CREATE TABLE IF NOT EXISTS `employees_tbl` (
   PRIMARY KEY (`emp_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- ----------------------------
+--  Records of `employees_tbl`
+-- ----------------------------
+BEGIN;
+INSERT INTO `employees_tbl` VALUES ('Jen', 'Hammock', '1'), ('Katja', 'Schulz', '2'), ('Jeremy', 'Rice', '3'), ('Eli', 'Agbayani', '4');
+COMMIT;
+
 SET FOREIGN_KEY_CHECKS = 1;
 

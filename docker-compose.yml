@@ -10,7 +10,7 @@ services:
       # MYSQL_PASSWORD: ${MYSQL_USER_PW}
 
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
+      MYSQL_DATABASE: eol_traitbank_${MY_ENVIRONMENT}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_USER_PW: ${MYSQL_USER_PW}
 
@@ -21,7 +21,7 @@ services:
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     # image: eagbayani/db-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${REGISTRY_DB_IMAGE}:${REGISTRY_DB_TAG}
+    # image: ${REGISTRY}/${REGISTRY_DB_IMAGE}:${REGISTRY_DB_TAG}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mysql -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
@@ -39,12 +39,14 @@ services:
     build:
       context: ./apache-php
       args:
+        GNPARSER_VERSION: ${GNPARSER_VERSION:-1.15.0}
+        GNPARSER_URL: ${GNPARSER_URL:-}
         ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
       dockerfile: Dockerfile
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
     # image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG} #works OK
-    # restart: always
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -82,10 +84,10 @@ services:
   # =================== Neo4j service ===================
   neo4j:
     env_file: ./.env
-    # build:
-    #   context: ./neo4j
-    #   dockerfile: Dockerfile
-    image: neo4j:5.26.12-enterprise-ubi9
+    build:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    # image: neo4j:5.26.12-enterprise-ubi9
     ports:
       - ${PORT_7474}
       - ${PORT_7687}
@@ -138,7 +140,7 @@ services:
       dockerfile: Dockerfile
     # image: jenkins/jenkins:2.538-jdk21
     # image: eagbayani/jenkins-service:1.0 #for Docker Hub
-    image: ${REGISTRY}/${REGISTRY_JENKINS_IMAGE}:${REGISTRY_JENKINS_TAG}
+    # image: ${REGISTRY}/${REGISTRY_JENKINS_IMAGE}:${REGISTRY_JENKINS_TAG}
     # restart: on-failure
 
     # these 2 lines was added to run Docker commands from the host
