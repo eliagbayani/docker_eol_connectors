@@ -42,7 +42,6 @@ RUN apt-get update \
         wget \
         zip \
         unzip \
-        file \
         iputils-ping \
         vim \
         libyaml-dev \
@@ -50,6 +49,10 @@ RUN apt-get update \
     && pecl install yaml-2.2.4 \
     && docker-php-ext-enable yaml \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends file \
     && rm -rf /var/lib/apt/lists/*
 
 
