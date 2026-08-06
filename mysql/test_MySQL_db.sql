@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `employees_tbl` (
 --  Records of `employees_tbl`
 -- ----------------------------
 BEGIN;
-INSERT INTO `employees_tbl` VALUES ('Jen', 'Hammock', '1'), ('Katja', 'Schulz', '2'), ('Jeremy', 'Rice', '3'), ('Eli', 'Agbayani', '4');
+INSERT INTO `employees_tbl` VALUES (1, 'Jen', 'Hammock'), (2, 'Katja', 'Schulz'), (3, 'Jeremy', 'Rice'), (4, 'Eli', 'Agbayani');
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
