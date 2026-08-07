@@ -12,7 +12,7 @@
 
 The stack **will run on RHEL 9** if you:
 
-1. Use **Linux paths** (not `/Volumes/...`)
+1. Use **Linux paths** (e.g. `/opt/eol/...` OR `/svr/eol/...`)
 2. Set **`MY_ENVIRONMENT=production`**
 3. Use **`.env.production.sample`** as the basis for server `.env`
 4. Populate **`/opt/eol/extra`** subdirs expected by `docker-entrypoint_production.sh`
