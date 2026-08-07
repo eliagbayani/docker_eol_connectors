@@ -10,22 +10,11 @@ COPY 000-default.conf  /etc/apache2/sites-available/
 
 # these 2 php files will be used in docker-entrypoint.sh
 ARG ENVIRONMENT_FROM_COMPOSE
-# Below works OK. But we don't have test_development.php nor test_production.php anymore. Only test.php.
-# COPY /src/test_${ENVIRONMENT_FROM_COMPOSE}.php /tmp/test_${ENVIRONMENT_FROM_COMPOSE}.php
 COPY /src/test.php /tmp/test.php
 COPY /src/info.php /tmp/info.php
 COPY /src/list.php /tmp/list.php
 
-
-### ----- this is original
 COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
-### ----- this is for K8s
-# COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# RUN chmod +x /usr/local/bin/docker-entrypoint.sh #to fix permissions
-
-
-# Is needed for other MySQL version.
-# COPY docker-php-ext-mysqli.ini /usr/local/etc/php/conf.d/docker-php-ext-mysqli.ini
 
 # This one works OK but we need to enter our own values to php.ini so we used the one below this.
 ### RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
