@@ -3,8 +3,7 @@ FROM php:8.2-apache
 # very important line
 RUN docker-php-ext-install mysqli
 
-# works ok!
-# We need these 2 files bec. we moved the default DocumentRoot to /html instead of default /var/www/html
+# We need these 2 files bec. we might have entered specific values to apache2.conf and 000-default.conf
 COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/
 
@@ -22,8 +21,7 @@ COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entr
 # We need to do this bec. we needed to update php.ini with our own values e.g. upload_max_filesize
 COPY php.ini.txt /usr/local/etc/php/php.ini
 
-# WORKDIR /var/www/html
-
+# =============================================================================
 # Update other OS stuff
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -43,7 +41,6 @@ RUN apt-get update \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends file \
     && rm -rf /var/lib/apt/lists/*
-
 
 # =============================================================================
 # gnparser — arch follows image platform (amd64 → linux-x86, arm64 → linux-arm)

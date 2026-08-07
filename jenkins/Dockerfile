@@ -1,7 +1,5 @@
 # FROM jenkins/jenkins:2.414.3-jdk17
 # FROM jenkins/jenkins:2.462.3-jdk11
-# -> worked OK but Java 11 is no longer supported. Java 11 end of life in Jenkins.
-
 # FROM jenkins/jenkins:jdk17 #used for the longest time
 # -> https://hub.docker.com/layers/jenkins/jenkins/jdk17/images/sha256-3f445a481e471c4342c08d3545c0350283060ad9d41be779941a6bf850075222
 
@@ -14,15 +12,7 @@ FROM jenkins/jenkins:2.538-jdk21
 # FROM jenkins/jenkins:2.560-jdk21
 # https://hub.docker.com/layers/jenkins/jenkins/2.560-jdk21/images/sha256-b86cbf6e32bbdb55361b4289a8885e6b06547a95899904af4eb8ffb9c26fcad5
 
-# ---------------- start sol'n for permission error
-# ARG JENKINS_HOME_FROM_COMPOSE
-# USER root
-# RUN mkdir ${JENKINS_HOME_FROM_COMPOSE}
-# RUN chown 1000 ${JENKINS_HOME_FROM_COMPOSE}
-# RUN chmod 777 ${JENKINS_HOME_FROM_COMPOSE}
-# USER jenkins
-# ---------------- -end-
-
+# =============================================================================
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 # eagbayani j173
 
@@ -31,27 +21,19 @@ COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy
 USER root
 RUN apt-get update
 RUN apt-get install file -y     # - important addition
-
+# =============================================================================
 # --------------------------- START python
 RUN apt-get install python3-full python3-pip -y 
 # Add any other Python-related packages or tools you need, e.g. python-pyset python3-flake8 etc.
 RUN apt update
-# ARG PYTHON_APP_DIR_FROM_COMPOSE
-# COPY /src_python/test2.py ${PYTHON_APP_DIR_FROM_COMPOSE}/test2.py
-
-# RUN mkdir /usr/src/app #gives error if folder already exists
 RUN [ -d /usr/src/app ] && echo "Folder exists" || mkdir /usr/src/app
-
-# works OK
 RUN pip install --break-system-packages neo4j 
-# works ok
 ENV PYTHONUNBUFFERED=1
 # --------------------------- END python
+# =============================================================================
 
-# install zip packages, curl, etc:
 RUN apt install zip unzip -y
 RUN apt-get install curl -y
-# RUN apt-get install iputils-ping -y
 RUN apt install wget -y
 
 # install PHP 8.2 from: https://php.watch/articles/install-php82-ubuntu-debian
@@ -65,42 +47,39 @@ RUN apt update
 # RUN apt install php8.2 php8.2-cli php8.2-{bz2,curl,mbstring,intl}
 RUN apt install -y php8.2 php8.2-cli php8.2-bz2 php8.2-curl php8.2-mbstring php8.2-intl php8.2-mysqli
 RUN apt install -y php8.2-fpm
-# OR
-# RUN apt install libapache2-mod-php8.2
-
-# sudo yum install php php-common 
-# sudo yum install php php-cgi .... { , , , , , , }
 RUN apt install -y php8.2-mysqlnd php8.2-pdo php8.2-xml php8.2-bcmath
-
-# install zip packages, curl, etc:
 RUN apt install -y php8.2-zip 
-# RUN apt-get install iputils-ping -y
-# RUN apt install -y php8.2-wget
-
 RUN apt install -y php8.2-yaml 
-# works OK
-
-# php8.2-pear - not located
-# php8.2-json - not located
-
 RUN a2enconf php8.2-fpm
 
-## trying to fix Jenkins /tmp permissions
-# RUN chown -R root:jenkins /var/tmp
-# RUN chown -R jenkins /tmp
+# =============================================================================
 
 # - just proof of variable passing
 ARG JENKINS_TMP_FROM_COMPOSE    
 RUN echo " to display value only: "${JENKINS_TMP_FROM_COMPOSE}""
 
 # =============================================================================
-ARG ZIP_URL="https://github.com/gnames/gnparser/releases/download/v1.11.6/gnparser-v1.11.6-linux-arm.tar.gz"
-RUN wget -O /tmp/downloaded.tar.gz ${ZIP_URL}
-RUN chmod 775 /tmp/downloaded.tar.gz
-RUN tar -xvzf /tmp/downloaded.tar.gz -C /tmp
-RUN rm /tmp/downloaded.tar.gz
-RUN cp /tmp/gnparser /bin/gnparser
-RUN rm /tmp/gnparser
+# gnparser — arch follows image platform (amd64 → linux-x86, arm64 → linux-arm)
+# Override: --build-arg GNPARSER_URL=... or set GNPARSER_URL in .env for Compose
+ARG GNPARSER_VERSION=1.15.0
+ARG TARGETARCH
+ARG GNPARSER_URL=
+RUN set -eux; \
+    if [ -n "${GNPARSER_URL}" ]; then \
+      URL="${GNPARSER_URL}"; \
+    else \
+      case "${TARGETARCH}" in \
+        amd64) GNPARSER_ARCH=x86 ;; \
+        arm64) GNPARSER_ARCH=arm ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac; \
+      URL="https://github.com/gnames/gnparser/releases/download/v${GNPARSER_VERSION}/gnparser-v${GNPARSER_VERSION}-linux-${GNPARSER_ARCH}.tar.gz"; \
+    fi; \
+    wget -qO /tmp/gnparser.tar.gz "${URL}"; \
+    tar -xzf /tmp/gnparser.tar.gz -C /tmp; \
+    mv /tmp/gnparser /usr/local/bin/gnparser; \
+    chmod 755 /usr/local/bin/gnparser; \
+    rm -f /tmp/gnparser.tar.gz
 # =============================================================================
 
 # drop back to the regular jenkins user - good practice
