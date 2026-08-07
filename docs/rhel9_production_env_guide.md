@@ -202,7 +202,6 @@ Login first: `echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --pas
 | Port 80 conflicts | Check with `sudo lsof -i :80`; may be another Docker stack |
 | `JAVA_OPTS` spacing | Leading space in compose value — verify Jenkins starts cleanly |
 
-**Resolved:** `MYSQL_USER_PW` → **`MYSQL_PASSWORD`** in compose and env samples.
 
 ---
 
@@ -235,4 +234,3 @@ docker compose -f docker-compose.yml build --no-cache db
 docker compose -f docker-compose.yml up -d db
 ```
 
-See also: `desktop/devops/docker_compose_up_info.md`
