@@ -43,17 +43,10 @@ ensure_dir "${EOL_BASE}/neo4j/plugins"
 
 # EXTRA_PATH — subdirs expected by docker-entrypoint_production.sh
 EXTRA="${EOL_BASE}/extra"
-ensure_dir "${EXTRA}/cache_LiteratureEditor"
 ensure_dir "${EXTRA}/ckan_resources"
-ensure_dir "${EXTRA}/eoearth_img/eoearth_images"
-ensure_dir "${EXTRA}/LiteratureEditor_img/LiteratureEditor_images"
-ensure_dir "${EXTRA}/map_data_final"
 ensure_dir "${EXTRA}/eol_connector_data_files"
 ensure_dir "${EXTRA}/dumps"
-ensure_dir "${EXTRA}/Pensoft_annotator"
 ensure_dir "${EXTRA}/other_files"
-ensure_dir "${EXTRA}/map_data_dwca"
-ensure_dir "${EXTRA}/wikimedia_cache"
 ensure_dir "${EXTRA}/gnfinder"
 
 echo ""
