@@ -1,106 +1,257 @@
-# Docker for EOL Connectors
+# `docker_eol_connectors` — Full EOL Connectors stack (Docker Compose)
 
-For machines that will host the EOL connectors.
-A docker-compose file with four services:
+**Path:** `My_Docker/docker_eol_connectors/`  
+**Updated:** 2026-08-08  
+**Info:** This is to run on a Docker host environment.
 
-1. jenkins: (Jenkins 2.538-jdk21, PHP 8.2.26, Python 3.11.2)
-2. web: (Apache/2.4.62 + PHP 8.2.26)
-3. db: (MySQL 8.4.3)
-4. neo4j: (Neo4j 5.26.8-enterprise - for TraitBank 1.0)
+---
 
-## Steps
+## What this is
 
-1. Download the zip file, unzip, open the folder.
-2. Rename the file `.env.sample` to `.env` and enter your information.
-   - For Mac, to see the hidden files press `cmd+shift+period`.
-   - Make sure that MYSQL_DATA_DIR folder is empty, so that the required database/tables will be created.
-3. From terminal, within the folder where `docker-compose.yml` is located run:
-   - For development: `$ docker-compose up`
-   - For production: `$ docker-compose -f docker-compose.yml up`
-4. To test Apache + PHP + MySQL:
-   - Edit `test.php` from your **WEBROOT_PATH**. Enter the **MYSQL_ROOT_PASSWORD** you entered in your `.env` file.
-     ```sh
-     $pass = 'mysql_root_password';
-     ```
-   - Go to browser: http://localhost:81/test.php
-     - You should see a list of four names.
-5. To test Jenkins:
-   1. Go to browser, open Jenkins: http://localhost:8081
-   2. Follow instructions to initialize your Jenkins.
-   3. To test PHP + MySQL + Jenkins
-      1. From **Dashboard**, create a **New Item**
-      2. Choose **Freestyle project**
-      3. Under **Build Steps**, choose **Execute shell**
-      4. Enter these three lines:
-         ```sh
-         cd /var/www/html
-         php -v
-         php test_development.php
-         ```
-      5. Then run **Build Now**
-      6. This should output the same information as: http://localhost:81/test.php
+Docker Compose project that runs the **full EOL Connectors local/archive stack** on a single host:
 
-6. To test MySQL from the host machine. Use these credentials:
-   ```sh
-   Host = localhost
-   Port = 4001
-   User Name = root
-   Password = {MYSQL_ROOT_PASSWORD}
-   ```
-7. - To remove containers run: `$ docker-compose down`
-   - To stop containers run: `$ docker-compose stop`
-   - To test a command without changing your application stack state.: `$ docker compose --dry-run up --build -d`
+| Service | Image / build | Role |
+|---------|---------------|------|
+| **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — connector web apps |
+| **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
+| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.12 Enterprise (UBI9) + APOC |
+| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser |
 
-   To re-create stuff:
-   - Recreate containers even if their configuration and image haven't changed: `docker-compose up --build --force-recreate`
-   - For specific service: `docker-compose up {service name} --build --force-recreate`
-   - Do not use cache when building the image: `docker-compose build --no-cache`
-   - Builds the images if they don’t exist, starts the containers in detached mode, forces recreation of the containers, and rebuilds the images even if they exist.: `docker-compose up -d --force-recreate --build`
+| Runtime | Purpose |
+|---------|---------|
+| **Mac (development)** | Local dev with `/Volumes` symlinks and override file |
+| **RHEL 9 (production)** | Archive/server deployment under `/opt/eol/...` |
 
-8. Other commands:
-   - To stop a service from compose: `docker stop {container id of that service}`
-   - To restart a service from compose: `docker-compose restart {service name}`
+This repo is **separate from** `dock_eol_conn_wf`, which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`).
 
-     This does not need to delete the container nor the image anymore.
+---
 
-   - To see all running containers: `docker ps`
+## Directory layout
 
-9. Login to a container:
-   - option 1: `docker start -i {container id}`
-     -> by default logins as root
-   - option 2: `docker exec -it -u john {container id} bash`
-     -> login as user john
-   - option 3: `docker exec -it {container id} bash`
-     -> login as root, opens bash
+```text
+docker_eol_connectors/
+├── docker-compose.yml              ← main stack (all environments)
+├── docker-compose.override.yml     ← Mac dev only (gitignored, not deployed)
+├── .env.sample                     ← Mac / local dev template
+├── .env.production.sample          ← RHEL 9 production template
+├── .gitignore
+├── docs/
+│   └── rhel9_production_env_guide.md
+├── scripts/
+│   └── rhel9-init-dirs.sh          ← create /opt/eol host dirs on RHEL
+├── apache-php/
+│   ├── Dockerfile
+│   ├── apache2.conf
+│   ├── 000-default.conf
+│   ├── php.ini.txt
+│   ├── docker-entrypoint_development.sh   ← Mac /Volumes symlinks
+│   ├── docker-entrypoint_production.sh    ← /extra symlinks
+│   └── src/                               ← test.php, info.php, list.php
+├── mysql/
+│   ├── Dockerfile
+│   ├── my.cnf
+│   ├── enable-mysql-native-password.cnf
+│   └── test_MySQL_db.sql                  ← init seed (employees_tbl)
+├── neo4j/
+│   └── Dockerfile                         ← FROM neo4j:5.26.12-enterprise-ubi9
+└── jenkins/
+    ├── Dockerfile
+    └── executors.groovy
+```
 
-10. To test your Neo4j database server, go to browser open: http://localhost:7474/browser/
+**WEBROOT_PATH** (host) is mounted at `/var/www/html` and should contain `eol_php8_code/` and related connector code — not baked into these Dockerfiles (unlike `dock_eol_conn_wf`).
 
-11. To test Neo4j + Python + Python driver for Neo4j:
-    1. Copy these 4 files from: https://github.com/eliagbayani/eol_python_code
-       ```sh
-       neo4j_credentials.py
-       neo4j_functions.py
-       test1.py
-       test2.py
-       ```
-    2. Load it to your {PYTHON_APP} folder you declared in your .env file.
-    3. Open Jenkins: http://localhost:8081
-    4. From **Dashboard**, create a **New Item**
-    5. Choose **Freestyle project**
-    6. Under **Build Steps**, choose **Execute shell**
-    7. Enter these three lines:
-       ```sh
-       cd /usr/src/app
-       python3 -V
-       python3 test1.py
-       python3 test2.py
-       ```
-    8. Then run **Build Now**
-    9. You should see this output:
+---
 
-       ```sh
-       username: your_username
-       password: your_password
-       URI: bolt://neo4j:7687
-       -Python accessing Neo4j OK-
-       ```
+## Service specification
+
+| Item | web | db | neo4j | jenkins |
+|------|-----|----|----|---------|
+| Base | `php:8.2-apache` | `mysql:8.4.3-oraclelinux9` | `neo4j:5.26.12-enterprise-ubi9` | `jenkins/jenkins:2.538-jdk21` |
+| PHP | 8.2, mysqli, yaml | — | — | 8.2 (apt) |
+| Python | — | embedded 3.9 | embedded 3.9 | 3.11 + neo4j driver |
+| gnparser | v1.15.0 (TARGETARCH) | — | — | v1.15.0 |
+| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 | 7474, 7687 | 8081→8080 |
+| Restart | unless-stopped | unless-stopped | — | unless-stopped |
+| Platform (web) | `linux/amd64` in compose | — | — | — |
+
+Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`, `eol_production`).
+
+---
+
+## Quick start — Mac development
+
+```bash
+cd My_Docker/docker_eol_connectors
+
+cp .env.sample .env
+# Edit paths (WEBROOT_PATH, MYSQL_DATA_DIR, etc.) — use /Volumes/... paths
+
+# Ensure MYSQL_DATA_DIR is empty on first run
+
+docker compose up -d
+# Merges docker-compose.override.yml automatically (mounts /Volumes)
+```
+
+**Test URLs (default .env.sample ports):**
+
+| Check | URL |
+|-------|-----|
+| PHP + MySQL | http://localhost:81/test.php |
+| Jenkins | http://localhost:8081 |
+| Neo4j Browser | http://localhost:7474/browser/ |
+| MySQL from host | `localhost:4001` (user: root) |
+
+**test.php MySQL settings (inside container):**
+
+```php
+$host = 'db';
+$port = 3306;              // not 4001 — that's the host-mapped port
+$db   = 'eol_development'; // matches MY_ENVIRONMENT
+```
+
+---
+
+## Quick start — RHEL 9 production
+
+```bash
+git clone <repo> /opt/eol/docker_eol_connectors
+cd /opt/eol/docker_eol_connectors
+
+sudo bash scripts/rhel9-init-dirs.sh
+cp .env.production.sample .env
+# Edit CHANGE_ME_* passwords and paths
+
+sudo chown -R 1000:1000 /opt/eol/jenkins_home /opt/eol/jenkins_tmp
+sudo chcon -Rt svirt_sandbox_file_t /opt/eol   # if SELinux enforcing
+
+# Populate /opt/eol/webroot and /opt/eol/extra before or after first up
+
+docker compose -f docker-compose.yml build
+docker compose -f docker-compose.yml up -d
+```
+
+**Do not deploy** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount only).
+
+Full guide: **`docs/rhel9_production_env_guide.md`** (also on Desktop: `devops/rhel9_production_env_guide.md`).
+
+---
+
+## Environment files
+
+| File | Use |
+|------|-----|
+| `.env.sample` | Mac / local dev — copy to `.env` |
+| `.env.production.sample` | RHEL 9 — copy to `.env` on server |
+| `.env` | Active config (gitignored) |
+
+Key variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `MY_ENVIRONMENT` | `development` or `production` — selects entrypoint script |
+| `WEBROOT_PATH` | Host path → `/var/www/html` |
+| `EXTRA_PATH` | Host path → `/extra` (prod symlinks) |
+| `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
+| `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
+| `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
+| `REGISTRY_*` | GHCR image names when using pre-built images |
+
+---
+
+## Entrypoint behaviour
+
+`MY_ENVIRONMENT` selects the web container startup script:
+
+| Value | Script | Symlink source |
+|-------|--------|----------------|
+| `development` | `docker-entrypoint_development.sh` | `/Volumes/AKiTiO4/...`, external drives |
+| `production` | `docker-entrypoint_production.sh` | `/extra/...` (from `EXTRA_PATH`) |
+
+Both copy `test.php` / `info.php` into the webroot if missing, then run `apache2-foreground`.
+
+---
+
+## Common commands
+
+```bash
+# Single service, no cache rebuild
+docker compose build --no-cache web && docker compose up -d --force-recreate web
+
+# Production (explicit — no override)
+docker compose -f docker-compose.yml up -d
+
+# Stop / remove
+docker compose down
+
+# Logs
+docker compose logs -f web
+
+# Shell into container
+docker compose exec web bash
+
+# Prune dangling <none> images
+docker image prune -f
+```
+
+See also: **`desktop/devops/docker_compose_up_info.md`**
+
+---
+
+## Push images to GHCR (optional)
+
+Uncomment `image:` lines in `docker-compose.yml` and comment out `build:` blocks.
+
+```bash
+export GHCR_TOKEN=...
+export GITHUB_ACTOR=eliagbayani
+echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+docker compose build --platform linux/amd64
+docker compose push
+```
+
+Registry vars in `.env`:
+
+```env
+REGISTRY=ghcr.io
+REGISTRY_WEB_IMAGE=eliagbayani/web-service
+REGISTRY_DB_IMAGE=eliagbayani/db-service
+REGISTRY_JENKINS_IMAGE=eliagbayani/jenkins-service
+REGISTRY_*_TAG=latest
+```
+
+---
+
+## Mac dev vs RHEL prod
+
+| | Mac dev | RHEL prod |
+|--|---------|-----------|
+| Env template | `.env.sample` | `.env.production.sample` |
+| `MY_ENVIRONMENT` | `development` | `production` |
+| Override file | local `docker-compose.override.yml` | not in repo |
+| Base paths | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
+| Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
+| Extra data | `/Volumes` mount + dev symlinks | `/opt/eol/extra` → `/extra` |
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
+| Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
+| Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
+| Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
+| Permission denied on RHEL | SELinux — `chcon -Rt svirt_sandbox_file_t /opt/eol` |
+| Override on production | Should not exist — file is gitignored; use `-f docker-compose.yml` |
+
+---
+
+## Notes
+
+- **Neo4j Enterprise** requires a valid license; compose sets `NEO4J_ACCEPT_LICENSE_AGREEMENT=yes`.
+- **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
+- **`docker-compose.override.yml`** is gitignored — create locally on Mac for `/Volumes` dev mount.
+- For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** instead of this full compose stack.
