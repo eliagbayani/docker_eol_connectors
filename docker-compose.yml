@@ -4,16 +4,10 @@ services:
     env_file:
       - ./.env
     environment:
-      # MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
-      # MYSQL_USER: ${MYSQL_USER}
-      # MYSQL_PASSWORD: ${MYSQL_USER_PW}
-
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_USER_PW: ${MYSQL_USER_PW}
-
     build:
       context: ./mysql
       args:
@@ -141,7 +135,7 @@ services:
     # image: jenkins/jenkins:2.538-jdk21
     # image: eagbayani/jenkins-service:1.0 #for Docker Hub
     # image: ${REGISTRY}/${REGISTRY_JENKINS_IMAGE}:${REGISTRY_JENKINS_TAG}
-    # restart: on-failure
+    restart: unless-stopped #old value: on-failure
 
     # these 2 lines was added to run Docker commands from the host
     # but did not work

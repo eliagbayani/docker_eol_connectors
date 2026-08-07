@@ -1,4 +1,7 @@
 
+# Mac dev only — do not deploy to RHEL/production servers
+docker-compose.override.yml
+
 .env
 *.log
 
