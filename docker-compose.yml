@@ -7,7 +7,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
       MYSQL_USER: ${MYSQL_USER}
-      MYSQL_USER_PW: ${MYSQL_USER_PW}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     build:
       context: ./mysql
       args:
@@ -40,7 +40,8 @@ services:
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
     # image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG} #works OK
-    restart: always
+    platform: linux/amd64
+    restart: unless-stopped #old value: always
     depends_on:
       db:
         condition: service_healthy
