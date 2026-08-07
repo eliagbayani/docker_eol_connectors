@@ -4,7 +4,7 @@ $host = 'db';                   //DO NOT change. This is the Docker service name
 $port = 3306;
 $user = 'root';                 //DO NOT change
 $pass = 'mysql_root_password';  //CHANGE THIS. Use value from .env file {MYSQL_ROOT_PASSWORD}
-$db = 'eol_traitbank_xxx';      //CHANGE THIS. Replace xxx with either 'development' or 'production'. Without the quotes.
+$db = 'eol_xxx';      //CHANGE THIS. Replace xxx with either 'development' or 'production'. Without the quotes.
 if($mysqli = new mysqli($host, $user, $pass, $db, $port)) {
     echo "\nEmployees database connected. OK\n";
     $result = $mysqli->query("SELECT * FROM employees_tbl;"); 
