@@ -54,7 +54,6 @@ The stack **will run on RHEL 9** if you:
 │   └── plugins/
 └── extra/                   ← EXTRA_PATH → /extra
     ├── ckan_resources/              → symlink uploaded_resources
-    ├── map_data_final/
     ├── eol_connector_data_files/
     ├── dumps/
     ├── other_files/
