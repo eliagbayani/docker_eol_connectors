@@ -1,7 +1,7 @@
 # `docker_eol_connectors` — EOL Connectors stack (Docker Compose)
 
 **Path:** `My_Docker/docker_eol_connectors/`  
-**Updated:** 2026-08-08  
+**Updated:** 2026-08-10  
 **Info:** This is to run on a Docker host environment.
 
 ---
