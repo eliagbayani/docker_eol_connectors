@@ -17,11 +17,10 @@ cp /tmp/info.php ${TARGET_PATH}
 # cd ${TARGET_PATH} #not needed
 echo "symlimk start... ${MY_ENV}"
 [ -d ${TARGET_PATH}/uploaded_resources ]        && echo "Symlink already exists (uploaded_resources)"       || ln -s /extra/ckan_resources/ uploaded_resources
-[ -d ${TARGET_PATH}/map_data ]                  && echo "Symlink already exists (map_data)"                 || ln -s /extra/map_data_final/ map_data
 [ -d ${TARGET_PATH}/eol_connector_data_files ]  && echo "Symlink already exists (eol_connector_data_files)" || ln -s /extra/eol_connector_data_files/ eol_connector_data_files
-[ -d ${TARGET_PATH}/dumps ]                     && echo "Symlink already exists (dumps)"                || ln -s /extra/dumps/ dumps
-[ -d ${TARGET_PATH}/other_files ]               && echo "Symlink already exists (other_files)"          || ln -s /extra/other_files/ other_files
-[ -d ${TARGET_PATH}/gnfinder ]                  && echo "Symlink already exists (gnfinder)"             || ln -s /extra/gnfinder/ gnfinder
+[ -d ${TARGET_PATH}/dumps ]                     && echo "Symlink already exists (dumps)"                    || ln -s /extra/dumps/ dumps
+[ -d ${TARGET_PATH}/other_files ]               && echo "Symlink already exists (other_files)"              || ln -s /extra/other_files/ other_files
+[ -d ${TARGET_PATH}/gnfinder ]                  && echo "Symlink already exists (gnfinder)"                 || ln -s /extra/gnfinder/ gnfinder
 echo "symlimk end... ${MY_ENV}"
 
 # ========== This will continue the container. Without it, the container will exit.
