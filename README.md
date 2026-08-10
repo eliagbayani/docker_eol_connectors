@@ -1,7 +1,7 @@
 # `docker_eol_connectors` — EOL Connectors stack (Docker Compose)
 
 **Path:** `My_Docker/docker_eol_connectors/`  
-**Updated:** 2026-08-10  
+**Updated:** 2026-08-11  
 **Info:** This is to run on a Docker host environment.
 
 ---
@@ -15,7 +15,7 @@ Docker Compose project that runs an **EOL Connectors local/archive stack** on a 
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — connector web apps |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
 | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 |
-| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.12 Enterprise (UBI9) + APOC <br> Optional. For TraitBank 1.0 testing|
+| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.29 Community (UBI10) + APOC <br> Optional. For TraitBank 1.0 testing |
 
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
 
@@ -55,7 +55,7 @@ docker_eol_connectors/
 │   ├── enable-mysql-native-password.cnf
 │   └── test_MySQL_db.sql                  ← init seed (employees_tbl)
 ├── neo4j/
-│   └── Dockerfile                         ← FROM neo4j:5.26.12-enterprise-ubi9
+│   └── Dockerfile                         ← FROM neo4j:5.26.29-community-ubi10
 └── jenkins/
     ├── Dockerfile
     └── executors.groovy
@@ -69,7 +69,7 @@ docker_eol_connectors/
 
 | Item | web | db | neo4j | jenkins |
 |------|-----|----|----|---------|
-| Base | `php:8.2-apache` | `mysql:8.4.3-oraclelinux9` | `neo4j:5.26.12-enterprise-ubi9` | `jenkins/jenkins:2.538-jdk21` |
+| Base | `php:8.2-apache` | `mysql:8.4.3-oraclelinux9` | `neo4j:5.26.29-community-ubi10` | `jenkins/jenkins:2.538-jdk21` |
 | PHP | 8.2, mysqli, yaml | — | — | 8.2 (apt) |
 | Python | — | embedded 3.9 | embedded 3.9 | 3.11 + neo4j driver |
 | gnparser | v1.15.0 (TARGETARCH) | — | — | v1.15.0 |
@@ -157,6 +157,8 @@ Key variables:
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
+| `NEO_DATABASE` | **`neo4j`** on Community (single user database) |
+| `PATH_NEO4J_IMPORT2` | Host path → `/var/lib/neo4j/import2` (TraitBank CSV imports) |
 | `REGISTRY_*` | GHCR image names when using pre-built images |
 
 ---
@@ -171,6 +173,44 @@ Key variables:
 | `production` | `docker-entrypoint_production.sh` | `/extra/...` (from `EXTRA_PATH`) |
 
 Both copy `test.php` / `info.php` into the webroot if missing, then run `apache2-foreground`.
+
+---
+
+## Neo4j (Community Edition)
+
+Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker).
+
+| Topic | Community behaviour |
+|-------|---------------------|
+| User database | Single database: **`neo4j`** — set `NEO_DATABASE=neo4j` in `.env` |
+| Admin commands | **`STOP DATABASE`**, **`START DATABASE`**, **`CREATE DATABASE`** are **not supported** |
+| Offline admin | Stop the container: `docker compose stop neo4j` (not `STOP DATABASE` in Browser) |
+| APOC | Enabled via `NEO4J_PLUGINS=["apoc"]` in compose |
+| License | No Enterprise license required (`NEO4J_ACCEPT_LICENSE_AGREEMENT` not used) |
+
+**TraitBank CSV import** (`neo4j-admin database import full`) — stop Neo4j first, then:
+
+```bash
+docker compose stop neo4j
+
+docker compose run --rm --entrypoint neo4j-admin neo4j \
+  database import full neo4j \
+  --overwrite-destination=true \
+  --nodes=import2/AnimalDiversityWeb_TraitBank_1_0_csv/nodes/Resource.csv \
+  ... # remaining --nodes, --relationships, --schema flags
+
+docker compose up -d neo4j
+```
+
+CSV files live under host `PATH_NEO4J_IMPORT2`, mounted at `/var/lib/neo4j/import2` in the container.
+
+**Clear all graph data** (Browser, connected to `neo4j` database):
+
+```cypher
+MATCH (n) WITH n LIMIT 10000 DETACH DELETE n;
+```
+
+Repeat until empty, or wipe `PATH_NEO4J_DATA` (with backup) for a full reset.
 
 ---
 
@@ -245,6 +285,9 @@ REGISTRY_*_TAG=latest
 | MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
 | Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
 | Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
+| `UnsupportedAdministrationCommand: STOP DATABASE` | Enterprise-only — use `docker compose stop neo4j` instead |
+| Neo4j import "database in use" | Neo4j still running — stop container before `neo4j-admin database import full` |
+| App cannot find `db.eol` | Community uses **`neo4j`** only — set `NEO_DATABASE=neo4j` |
 | Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
 | Permission denied on RHEL | SELinux — `chcon -Rt svirt_sandbox_file_t /opt/eol` |
 | Override on production | Should not exist — file is gitignored; use `-f docker-compose.yml` |
@@ -253,7 +296,8 @@ REGISTRY_*_TAG=latest
 
 ## Notes
 
-- **Neo4j Enterprise** requires a valid license; compose sets `NEO4J_ACCEPT_LICENSE_AGREEMENT=yes`.
+- **Neo4j Community** (5.26.29 UBI10): no Enterprise license; single database **`neo4j`**; no `STOP DATABASE` / `CREATE DATABASE` admin commands.
+- Previously used **`neo4j:5.26.12-enterprise-ubi9`** — Enterprise dumps or named databases (e.g. `db.eol`) may not carry over; re-import into `neo4j` if needed.
 - **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
 - **`docker-compose.override.yml`** is gitignored — create locally on Mac for `/Volumes` dev mount.
 - For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** instead of this full compose stack.

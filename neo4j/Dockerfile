@@ -10,5 +10,8 @@
 # still working OK, used for the longest time
 # -> this ver. worked with neo4j-admin import
 
-FROM neo4j:5.26.12-enterprise-ubi9
+# FROM neo4j:5.26.12-enterprise-ubi9
 # latest version OK
+# used for development for the longest time
+
+FROM neo4j:5.26.29-community-ubi10

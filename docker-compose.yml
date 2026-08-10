@@ -98,7 +98,7 @@ services:
       # - NEO4J_server.config.strict_validation.enabled=false
 
       # for the Enterprise edition only
-      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      # - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
 
       # for python: neo4j-admin --- Cannot use "NEO4J_" as it is reserved.
       - NEO_USERNAME=${NEO_USERNAME}
