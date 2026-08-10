@@ -8,21 +8,23 @@
 
 ## What this is
 
-Docker Compose project that runs the **full EOL Connectors local/archive stack** on a single host:
+Docker Compose project that runs an **EOL Connectors local/archive stack** on a single host:
 
 | Service | Image / build | Role |
 |---------|---------------|------|
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — connector web apps |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
-| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.12 Enterprise (UBI9) + APOC |
-| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser |
+| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 |
+| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.12 Enterprise (UBI9) + APOC <br> Optional. For TraitBank 1.0 testing|
+
+<!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
 
 | Runtime | Purpose |
 |---------|---------|
 | **Mac (development)** | Local dev with `/Volumes` symlinks and override file |
 | **RHEL 9 (production)** | Archive/server deployment under `/opt/eol/...` |
 
-This repo is **separate from** `dock_eol_conn_wf`, which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`).
+This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/eliagbayani/dock_eol_conn_wf), which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`).
 
 ---
 
@@ -131,9 +133,9 @@ docker compose -f docker-compose.yml build
 docker compose -f docker-compose.yml up -d
 ```
 
-**Do not deploy** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount only).
+**Do not deploy:** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount only).
 
-Full guide: **`docs/rhel9_production_env_guide.md`** (also on Desktop: `devops/rhel9_production_env_guide.md`).
+Full guide: **`docs/rhel9_production_env_guide.md`**.
 
 ---
 
