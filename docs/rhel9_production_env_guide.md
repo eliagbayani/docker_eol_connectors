@@ -75,12 +75,6 @@ PORT_7687=7687:7687
 
 APOC remains enabled in compose: `NEO4J_PLUGINS=["apoc"]`.
 
-### Migrating from Enterprise data on RHEL
-
-1. **Back up** `/opt/eol/neo4j/data` before any change.
-2. Set **`NEO_DATABASE=neo4j`** in `.env` (Jenkins/Python connectors too).
-3. Enterprise **block-format dumps** may not load into Community — prefer **CSV re-import** via `neo4j-admin database import full`.
-4. Do **not** use `STOP DATABASE` in Browser — use `docker compose stop neo4j`.
 
 ### TraitBank CSV import on RHEL (Community)
 
