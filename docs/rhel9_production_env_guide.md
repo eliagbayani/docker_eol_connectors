@@ -29,7 +29,7 @@ The stack **will run on RHEL 9** if you:
 | `.env.production.sample` | RHEL 9 production `.env` template (`/opt/eol/...` paths) |
 | `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/opt/eol` |
 | `docker-compose.yml` | Main compose file (all four services) |
-| `neo4j/Dockerfile` | `FROM neo4j:5.26.29-community-ubi10` |
+| `neo4j/Dockerfile` | `FROM neo4j:5.26.29-community-ubi10` <br> _Neo4j in RHEL 9 is just for testing not for public access._ |
 | `.gitignore` | Excludes `docker-compose.override.yml`, `.env`, Mac-only files |
 
 **Not in repo (Mac dev only):** `docker-compose.override.yml`
@@ -37,6 +37,7 @@ The stack **will run on RHEL 9** if you:
 ---
 
 ## Neo4j — Community Edition (was Enterprise)
+_Neo4j in RHEL 9 is just for TraitBank 1.0 testing not for public access._
 
 | | Previous | Current |
 |--|----------|---------|
@@ -177,7 +178,7 @@ cp .env.production.sample .env
 |---------|-------|-------|
 | `db` → `MYSQL_PASSWORD` | `${MYSQL_PASSWORD}` | Official MySQL env var |
 | `web` → `platform` | `linux/amd64` | Explicit amd64 for RHEL x86_64 |
-| `neo4j` image | `5.26.29-community-ubi10` | Via `neo4j/Dockerfile` |
+| `neo4j` image | `5.26.29-community-ubi10` | Via `neo4j/Dockerfile` <br> _Neo4j in RHEL 9 is just for testing not for public access._ |
 | `NEO4J_ACCEPT_LICENSE_AGREEMENT` | commented out | Enterprise only — not needed |
 | All services → `restart` | `unless-stopped` | Survives host reboot |
 

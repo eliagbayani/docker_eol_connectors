@@ -15,7 +15,7 @@ Docker Compose project that runs an **EOL Connectors local/archive stack** on a 
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — connector web apps |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
 | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 |
-| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.29 Community (UBI10) + APOC <br> Optional. For TraitBank 1.0 testing |
+| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.29 Community (UBI10) + APOC <br> _Neo4j in RHEL 9 is just for testing not for public access._ |
 
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
 
@@ -178,8 +178,8 @@ Both copy `test.php` / `info.php` into the webroot if missing, then run `apache2
 
 ## Neo4j (Community Edition)
 
-Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker).
-
+Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker). <br>
+_Neo4j in RHEL 9 is just for testing not for public access._
 | Topic | Community behaviour |
 |-------|---------------------|
 | User database | Single database: **`neo4j`** — set `NEO_DATABASE=neo4j` in `.env` |
