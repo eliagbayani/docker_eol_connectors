@@ -300,4 +300,4 @@ REGISTRY_*_TAG=latest
 - Previously used **`neo4j:5.26.12-enterprise-ubi9`** — Enterprise dumps or named databases (e.g. `db.eol`) may not carry over; re-import into `neo4j` if needed.
 - **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
 - **`docker-compose.override.yml`** is gitignored — create locally on Mac for `/Volumes` dev mount.
-- For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** instead of this full compose stack.
+- For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** [GitHub](https://github.com/EOL/eol-apps-connectors/tree/main/connectors) instead of this full compose stack.
