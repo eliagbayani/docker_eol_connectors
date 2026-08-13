@@ -13,9 +13,7 @@ ls -lt
 [ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
 cp /tmp/info.php ${PWD}
 
-# Create symlink in ${PWD} (/var/www/html). Check existence against ${PWD}, not host
-# TARGET_PATH — that path is usually invisible inside the container, so the old check
-# always failed and `ln -s name` followed an existing dir symlink into a nested link.
+# Create symlink in ${PWD} (/var/www/html). Check existence against ${PWD}
 ensure_symlink() {
   name="$1"
   target="$2"
@@ -55,17 +53,7 @@ ensure_symlink other_files2 /Volumes/Crucial_2TB/other_files2
 ensure_symlink cache_LiteratureEditor /Volumes/Crucial_2TB/cache_LiteratureEditor
 ensure_symlink Pensoft_annotator /Volumes/Crucial_4TB/Pensoft_annotator
 ensure_symlink gnfinder /Volumes/Crucial_4TB/gnfinder
-
-# These 2 are real folders for PHP 8, not symlinks.
-# ensure_symlink LiteratureEditor /Volumes/AKiTiO4/webroot/LiteratureEditor
-# ensure_symlink FreshData /Volumes/AKiTiO4/webroot/FreshData
-
 echo "symlink end... ${MY_ENV}"
-
-# We may need it when we go back to Neo4j tasks:
-# chmod -R 777 ${PWD}/php_neo4j/
-# chmod -R 777 ${PWD}/php_neo4j/.
-
 
 # ========== This will continue the container. Without it, the container will exit.
 apache2-foreground

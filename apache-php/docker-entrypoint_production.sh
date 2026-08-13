@@ -13,8 +13,7 @@ ls -lt
 [ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
 cp /tmp/info.php ${PWD}
 
-# Create symlink in ${PWD}. Check against ${PWD}; use ln -sfn so existing dir
-# symlinks are not followed into nested links.
+# Create symlink in ${PWD}. Check against ${PWD}; use ln -sfn so existing dir symlinks are not followed into nested links.
 ensure_symlink() {
   name="$1"
   target="$2"
