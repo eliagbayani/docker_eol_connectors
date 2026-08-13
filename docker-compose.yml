@@ -128,8 +128,8 @@ services:
     env_file: ./.env
     build:
       args:
-        JENKINS_HOME_FROM_COMPOSE: ${JENKINS_HOME}
-        JENKINS_TMP_FROM_COMPOSE: ${JENKINS_TMP}
+        JENKINS_HOME_FROM_COMPOSE: ${PATH_JENKINS_HOME}
+        JENKINS_TMP_FROM_COMPOSE: ${PATH_JENKINS_TMP}
         PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
       dockerfile: Dockerfile
@@ -147,13 +147,15 @@ services:
       # - ${PWD}/jenkins_home:/var/jenkins_home
       # -> works OK, but better implementation below
 
-      - ${JENKINS_HOME}:/var/jenkins_home:rw
+      # Host path var must NOT be named JENKINS_HOME — env_file would override
+      # the in-container path Jenkins expects (/var/jenkins_home).
+      - ${PATH_JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
 
       # - ${WEBROOT_PATH}:/webroot
       - ${WEBROOT_PATH}:/var/www/html
 
-      - ${JENKINS_TMP}:/jenkins_tmp
+      - ${PATH_JENKINS_TMP}:/jenkins_tmp
       # - ${PWD}/jenkins_tmp:/jenkins_tmp     # -> works OK also
 
       # - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
@@ -176,7 +178,8 @@ services:
     #   - "host.docker.internal:host-gateway"
 
     environment:
-      - JAVA_OPTS= "-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.util.logging.config.file=/var/jenkins_home/log.properties -Djava.io.tmpdir=/jenkins_tmp"
+      - JENKINS_HOME=/var/jenkins_home
+      - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp
 
       # for python:
       - NEO_URI=${NEO_URI}
