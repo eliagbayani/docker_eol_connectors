@@ -57,15 +57,11 @@ services:
     volumes:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
-      # - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
       - ${EXTRA_PATH}:/extra
     # command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
 
-    ### this is the orig
     command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT}.sh
-    ### this is for K8s
-    # command: /usr/local/bin/docker-entrypoint.sh
 
     ports:
       - ${WEB_PORTS} # 81:80
@@ -112,7 +108,6 @@ services:
       - ${PATH_NEO4J_PLUGINS}:/plugins
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
-    # --- below here is new:
     healthcheck:
       test:
         [
@@ -138,34 +133,18 @@ services:
     # image: ${REGISTRY}/${REGISTRY_JENKINS_IMAGE}:${REGISTRY_JENKINS_TAG}
     restart: unless-stopped #old value: on-failure
 
-    # these 2 lines was added to run Docker commands from the host
-    # but did not work
-    # privileged: true # Required for Docker-in-Docker scenarios in Jenkins
-    # user: root # Run Jenkins as root for easier Docker access within Jenkins
-
     volumes:
-      # - ${PWD}/jenkins_home:/var/jenkins_home
-      # -> works OK, but better implementation below
-
       # Host path var must NOT be named JENKINS_HOME — env_file would override
       # the in-container path Jenkins expects (/var/jenkins_home).
       - ${PATH_JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
 
-      # - ${WEBROOT_PATH}:/webroot
       - ${WEBROOT_PATH}:/var/www/html
-
       - ${PATH_JENKINS_TMP}:/jenkins_tmp
-      # - ${PWD}/jenkins_tmp:/jenkins_tmp     # -> works OK also
-
-      # - ${VOLUMES_LOCAL}:/Volumes #not allowed in K8s
       - ${EXTRA_PATH}:/extra
 
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
-      # Allow Jenkins to interact with Docker daemon
-      # but did not work
-      # - /var/run/docker.sock:/var/run/docker.sock:ro
 
     links:
       - web
@@ -173,9 +152,6 @@ services:
     ports:
       - ${JENKINS_PORTS} # 8081:8080
       - ${JENKINS_PORTS_COMMUNICATION} # 50000:50000 # Jenkins default port for communication
-
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
 
     environment:
       - JENKINS_HOME=/var/jenkins_home
@@ -186,14 +162,6 @@ services:
       - NEO_USERNAME=${NEO_USERNAME}
       - NEO_PASSWORD=${NEO_PASSWORD}
       - NEO_DATABASE=${NEO_DATABASE}
-
-  # network_mode: "bridge"
-  # volumes:
-  #   jenkins_home:
-
-  # Solution: for sometimes --build get corrupted.
-  # sudo rm  ~/.docker/config.json
-  # Rerun restart
 
   # =================== Python service ===================
   # python:
