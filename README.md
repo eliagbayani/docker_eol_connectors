@@ -1,7 +1,7 @@
 # `docker_eol_connectors` — EOL Connectors stack (Docker Compose)
 
 **Path:** `My_Docker/docker_eol_connectors/`  
-**Updated:** 2026-08-11  
+**Updated:** 2026-08-13  
 **Info:** This is to run on a Docker host environment.
 
 ---
@@ -73,7 +73,7 @@ docker_eol_connectors/
 | PHP | 8.2, mysqli, yaml | — | — | 8.2 (apt) |
 | Python | — | embedded 3.9 | embedded 3.9 | 3.11 + neo4j driver |
 | gnparser | v1.15.0 (TARGETARCH) | — | — | v1.15.0 |
-| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 | 7474, 7687 | 8081→8080 |
+| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 | 7494→7474, 7697→7687 (dev example) | 8081→8080 |
 | Restart | unless-stopped | unless-stopped | — | unless-stopped |
 | Platform (web) | `linux/amd64` in compose | — | — | — |
 
@@ -95,14 +95,16 @@ docker compose up -d
 # Merges docker-compose.override.yml automatically (mounts /Volumes)
 ```
 
-**Test URLs (default .env.sample ports):**
+**Test URLs** (match ports in your `.env`; example Mac dev values):
 
 | Check | URL |
 |-------|-----|
 | PHP + MySQL | http://localhost:81/test.php |
 | Jenkins | http://localhost:8081 |
-| Neo4j Browser | http://localhost:7474/browser/ |
+| Neo4j Browser | http://localhost:7494/browser/ |
 | MySQL from host | `localhost:4001` (user: root) |
+
+Neo4j Bolt from host uses `PORT_7687` host side (e.g. `7697` when mapped `7697:7687`).
 
 **test.php MySQL settings (inside container):**
 
@@ -153,33 +155,78 @@ Key variables:
 |----------|---------|
 | `MY_ENVIRONMENT` | `development` or `production` — selects entrypoint script |
 | `WEBROOT_PATH` | Host path → `/var/www/html` |
-| `EXTRA_PATH` | Host path → `/extra` (prod symlinks) |
+| `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
+| `PATH_JENKINS_HOME` | Host Jenkins data → `/var/jenkins_home` (do **not** name `JENKINS_HOME` in `.env` — reserved in container) |
+| `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
 | `NEO_DATABASE` | **`neo4j`** on Community (single user database) |
 | `PATH_NEO4J_IMPORT2` | Host path → `/var/lib/neo4j/import2` (TraitBank CSV imports) |
-| `REGISTRY_*` | GHCR image names when using pre-built images |
+| `PORT_7474` / `PORT_7687` | Host:container Neo4j browser / Bolt ports |
+| `REGISTRY_*` | GHCR image names when using pre-built images (optional) |
 
 ---
 
 ## Entrypoint behaviour
 
-`MY_ENVIRONMENT` selects the web container startup script:
+`MY_ENVIRONMENT` selects the web container startup script. Both scripts:
 
-| Value | Script | Symlink source |
-|-------|--------|----------------|
-| `development` | `docker-entrypoint_development.sh` | `/Volumes/AKiTiO4/...`, external drives |
+- Copy `test.php` / `info.php` into **`${PWD}`** (`/var/www/html`) — not `${TARGET_PATH}` (host path is not visible inside the container)
+- Use shared **`ensure_symlink`** helper: `ln -sfn` into `${PWD}`; skip if link/path already exists
+
+| Value | Script | Symlink targets |
+|-------|--------|-----------------|
+| `development` | `docker-entrypoint_development.sh` | `/Volumes/...` (requires override mount of `/Volumes`) |
 | `production` | `docker-entrypoint_production.sh` | `/extra/...` (from `EXTRA_PATH`) |
 
-Both copy `test.php` / `info.php` into the webroot if missing, then run `apache2-foreground`.
+### Development symlinks (`docker-entrypoint_development.sh`)
+
+Requires `docker-compose.override.yml` mounting **`/Volumes:/Volumes`**.
+
+| Link name in webroot | Target |
+|----------------------|--------|
+| `opendata` | `/var/www/html/eol_php8_code/applications/opendata` |
+| `eoearth_images` | `/Volumes/AKiTiO4/web/eoearth_images` |
+| `eoearth` | `/Volumes/AKiTiO4/webroot/eoearth` |
+| `maps_test` | `/Volumes/AKiTiO4/webroot/maps_test` |
+| `eol_maps` | `/Volumes/AKiTiO4/webroot/eol_maps` |
+| `opendata_uploads` | `/Volumes/AKiTiO4/other_files/opendata_uploads` |
+| `other_files` | `/Volumes/AKiTiO4/other_files` |
+| `d_w_h` | `/Volumes/AKiTiO4/d_w_h/dynamic_working_hierarchy-master` |
+| `cp` | `/Volumes/AKiTiO4/web/cp` |
+| `cp_new` | `/Volumes/AKiTiO4/web/cp_new` |
+| `effechecka` | `/Volumes/AKiTiO4/webroot/effechecka` |
+| `Leaflet_Cluster_map` | `/Volumes/AKiTiO4/webroot/Leaflet_Cluster_map` |
+| `ckan_api_results` | `/Volumes/AKiTiO4/CKAN_info/api_results` |
+| `wikimedia_cache` | `/Volumes/AKiTiO4/wikimedia_cache` |
+| `other_files2` | `/Volumes/Crucial_2TB/other_files2` |
+| `cache_LiteratureEditor` | `/Volumes/Crucial_2TB/cache_LiteratureEditor` |
+| `Pensoft_annotator` | `/Volumes/Crucial_4TB/Pensoft_annotator` |
+| `gnfinder` | `/Volumes/Crucial_4TB/gnfinder` |
+
+On startup, removes accidental nested symlink `eol_php8_code/applications/opendata/opendata` if present (legacy `ln` behaviour).
+
+### Production symlinks (`docker-entrypoint_production.sh`)
+
+| Link name in webroot | Target (`/extra/...`) |
+|----------------------|-------------------------|
+| `uploaded_resources` | `ckan_resources` |
+| `eol_connector_data_files` | `eol_connector_data_files` |
+| `dumps` | `dumps` |
+| `other_files` | `other_files` |
+| `gnfinder` | `gnfinder` |
+
+Then runs `apache2-foreground`.
 
 ---
 
 ## Neo4j (Community Edition)
 
-Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker). <br>
-_Neo4j in RHEL 9 is just for testing not for public access._
+Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker).
+
+_Neo4j in RHEL 9 is just for testing, not for public access._
+
 | Topic | Community behaviour |
 |-------|---------------------|
 | User database | Single database: **`neo4j`** — set `NEO_DATABASE=neo4j` in `.env` |
@@ -291,11 +338,15 @@ REGISTRY_*_TAG=latest
 | Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
 | Permission denied on RHEL | SELinux — `chcon -Rt svirt_sandbox_file_t /opt/eol` |
 | Override on production | Should not exist — file is gitignored; use `-f docker-compose.yml` |
+| Nested `opendata/opendata` symlink | Dev entrypoint removes it; recreate web container if links look wrong |
+| Jenkins empty after `.env` change | Use **`PATH_JENKINS_HOME`** / **`PATH_JENKINS_TMP`** for host paths — not `JENKINS_HOME` in `.env` |
 
 ---
 
 ## Notes
 
+- **Web entrypoints** use `${PWD}` (`/var/www/html`) and **`ensure_symlink`** (`ln -sfn`) — see tables above.
+- **Jenkins:** compose sets in-container `JENKINS_HOME=/var/jenkins_home`; host bind path is **`PATH_JENKINS_HOME`** in `.env`.
 - **Neo4j Community** (5.26.29 UBI10): no Enterprise license; single database **`neo4j`**; no `STOP DATABASE` / `CREATE DATABASE` admin commands.
 - Previously used **`neo4j:5.26.12-enterprise-ubi9`** — Enterprise dumps or named databases (e.g. `db.eol`) may not carry over; re-import into `neo4j` if needed.
 - **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
