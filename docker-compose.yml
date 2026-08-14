@@ -93,6 +93,13 @@ services:
       - NEO4J_PLUGINS=["apoc"]
       # - NEO4J_server.config.strict_validation.enabled=false
 
+      # --- memory tuning (Layer 2 stability); values from .env ---
+      # Note: '.' -> '_' and '_' -> '__' in NEO4J_* env var names.
+      - NEO4J_server_memory_heap_initial__size=${NEO_HEAP_INIT}
+      - NEO4J_server_memory_heap_max__size=${NEO_HEAP_MAX}
+      - NEO4J_server_memory_pagecache_size=${NEO_PAGECACHE}
+      - NEO4J_db_memory_transaction_total_max=${NEO_TX_TOTAL_MAX}
+
       # for the Enterprise edition only
       # - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
 
@@ -108,15 +115,26 @@ services:
       - ${PATH_NEO4J_PLUGINS}:/plugins
       # for python
       - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+    # Verify the actual `neo4j` graph DB answers queries, not just that HTTP 7474
+    # is up — the old wget check reported "healthy" while the DB was still offline
+    # (recovering). $$ escapes to a literal $ so the container's shell expands it.
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1",
+          "cypher-shell -u \"$${NEO_USERNAME}\" -p \"$${NEO_PASSWORD}\" -d neo4j 'RETURN 1' || exit 1",
         ]
-      interval: 5s
-      timeout: 30s
-      retries: 5
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
+    # Hard memory cap so Neo4j can't OOM the whole Docker Desktop VM.
+    # heap_max + pagecache + ~1G JVM overhead must stay under this.
+    mem_limit: ${NEO_MEM_LIMIT}
+    # Auto-recover after a crash; give it time to checkpoint on stop so a hard
+    # SIGKILL (the exit-137 that corrupted the tx logs) can't recur on shutdown.
+    restart: unless-stopped
+    stop_grace_period: 120s
 
   # =================== Jenkins service ===================
   jenkins:
