@@ -12,9 +12,9 @@ Docker Compose project that runs an **EOL Connectors local/archive stack** on a 
 
 | Service | Image / build | Role |
 |---------|---------------|------|
-| **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — connector web apps |
+| **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — host web-based tools |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
-| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 |
+| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 - maintains jobs for the web-based tools |
 | **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.29 Community (UBI10) + APOC <br> _Neo4j in RHEL 9 is just for testing not for public access._ |
 
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
