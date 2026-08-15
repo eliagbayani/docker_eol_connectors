@@ -235,29 +235,6 @@ _Neo4j in RHEL 9 is just for testing, not for public access._
 | APOC | Enabled via `NEO4J_PLUGINS=["apoc"]` in compose |
 | License | No Enterprise license required (`NEO4J_ACCEPT_LICENSE_AGREEMENT` not used) |
 
-**TraitBank CSV import** (`neo4j-admin database import full`) — stop Neo4j first, then:
-
-```bash
-docker compose stop neo4j
-
-docker compose run --rm --entrypoint neo4j-admin neo4j \
-  database import full neo4j \
-  --overwrite-destination=true \
-  --nodes=import2/AnimalDiversityWeb_TraitBank_1_0_csv/nodes/Resource.csv \
-  ... # remaining --nodes, --relationships, --schema flags
-
-docker compose up -d neo4j
-```
-
-CSV files live under host `PATH_NEO4J_IMPORT2`, mounted at `/var/lib/neo4j/import2` in the container.
-
-**Clear all graph data** (Browser, connected to `neo4j` database):
-
-```cypher
-MATCH (n) WITH n LIMIT 10000 DETACH DELETE n;
-```
-
-Repeat until empty, or wipe `PATH_NEO4J_DATA` (with backup) for a full reset.
 
 ---
 
@@ -283,32 +260,8 @@ docker compose exec web bash
 docker image prune -f
 ```
 
-See also: **`desktop/devops/docker_compose_up_info.md`**
 
----
 
-## Push images to GHCR (optional)
-
-Uncomment `image:` lines in `docker-compose.yml` and comment out `build:` blocks.
-
-```bash
-export GHCR_TOKEN=...
-export GITHUB_ACTOR=eliagbayani
-echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-
-docker compose build --platform linux/amd64
-docker compose push
-```
-
-Registry vars in `.env`:
-
-```env
-REGISTRY=ghcr.io
-REGISTRY_WEB_IMAGE=eliagbayani/web-service
-REGISTRY_DB_IMAGE=eliagbayani/db-service
-REGISTRY_JENKINS_IMAGE=eliagbayani/jenkins-service
-REGISTRY_*_TAG=latest
-```
 
 ---
 
@@ -347,8 +300,6 @@ REGISTRY_*_TAG=latest
 
 - **Web entrypoints** use `${PWD}` (`/var/www/html`) and **`ensure_symlink`** (`ln -sfn`) — see tables above.
 - **Jenkins:** compose sets in-container `JENKINS_HOME=/var/jenkins_home`; host bind path is **`PATH_JENKINS_HOME`** in `.env`.
-- **Neo4j Community** (5.26.29 UBI10): no Enterprise license; single database **`neo4j`**; no `STOP DATABASE` / `CREATE DATABASE` admin commands.
-- Previously used **`neo4j:5.26.12-enterprise-ubi9`** — Enterprise dumps or named databases (e.g. `db.eol`) may not carry over; re-import into `neo4j` if needed.
 - **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
 - **`docker-compose.override.yml`** is gitignored — create locally on Mac for `/Volumes` dev mount.
 - For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** [GitHub](https://github.com/EOL/eol-apps-connectors/tree/main/connectors) instead of this full compose stack.
