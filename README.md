@@ -1,4 +1,4 @@
-# `docker_eol_connectors` — EOL legacy web-based tools (Docker Compose)
+# EOL legacy web-based tools (Docker Compose)
 
 **Path (local):** `My_Docker/docker_eol_connectors/`  
 **Updated:** 2026-08-16  
