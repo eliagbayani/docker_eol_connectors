@@ -247,8 +247,6 @@ The override adds:
 
 Jenkins receives `NEO_URI=bolt://neo4j:7687` from `.env` so Python jobs can reach the graph DB on Mac. On production, Jenkins still starts but Neo4j-dependent jobs should not run (no `neo4j` container on the network).
 
-**Bulk CSV import** (e.g. `import_dataset.sh`) requires the override file so `docker compose stop neo4j` works. See `~/Desktop/devops/import_dataset_sh.md`.
-
 ---
 
 ## Common commands
