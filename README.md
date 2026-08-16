@@ -1,21 +1,22 @@
 # `docker_eol_connectors` — EOL Connectors stack (Docker Compose)
 
 **Path:** `My_Docker/docker_eol_connectors/`  
-**Updated:** 2026-08-13  
+**Updated:** 2026-08-16  
 **Info:** This is to run on a Docker host environment.
 
 ---
 
 ## What this is
 
-Docker Compose project that runs an **EOL Connectors local/archive stack** on a single host:
+A Docker Compose project that runs eol-archive server stack on a single host. This will be
+installed on a server with RHEL 9. Main purpose is to host the legacy EOL web-based
+tools.
 
 | Service | Image / build | Role |
 |---------|---------------|------|
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.2 — host web-based tools |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
-| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 - maintains jobs for the web-based tools |
-| **neo4j** | `neo4j/Dockerfile` | Neo4j 5.26.29 Community (UBI10) + APOC <br> _Neo4j in RHEL 9 is just for testing not for public access._ |
+| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 — maintains jobs for the web-based tools |
 
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
 
@@ -54,8 +55,6 @@ docker_eol_connectors/
 │   ├── my.cnf
 │   ├── enable-mysql-native-password.cnf
 │   └── test_MySQL_db.sql                  ← init seed (employees_tbl)
-├── neo4j/
-│   └── Dockerfile                         ← FROM neo4j:5.26.29-community-ubi10
 └── jenkins/
     ├── Dockerfile
     └── executors.groovy
@@ -67,15 +66,15 @@ docker_eol_connectors/
 
 ## Service specification
 
-| Item | web | db | neo4j | jenkins |
-|------|-----|----|----|---------|
-| Base | `php:8.2-apache` | `mysql:8.4.3-oraclelinux9` | `neo4j:5.26.29-community-ubi10` | `jenkins/jenkins:2.538-jdk21` |
-| PHP | 8.2, mysqli, yaml | — | — | 8.2 (apt) |
-| Python | — | embedded 3.9 | embedded 3.9 | 3.11 + neo4j driver |
-| gnparser | v1.15.0 (TARGETARCH) | — | — | v1.15.0 |
-| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 | 7494→7474, 7697→7687 (dev example) | 8081→8080 |
-| Restart | unless-stopped | unless-stopped | — | unless-stopped |
-| Platform (web) | `linux/amd64` in compose | — | — | — |
+| Item | web | db | jenkins |
+|------|-----|-----|---------|
+| Base | `php:8.2-apache` | `mysql:8.4.3-oraclelinux9` | `jenkins/jenkins:2.538-jdk21` |
+| PHP | 8.2, mysqli, yaml | — | 8.2 (apt) |
+| Python | — | embedded 3.9 | 3.11 |
+| gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
+| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 | 8081→8080 |
+| Restart | unless-stopped | unless-stopped | unless-stopped |
+| Platform (web) | `linux/amd64` in compose | — | — |
 
 Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`, `eol_production`).
 
@@ -101,10 +100,7 @@ docker compose up -d
 |-------|-----|
 | PHP + MySQL | http://localhost:81/test.php |
 | Jenkins | http://localhost:8081 |
-| Neo4j Browser | http://localhost:7494/browser/ |
 | MySQL from host | `localhost:4001` (user: root) |
-
-Neo4j Bolt from host uses `PORT_7687` host side (e.g. `7697` when mapped `7697:7687`).
 
 **test.php MySQL settings (inside container):**
 
@@ -161,9 +157,7 @@ Key variables:
 | `PATH_JENKINS_HOME` | Host Jenkins data → `/var/jenkins_home` (do **not** name `JENKINS_HOME` in `.env` — reserved in container) |
 | `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
-| `NEO_DATABASE` | **`neo4j`** on Community (single user database) |
-| `PATH_NEO4J_IMPORT2` | Host path → `/var/lib/neo4j/import2` (TraitBank CSV imports) |
-| `PORT_7474` / `PORT_7687` | Host:container Neo4j browser / Bolt ports |
+| `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |
 | `REGISTRY_*` | GHCR image names when using pre-built images (optional) |
 
 ---
@@ -221,23 +215,6 @@ Then runs `apache2-foreground`.
 
 ---
 
-## Neo4j (Community Edition)
-
-Image: **`neo4j:5.26.29-community-ubi10`** (Red Hat UBI10 base; runs on RHEL 9 hosts in Docker).
-
-_Neo4j in RHEL 9 is just for testing, not for public access._
-
-| Topic | Community behaviour |
-|-------|---------------------|
-| User database | Single database: **`neo4j`** — set `NEO_DATABASE=neo4j` in `.env` |
-| Admin commands | **`STOP DATABASE`**, **`START DATABASE`**, **`CREATE DATABASE`** are **not supported** |
-| Offline admin | Stop the container: `docker compose stop neo4j` (not `STOP DATABASE` in Browser) |
-| APOC | Enabled via `NEO4J_PLUGINS=["apoc"]` in compose |
-| License | No Enterprise license required (`NEO4J_ACCEPT_LICENSE_AGREEMENT` not used) |
-
-
----
-
 ## Common commands
 
 ```bash
@@ -260,9 +237,6 @@ docker compose exec web bash
 docker image prune -f
 ```
 
-
-
-
 ---
 
 ## Mac dev vs RHEL prod
@@ -284,10 +258,6 @@ docker image prune -f
 |---------|--------------|
 | MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
 | Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
-| Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
-| `UnsupportedAdministrationCommand: STOP DATABASE` | Enterprise-only — use `docker compose stop neo4j` instead |
-| Neo4j import "database in use" | Neo4j still running — stop container before `neo4j-admin database import full` |
-| App cannot find `db.eol` | Community uses **`neo4j`** only — set `NEO_DATABASE=neo4j` |
 | Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
 | Permission denied on RHEL | SELinux — `chcon -Rt svirt_sandbox_file_t /opt/eol` |
 | Override on production | Should not exist — file is gitignored; use `-f docker-compose.yml` |
