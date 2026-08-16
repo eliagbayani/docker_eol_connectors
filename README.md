@@ -18,6 +18,8 @@ tools.
 | **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
 | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 — maintains jobs for the web-based tools |
 
+**Mac development only:** Neo4j (`neo4j/Dockerfile`) is defined in **`docker-compose.override.yml`**, not in production `docker-compose.yml`. See [Neo4j (Mac dev only)](#neo4j-mac-dev-only).
+
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.538 + PHP 8.2 + Python 3 + gnparser | -->
 
 | Runtime | Purpose |
@@ -33,15 +35,16 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 
 ```text
 docker_eol_connectors/
-├── docker-compose.yml              ← main stack (all environments)
-├── docker-compose.override.yml     ← Mac dev only (gitignored, not deployed)
-├── .env.sample                     ← Mac / local dev template
-├── .env.production.sample          ← RHEL 9 production template
+├── docker-compose.yml                    ← production stack (web, db, jenkins)
+├── docker-compose.override.sample.yml  ← Mac dev template (copy → override.yml)
+├── docker-compose.override.yml         ← Mac dev only (gitignored, not deployed)
+├── .env.sample                         ← Mac / local dev template
+├── .env.production.sample              ← RHEL 9 production template
 ├── .gitignore
 ├── docs/
 │   └── rhel9_production_env_guide.md
 ├── scripts/
-│   └── rhel9-init-dirs.sh          ← create /opt/eol host dirs on RHEL
+│   └── rhel9-init-dirs.sh              ← create /opt/eol host dirs on RHEL
 ├── apache-php/
 │   ├── Dockerfile
 │   ├── apache2.conf
@@ -55,6 +58,8 @@ docker_eol_connectors/
 │   ├── my.cnf
 │   ├── enable-mysql-native-password.cnf
 │   └── test_MySQL_db.sql                  ← init seed (employees_tbl)
+├── neo4j/
+│   └── Dockerfile                         ← Mac dev only (via override file)
 └── jenkins/
     ├── Dockerfile
     └── executors.groovy
@@ -86,12 +91,13 @@ Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`
 cd My_Docker/docker_eol_connectors
 
 cp .env.sample .env
-# Edit paths (WEBROOT_PATH, MYSQL_DATA_DIR, etc.) — use /Volumes/... paths
+cp docker-compose.override.sample.yml docker-compose.override.yml
+# Edit paths in .env (WEBROOT_PATH, MYSQL_DATA_DIR, PATH_NEO4J_*, etc.)
 
 # Ensure MYSQL_DATA_DIR is empty on first run
 
 docker compose up -d
-# Merges docker-compose.override.yml automatically (mounts /Volumes)
+# Merges docker-compose.override.yml: /Volumes mount + neo4j service
 ```
 
 **Test URLs** (match ports in your `.env`; example Mac dev values):
@@ -100,6 +106,7 @@ docker compose up -d
 |-------|-----|
 | PHP + MySQL | http://localhost:81/test.php |
 | Jenkins | http://localhost:8081 |
+| Neo4j Browser | http://localhost:7494/browser/ |
 | MySQL from host | `localhost:4001` (user: root) |
 
 **test.php MySQL settings (inside container):**
@@ -131,7 +138,7 @@ docker compose -f docker-compose.yml build
 docker compose -f docker-compose.yml up -d
 ```
 
-**Do not deploy:** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount only).
+**Do not deploy:** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount + Neo4j). Production uses only `docker-compose.yml` (web, db, jenkins).
 
 Full guide: **`docs/rhel9_production_env_guide.md`**.
 
@@ -158,6 +165,7 @@ Key variables:
 | `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
 | `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |
+| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474`, `PORT_7687` | **Mac dev only** — Neo4j vars in `.env.sample`; not used on RHEL production |
 | `REGISTRY_*` | GHCR image names when using pre-built images (optional) |
 
 ---
@@ -215,6 +223,34 @@ Then runs `apache2-foreground`.
 
 ---
 
+## Neo4j (Mac dev only)
+
+Neo4j is **not** part of the RHEL production stack. It lives only in **`docker-compose.override.yml`**, which Docker Compose merges automatically on Mac but which must **not** exist on production servers.
+
+| | Mac dev | RHEL prod |
+|--|---------|-----------|
+| Neo4j in compose | `docker-compose.override.yml` | **not defined** |
+| Start command | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
+| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.sample`) | omit Neo4j vars (use `.env.production.sample`) |
+| Browser | `http://localhost:7494/browser/` (when `PORT_7474=7494:7474`) | — |
+
+**First-time Mac setup:**
+
+```bash
+cp docker-compose.override.sample.yml docker-compose.override.yml
+```
+
+The override adds:
+
+1. **`/Volumes:/Volumes`** mount on web + jenkins (dev symlinks)
+2. **`neo4j`** service — builds from `neo4j/Dockerfile` (`neo4j:5.26.29-community-ubi10`)
+
+Jenkins receives `NEO_URI=bolt://neo4j:7687` from `.env` so Python jobs can reach the graph DB on Mac. On production, Jenkins still starts but Neo4j-dependent jobs should not run (no `neo4j` container on the network).
+
+**Bulk CSV import** (e.g. `import_dataset.sh`) requires the override file so `docker compose stop neo4j` works. See `~/Desktop/devops/import_dataset_sh.md`.
+
+---
+
 ## Common commands
 
 ```bash
@@ -245,7 +281,8 @@ docker image prune -f
 |--|---------|-----------|
 | Env template | `.env.sample` | `.env.production.sample` |
 | `MY_ENVIRONMENT` | `development` | `production` |
-| Override file | local `docker-compose.override.yml` | not in repo |
+| Override file | `docker-compose.override.yml` (from `.sample`) | **must not exist** |
+| Services | web, db, jenkins, **neo4j** | web, db, jenkins only |
 | Base paths | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
 | Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
 | Extra data | `/Volumes` mount + dev symlinks | `/opt/eol/extra` → `/extra` |
@@ -260,7 +297,9 @@ docker image prune -f
 | Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
 | Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
 | Permission denied on RHEL | SELinux — `chcon -Rt svirt_sandbox_file_t /opt/eol` |
-| Override on production | Should not exist — file is gitignored; use `-f docker-compose.yml` |
+| Override on production | Should not exist — gitignored; use `-f docker-compose.yml` only |
+| Neo4j missing on Mac | Copy `docker-compose.override.sample.yml` → `docker-compose.override.yml` |
+| Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
 | Nested `opendata/opendata` symlink | Dev entrypoint removes it; recreate web container if links look wrong |
 | Jenkins empty after `.env` change | Use **`PATH_JENKINS_HOME`** / **`PATH_JENKINS_TMP`** for host paths — not `JENKINS_HOME` in `.env` |
 
@@ -271,5 +310,6 @@ docker image prune -f
 - **Web entrypoints** use `${PWD}` (`/var/www/html`) and **`ensure_symlink`** (`ln -sfn`) — see tables above.
 - **Jenkins:** compose sets in-container `JENKINS_HOME=/var/jenkins_home`; host bind path is **`PATH_JENKINS_HOME`** in `.env`.
 - **First MySQL init** runs SQL in `mysql/test_MySQL_db.sql` only when `MYSQL_DATA_DIR` is empty.
-- **`docker-compose.override.yml`** is gitignored — create locally on Mac for `/Volumes` dev mount.
+- **`docker-compose.override.yml`** is gitignored — on Mac, copy from **`docker-compose.override.sample.yml`** (adds `/Volumes` mount + Neo4j).
+- **Neo4j** runs on Mac dev only; production `docker-compose.yml` has no Neo4j service.
 - For Kubernetes production workloads, use **`dock_eol_conn_wf`** + **`eol-apps-connectors`** [GitHub](https://github.com/EOL/eol-apps-connectors/tree/main/connectors) instead of this full compose stack.

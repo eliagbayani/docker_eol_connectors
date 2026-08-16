@@ -1,0 +1,69 @@
+# Mac development only — copy to docker-compose.override.yml (gitignored):
+#   cp docker-compose.override.sample.yml docker-compose.override.yml
+#
+# Merged automatically on Mac:  docker compose up -d
+# NOT used on RHEL production:    docker compose -f docker-compose.yml up -d
+
+services:
+  # =================== Apache and PHP service ===================
+  web:
+    env_file:
+      - ./.env
+    volumes:
+      - /Volumes:/Volumes #for development only
+
+  # =================== Jenkins service ===================
+  jenkins:
+    env_file: ./.env
+    volumes:
+      - /Volumes:/Volumes #for development only
+
+  # =================== Neo4j service (Mac dev only — not in production stack) ===================
+  neo4j:
+    env_file: ./.env
+    build:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    ports:
+      - ${PORT_7474}
+      - ${PORT_7687}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_PLUGINS=["apoc"]
+
+      # --- memory tuning (Layer 2 stability); values from .env ---
+      # Note: '.' -> '_' and '_' -> '__' in NEO4J_* env var names.
+      - NEO4J_server_memory_heap_initial__size=${NEO_HEAP_INIT}
+      - NEO4J_server_memory_heap_max__size=${NEO_HEAP_MAX}
+      - NEO4J_server_memory_pagecache_size=${NEO_PAGECACHE}
+      - NEO4J_db_memory_transaction_total_max=${NEO_TX_TOTAL_MAX}
+
+      # for python: neo4j-admin --- Cannot use "NEO4J_" as it is reserved.
+      - NEO_USERNAME=${NEO_USERNAME}
+      - NEO_PASSWORD=${NEO_PASSWORD}
+      - NEO_DATABASE=${NEO_DATABASE}
+    volumes:
+      - ${PATH_NEO4J_DATA}:/data
+      - ${PATH_NEO4J_LOGS}:/logs
+      - ${PATH_NEO4J_IMPORT}:/var/lib/neo4j/import
+      - ${PATH_NEO4J_IMPORT2}:/var/lib/neo4j/import2
+      - ${PATH_NEO4J_PLUGINS}:/plugins
+      - ${PYTHON_APP}:/usr/src/app:rw
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -u \"$${NEO_USERNAME}\" -p \"$${NEO_PASSWORD}\" -d neo4j 'RETURN 1' || exit 1",
+        ]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
+    mem_limit: ${NEO_MEM_LIMIT}
+    restart: unless-stopped
+    stop_grace_period: 120s
