@@ -6,8 +6,6 @@
 
 ---
 
-## What this is
-
 A Docker Compose project that runs eol-archive server stack on a single host. This will be
 installed on a server with RHEL 9. Main purpose is to host the legacy EOL web-based
 tools.
