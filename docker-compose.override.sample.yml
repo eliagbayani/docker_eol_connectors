@@ -15,6 +15,10 @@ services:
   # =================== Jenkins service ===================
   jenkins:
     env_file: ./.env
+    cpus: 5
+    mem_limit: 12gb
+    environment:
+      - JAVA_OPTS=-Xmx10g -Xms6g
     volumes:
       - /Volumes:/Volumes #for development only
 
