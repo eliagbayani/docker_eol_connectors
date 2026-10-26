@@ -39,6 +39,11 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **php.ini** | `session.sid_length` / `session.sid_bits_per_character` commented out (deprecated in 8.4; PHP defaults 32 / 4 apply). |
 | **`.env.production.sample`** | Jenkins (8080) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes). |
 | **`eol_php8_code`** (webroot, separate repo) | PHP 8.4 deprecations fixed. See [PHP 8.4 migration notes](#php-84-migration-notes). |
+| **MySQL image** | Root password no longer baked into the image: `root-native-password.sh` sets it at first init from the runtime env. `!includedir` fix so the first init on an empty data dir completes. |
+| **Apache hardening** | No directory listings; dotfiles/`.git` → 404; `eol_php8_code` config, vendor, lib, logs and loose files (`*.yml`, `*.sql`, …) → 403; PHP never runs from job-written / data dirs (`temp`, `tmp`, `content_server/resources`, `/extra` links). `ServerTokens Prod`. See [Security notes](#security-notes). |
+| **Production PHP settings** | `zz-production.ini` (production builds only): errors logged, not displayed; `expose_php=Off`; strict, `HttpOnly`, `SameSite=Lax` session cookies. `ini_set('display_errors', true)` still works per page. |
+| **Ports** | Every non-public port on `127.0.0.1`, Mac included (web `127.0.0.1:81`). Jenkins agent port 50000 not published. Prod web bound to the internal IP — see [Public access](#public-access-editorseolorg). |
+| **Container-to-container** | Code reaches MySQL at `db:3306` (`database.yml`) and Jenkins at `jenkins:8080` (`JENKINS_DOMAIN`), with a build-only Jenkins user (`web-trigger`). |
 
 ---
 
@@ -61,6 +66,8 @@ docker_eol_connectors/
 │   ├── apache2.conf
 │   ├── 000-default.conf
 │   ├── php.ini.txt
+│   ├── zz-production.ini                  ← production-only PHP settings
+│   ├── zz-security.conf                   ← ServerTokens Prod, ServerSignature Off
 │   ├── docker-entrypoint_development.sh   ← Mac /Volumes symlinks
 │   ├── docker-entrypoint_production.sh    ← /extra symlinks
 │   └── src/                               ← test.php, info.php, list.php
@@ -68,6 +75,7 @@ docker_eol_connectors/
 │   ├── Dockerfile
 │   ├── my.cnf
 │   ├── enable-mysql-native-password.cnf
+│   ├── root-native-password.sh            ← first-init: root auth plugin, password from env
 │   └── test_MySQL_db.sql                  ← init seed (employees_tbl)
 ├── neo4j/
 │   └── Dockerfile                         ← Mac dev only (via override file)
@@ -88,7 +96,7 @@ docker_eol_connectors/
 | PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python | — | embedded 3.9 | 3.11 |
 | gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
-| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 (`127.0.0.1` only) | 8081→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
+| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:80`→80 (prod, internal IP) | `127.0.0.1:4001`→3306 | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
 | Restart | unless-stopped | unless-stopped | unless-stopped |
 | Platform (web) | `linux/amd64` in compose | — | — |
 
@@ -149,12 +157,25 @@ sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
 sudo restorecon -Rv /opt/eol
 
 # Populate /opt/eol/webroot and /opt/eol/extra before or after first up
+# In eol_php8_code: config/database.yml → host: db, port: 3306 (quoted new password);
+#                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
+
+# Port 80 belongs to the web container — the host's own Apache must not run
+sudo systemctl disable --now httpd 2>/dev/null
 
 docker compose -f docker-compose.yml build --no-cache --pull
 docker compose -f docker-compose.yml up -d
 ```
 
 Check the build log for `PHP 8.4.27` (Jenkins PHP version guard).
+
+### Public access (editors.eol.org)
+
+```
+browser ──HTTPS──▶ Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:80──▶ server 10.252.248.39
+```
+
+HTTPS ends at 160.111.248.42, which forwards plain HTTP over the internal network — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:80:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → *Public access*.
 
 **Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from your machine through an SSH tunnel:
 
@@ -185,6 +206,7 @@ Key variables:
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
+| `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:80:80` (internal IP; reached via 160.111.248.42) |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
@@ -199,10 +221,14 @@ Key variables:
 
 ## Security notes
 
-- **Docker-published ports bypass firewalld.** A port published on all interfaces (e.g. `8080:8080`) is reachable even if firewalld does not open it. Bind anything that is not public to `127.0.0.1` in `.env` — the production sample does this for MySQL, Jenkins, the Jenkins agent port and Neo4j. Only **web (80)** is public.
+- **Docker-published ports bypass firewalld.** A port published on all interfaces (e.g. `8080:8080`) is reachable even if firewalld does not open it. Bind anything that is not public to `127.0.0.1` in `.env` — both samples do this for MySQL, Jenkins and Neo4j; the agent port 50000 is not published. Prod web is bound to the **internal IP** only (public traffic arrives via 160.111.248.42).
 - **`.env` holds passwords** — `chmod 600 .env` on the server; never commit it.
 - **SELinux** — use `semanage fcontext` + `restorecon` (above). `chcon` labels are lost on a relabel. `webroot` and `extra` are mounted by both web and jenkins, so if you use mount suffixes use `:z` (shared), not `:Z`.
 - **Jenkins over plain HTTP** — keep it on localhost + SSH tunnel, or put a TLS reverse proxy in front before exposing it.
+- **Jenkins access** — Project-based Matrix Authorization; anonymous has no access. The web tools trigger jobs as a **build-only** user (`web-trigger`, API token in `production.php`), never an admin token.
+- **Apache (`apache2.conf`)** — `eol_php8_code` lives inside the webroot, so its `config/` (DB passwords), `vendor/`, `lib/`, logs and loose files are denied (403), dotfiles/`.git` return 404, and PHP is switched off in directories Jenkins jobs write to. A new web entry point outside `applications/`, `public/`, `html/` must be checked against these rules.
+- **PHP errors in production** — not displayed; read them with `docker compose logs web`. For one page, `ini_set('display_errors', true)` still shows them.
+- **MySQL** — the root password comes from `.env` at first init only; changing it later means `ALTER USER` in MySQL, not editing `.env`.
 
 ---
 
@@ -391,7 +417,9 @@ docker image prune -f
 | Base paths | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
 | Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
 | Extra data | `/Volumes` mount + dev symlinks | `/opt/eol/extra` → `/extra` |
-| Non-public ports | as set in `.env` | bound to `127.0.0.1` (SSH tunnel) |
+| Non-public ports | `127.0.0.1` | `127.0.0.1` (SSH tunnel) |
+| Web port | `127.0.0.1:81` | `10.252.248.39:80` — public via Cloudflare → 160.111.248.42 |
+| PHP errors | displayed | logged only (`docker compose logs web`) |
 
 ---
 
@@ -401,7 +429,10 @@ docker image prune -f
 |---------|--------------|
 | MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
 | Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
-| Port 80 in use | Often Docker (`com.docke`) — `docker ps --filter "publish=80"` |
+| Port 80 in use | Mac: often Docker (`com.docke`) — `docker ps --filter "publish=80"`. RHEL: the host's own `httpd` — `sudo systemctl disable --now httpd` |
+| 403 on `eol_php8_code/config/…`, `*.yml`, `vendor/` | Expected — denied in `apache2.conf` (secrets/code not downloadable) |
+| Blank page / no PHP error in production | Errors are logged, not shown — `docker compose logs web`, or `ini_set('display_errors', true)` on that page |
+| Web tool can't start a Jenkins job | `JENKINS_DOMAIN` must be `jenkins:8080`; `web-trigger` token valid and has Build on the job |
 | Permission denied on RHEL | SELinux — `semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"` then `restorecon -Rv /opt/eol` |
 | Override on production | Should not exist — gitignored; use `-f docker-compose.yml` only |
 | Neo4j missing on Mac | Copy `docker-compose.override.sample.yml` → `docker-compose.override.yml` |
