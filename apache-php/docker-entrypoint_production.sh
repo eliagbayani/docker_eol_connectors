@@ -10,8 +10,9 @@ ls -lt
 # ========== Here copy test_{environment}.php, does not overwrite. Also copies info.php, it overwrites.
 # Below works OK. But now commented since we don't have test_development.php or test_production.php anymore. We only have test.php.
 # Use ${PWD} (/var/www/html mount), not host TARGET_PATH — that path is not visible in-container.
-[ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
-cp /tmp/info.php ${PWD}
+### works OK but not do it in production
+###[ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
+###cp /tmp/info.php ${PWD}
 
 # Create symlink in ${PWD}. Check against ${PWD}; use ln -sfn so existing dir symlinks are not followed into nested links.
 ensure_symlink() {
