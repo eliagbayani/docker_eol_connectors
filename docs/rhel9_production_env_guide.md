@@ -176,7 +176,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
 | `WEB_PORTS` | `80:80` | Public. Or `8080:80` if 80 is taken |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
-| `JENKINS_PORTS_COMMUNICATION` | `127.0.0.1:50000:50000` | Inbound-agent port — localhost unless you use inbound agents |
+| `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
 | `PORT_7474` / `PORT_7687` | `127.0.0.1:…` | Only relevant if a neo4j service is added |
 | `NEO_DATABASE` | **`neo4j`** | Community single database (not `db.eol`) |
 | MySQL DB name (auto) | `eol_production` | From `eol_${MY_ENVIRONMENT}` in compose |
@@ -244,7 +244,7 @@ sudo firewall-cmd --permanent --add-port=80/tcp
 sudo firewall-cmd --reload
 ```
 
-**Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL, Jenkins (8080, 50000) and Neo4j to `127.0.0.1` instead of relying on `firewall-cmd`.
+**Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL, Jenkins (8080) and Neo4j to `127.0.0.1` (the agent port 50000 is not published at all) instead of relying on `firewall-cmd`.
 
 **Jenkins from your machine** (bound to localhost on the server):
 

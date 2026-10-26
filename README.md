@@ -37,7 +37,7 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **PHP version guard** | `jenkins/Dockerfile` fails the build if apt installs PHP older than `PHP_MIN_VERSION` (8.4.27). See [PHP version pins](#php-version-pins). |
 | **Jenkins** | 2.538 (weekly) → **2.580.1 LTS** — picks up 2026 security advisories (incl. CVE-2026-70426). See [Upgrading Jenkins](#upgrading-jenkins). |
 | **php.ini** | `session.sid_length` / `session.sid_bits_per_character` commented out (deprecated in 8.4; PHP defaults 32 / 4 apply). |
-| **`.env.production.sample`** | Jenkins (8080, 50000) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes). |
+| **`.env.production.sample`** | Jenkins (8080) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes). |
 | **`eol_php8_code`** (webroot, separate repo) | PHP 8.4 deprecations fixed. See [PHP 8.4 migration notes](#php-84-migration-notes). |
 
 ---
@@ -187,7 +187,7 @@ Key variables:
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
 | `MYSQL_PORTS` | Prod: `127.0.0.1:4001:3306` (localhost only) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
-| `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Prod: `127.0.0.1:50000:50000` |
+| `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
 | `PATH_JENKINS_HOME` | Host Jenkins data → `/var/jenkins_home` (do **not** name `JENKINS_HOME` in `.env` — reserved in container) |
 | `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
