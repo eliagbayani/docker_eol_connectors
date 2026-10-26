@@ -8,11 +8,11 @@ FROM mysql:8.4.3-oraclelinux9
 
 # Just overwrite the entire my.cnf, since updating above didn't work.
 # this one worked OK
-COPY my.cnf /etc/my.cnf
+COPY --chmod=644 my.cnf /etc/my.cnf
 
 # Required. This is important:
 # Without it, will have an error: Plugin 'mysql_native_password' is not loaded
-COPY enable-mysql-native-password.cnf /etc/mysql/conf.d/
+COPY --chmod=644 enable-mysql-native-password.cnf /etc/mysql/conf.d/
 
 # Initial migration of eol_development tables and a test employees table. Creates the eol_development database.
 # COPY eol_development.sql /docker-entrypoint-initdb.d/eol_development.sql
@@ -22,7 +22,5 @@ RUN echo "My environment is: "${ENVIRONMENT_FROM_COMPOSE}
 # -> working but was changed to below:
 COPY test_MySQL_db.sql /docker-entrypoint-initdb.d/test_MySQL_db.sql
 
-# works OK. From: https://stackoverflow.com/questions/29261811/use-docker-compose-env-variable-in-dockerbuild-file
-# Passing vars from compose file to container during build.
-ARG MRP_FROM_COMPOSE
-RUN echo "ALTER USER 'root' IDENTIFIED WITH mysql_native_password BY '"${MRP_FROM_COMPOSE}"';" > /docker-entrypoint-initdb.d/eli.sql
+# Root auth plugin is set at first container init (password read from env, not baked into the image).
+COPY --chmod=755 root-native-password.sh /docker-entrypoint-initdb.d/zz-root-native-password.sh
