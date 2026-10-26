@@ -289,6 +289,22 @@ $db   = 'eol_production';
 
 Browser: `http://<server>/test.php` (when `WEB_PORTS=80:80`)
 
+## eol_php8_code `config/database.yml` (gitignored — copy by hand)
+
+The `production` and `jenkins_production` sections must use the Compose service name, not `127.0.0.1` or a container IP:
+
+```yaml
+production:
+  host: db
+  username: root
+  password: "<MYSQL_ROOT_PASSWORD from .env>"
+  database: eol_production
+  encoding: utf8
+  port: 3306
+```
+
+Same for `jenkins_production`. Quote the password. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
+
 `test.php` connects as **root** and runs `shell_exec`, and the production entrypoint also copies `info.php` (phpinfo) into the public webroot. Remove both from `/opt/eol/webroot` after the smoke test.
 
 ---

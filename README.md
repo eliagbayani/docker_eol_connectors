@@ -88,7 +88,7 @@ docker_eol_connectors/
 | PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python | — | embedded 3.9 | 3.11 |
 | gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
-| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 (prod: `127.0.0.1` only) | 8081→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
+| Default host port | 81→80 (dev) / 80→80 (prod) | 4001→3306 (`127.0.0.1` only) | 8081→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
 | Restart | unless-stopped | unless-stopped | unless-stopped |
 | Platform (web) | `linux/amd64` in compose | — | — |
 
@@ -185,7 +185,7 @@ Key variables:
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
-| `MYSQL_PORTS` | Prod: `127.0.0.1:4001:3306` (localhost only) |
+| `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
 | `PATH_JENKINS_HOME` | Host Jenkins data → `/var/jenkins_home` (do **not** name `JENKINS_HOME` in `.env` — reserved in container) |
