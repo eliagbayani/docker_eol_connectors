@@ -210,7 +210,7 @@ Key variables:
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
-| `PATH_JENKINS_HOME` | Host Jenkins data → `/var/jenkins_home` (do **not** name `JENKINS_HOME` in `.env` — reserved in container) |
+| `PATH_JENKINS_HOME` | Host Jenkins data, mounted at `/var/jenkins_home`. The in-container `JENKINS_HOME=/var/jenkins_home` is set in `docker-compose.yml` (`environment:`), not in `.env` |
 | `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
 | `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |

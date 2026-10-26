@@ -77,7 +77,6 @@ services:
     env_file: ./.env
     build:
       args:
-        JENKINS_HOME_FROM_COMPOSE: ${PATH_JENKINS_HOME}
         JENKINS_TMP_FROM_COMPOSE: ${PATH_JENKINS_TMP}
         PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
       context: ./jenkins
@@ -88,8 +87,8 @@ services:
     restart: unless-stopped #old value: on-failure
 
     volumes:
-      # Host path var must NOT be named JENKINS_HOME — env_file would override
-      # the in-container path Jenkins expects (/var/jenkins_home).
+      # Host folder → /var/jenkins_home. In-container JENKINS_HOME is set under environment: below
+      # (environment: wins over env_file). The host var is PATH_JENKINS_HOME so the two never mix.
       - ${PATH_JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
 
