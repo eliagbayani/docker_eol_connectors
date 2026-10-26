@@ -44,6 +44,8 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **Production PHP settings** | `zz-production.ini` (production builds only): errors logged, not displayed; `expose_php=Off`; strict, `HttpOnly`, `SameSite=Lax` session cookies. `ini_set('display_errors', true)` still works per page. |
 | **Ports** | Every non-public port on `127.0.0.1`, Mac included (web `127.0.0.1:81`). Jenkins agent port 50000 not published. Prod web bound to the internal IP — see [Public access](#public-access-editorseolorg). |
 | **Container-to-container** | Code reaches MySQL at `db:3306` (`database.yml`) and Jenkins at `jenkins:8080` (`JENKINS_DOMAIN`), with a build-only Jenkins user (`web-trigger`). |
+| **Env templates** | `.env.sample` renamed to **`.env.development.sample`** (pairs with `.env.production.sample`). An existing `.env` is unaffected. |
+| **Existing installs** | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). |
 
 ---
 
@@ -229,6 +231,36 @@ Key variables:
 - **Apache (`apache2.conf`)** — `eol_php8_code` lives inside the webroot, so its `config/` (DB passwords), `vendor/`, `lib/`, logs and loose files are denied (403), dotfiles/`.git` return 404, and PHP is switched off in directories Jenkins jobs write to. A new web entry point outside `applications/`, `public/`, `html/` must be checked against these rules.
 - **PHP errors in production** — not displayed; read them with `docker compose logs web`. For one page, `ini_set('display_errors', true)` still shows them.
 - **MySQL** — the root password comes from `.env` at first init only; changing it later means `ALTER USER` in MySQL, not editing `.env`.
+
+### Changing the MySQL root password
+
+The password lives in MySQL itself (set once at first init) and is copied into `.env`, `eol_php8_code/config/database.yml` and the webroot test pages. Change all of them together; never print the value.
+
+```bash
+# 1. New password, kept in a shell variable only
+NEWPW=$(openssl rand -hex 24); export NEWPW
+
+# 2. Change it inside MySQL (both root accounts); SQL goes via stdin, not the command line
+docker compose exec -T -e NEWPW db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot <<SQL
+ALTER USER '"'"'root'"'"'@'"'"'%'"'"' IDENTIFIED WITH mysql_native_password BY '"'"'$NEWPW'"'"';
+ALTER USER '"'"'root'"'"'@'"'"'localhost'"'"' IDENTIFIED BY '"'"'$NEWPW'"'"';
+SQL'
+
+# 3. Put $NEWPW into MYSQL_ROOT_PASSWORD in .env, the matching database.yml sections (quoted),
+#    and test.php / test_development.php — then recreate the containers so they read the new .env
+docker compose up -d          # RHEL: docker compose -f docker-compose.yml up -d
+unset NEWPW
+```
+
+Check: `test.php` shows rows. To find files still holding the old value, use `grep -rlF` with the old password from a variable (prints file names only).
+
+**Old db images:** an image built before Oct 2026 has a root password in `/docker-entrypoint-initdb.d/eli.sql`. Rebuild and drop it (data in `MYSQL_DATA_DIR` is untouched):
+
+```bash
+docker compose build --no-cache --pull db && docker compose up -d db
+docker image prune -f
+docker run --rm --entrypoint ls docker_eol_connectors-db /docker-entrypoint-initdb.d/   # → test_MySQL_db.sql, zz-root-native-password.sh
+```
 
 ---
 
