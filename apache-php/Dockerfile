@@ -24,6 +24,14 @@ COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entr
 # We need to do this bec. we needed to update php.ini with our own values e.g. upload_max_filesize
 COPY php.ini.txt /usr/local/etc/php/php.ini
 
+# H1: production error/session settings on top of php.ini.txt (dev builds keep showing errors).
+COPY zz-production.ini /tmp/zz-production.ini
+RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then cp /tmp/zz-production.ini /usr/local/etc/php/conf.d/; fi
+
+# H2: hide Apache version/OS in headers and error pages.
+COPY zz-security.conf /etc/apache2/conf-available/
+RUN a2enconf zz-security
+
 # =============================================================================
 # Update other OS stuff
 RUN apt-get update \
