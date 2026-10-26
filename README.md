@@ -54,7 +54,7 @@ docker_eol_connectors/
 ├── docker-compose.yml                    ← production stack (web, db, jenkins)
 ├── docker-compose.override.sample.yml  ← Mac dev template (copy → override.yml)
 ├── docker-compose.override.yml         ← Mac dev only (gitignored, not deployed)
-├── .env.sample                         ← Mac / local dev template
+├── .env.development.sample             ← Mac / local dev template
 ├── .env.production.sample              ← RHEL 9 production template
 ├── .gitignore
 ├── docs/
@@ -109,7 +109,7 @@ Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`
 ```bash
 cd My_Docker/docker_eol_connectors
 
-cp .env.sample .env
+cp .env.development.sample .env
 cp docker-compose.override.sample.yml docker-compose.override.yml
 # Edit paths in .env (WEBROOT_PATH, MYSQL_DATA_DIR, PATH_NEO4J_*, etc.)
 
@@ -193,7 +193,7 @@ Full guide: **`docs/rhel9_production_env_guide.md`**.
 
 | File | Use |
 |------|-----|
-| `.env.sample` | Mac / local dev — copy to `.env` |
+| `.env.development.sample` | Mac / local dev — copy to `.env` |
 | `.env.production.sample` | RHEL 9 — copy to `.env` on server, then `chmod 600 .env` |
 | `.env` | Active config (gitignored) |
 
@@ -360,7 +360,7 @@ Neo4j is **not** part of the RHEL production stack. It lives only in **`docker-c
 |--|---------|-----------|
 | Neo4j in compose | `docker-compose.override.yml` | **not defined** |
 | Start command | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
-| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.sample`) | present in `.env.production.sample` (ports on `127.0.0.1`), unused while no `neo4j` service is defined |
+| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.development.sample`) | present in `.env.production.sample` (ports on `127.0.0.1`), unused while no `neo4j` service is defined |
 | Browser | `http://localhost:7494/browser/` (when `PORT_7474=7494:7474`) | — |
 
 **First-time Mac setup:**
@@ -410,7 +410,7 @@ docker image prune -f
 
 | | Mac dev | RHEL prod |
 |--|---------|-----------|
-| Env template | `.env.sample` | `.env.production.sample` |
+| Env template | `.env.development.sample` | `.env.production.sample` |
 | `MY_ENVIRONMENT` | `development` | `production` |
 | Override file | `docker-compose.override.yml` (from `.sample`) | **must not exist** |
 | Services | web, db, jenkins, **neo4j** | web, db, jenkins only |

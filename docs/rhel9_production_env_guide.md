@@ -376,7 +376,7 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 | `MY_ENVIRONMENT` | `development` | `production` |
 | Symlinks | `/Volumes/AKiTiO4/...` (dev entrypoint) | `/extra/...` (prod entrypoint) |
 | Base path | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
-| Env template | `.env.sample` | `.env.production.sample` |
+| Env template | `.env.development.sample` | `.env.production.sample` |
 | Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
 | `NEO_DATABASE` | **`neo4j`** | **`neo4j`** (passed to jenkins) |
 | Admin ports (MySQL, Jenkins, Neo4j) | `127.0.0.1` only | `127.0.0.1` only — SSH tunnel |
