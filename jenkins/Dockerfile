@@ -39,7 +39,7 @@ RUN apt install zip unzip -y
 RUN apt-get install curl -y
 RUN apt install wget -y
 
-# install PHP 8.2 from: https://php.watch/articles/install-php82-ubuntu-debian
+# install PHP 8.4 (was 8.2) from: https://php.watch/articles/install-php82-ubuntu-debian
 RUN dpkg -l | grep php | tee packages.txt
 RUN apt install apt-transport-https lsb-release ca-certificates wget -y
 RUN wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg 
@@ -47,18 +47,18 @@ RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /
 RUN apt update
 
 # Expand the curly braces with all extensions necessary.
-# RUN apt install php8.2 php8.2-cli php8.2-{bz2,curl,mbstring,intl}
-RUN apt install -y php8.2 php8.2-cli php8.2-bz2 php8.2-curl php8.2-mbstring php8.2-intl php8.2-mysqli
-RUN apt install -y php8.2-fpm
-RUN apt install -y php8.2-mysqlnd php8.2-pdo php8.2-xml php8.2-bcmath
-RUN apt install -y php8.2-zip 
-RUN apt install -y php8.2-yaml 
-RUN a2enconf php8.2-fpm
+# RUN apt install php8.4 php8.4-cli php8.4-{bz2,curl,mbstring,intl}
+RUN apt install -y php8.4 php8.4-cli php8.4-bz2 php8.4-curl php8.4-mbstring php8.4-intl php8.4-mysqli
+RUN apt install -y php8.4-fpm
+RUN apt install -y php8.4-mysqlnd php8.4-pdo php8.4-xml php8.4-bcmath
+RUN apt install -y php8.4-zip
+RUN apt install -y php8.4-yaml
+RUN a2enconf php8.4-fpm
 
-# PHP2Shell (CVE-2026-109618 / CVE-2026-109619, Oct 2026) is fixed in 8.2.35.
-# Fail the build if sury gave us an older 8.2.x (e.g. stale cached apt layer -> rebuild with --no-cache).
-# Raise this when a newer 8.2.x security release comes out.
-ARG PHP_MIN_VERSION=8.2.35
+# PHP2Shell (CVE-2026-109618 / CVE-2026-109619, Oct 2026) is fixed in 8.4.27.
+# Fail the build if sury gave us an older 8.4.x (e.g. stale cached apt layer -> rebuild with --no-cache).
+# Raise this when a newer 8.4.x security release comes out.
+ARG PHP_MIN_VERSION=8.4.27
 RUN php -r "echo 'PHP ', PHP_VERSION, PHP_EOL; exit(version_compare(PHP_VERSION, '${PHP_MIN_VERSION}', '>=') ? 0 : 1);" \
   || { echo "ERROR: PHP is older than ${PHP_MIN_VERSION}. Rebuild with --no-cache."; exit 1; }
 

@@ -1,6 +1,7 @@
-# Pinned to a patch version: 8.2.35 fixes CVE-2026-109618 and CVE-2026-109619 ("PHP2Shell", Oct 2026).
-# Raise this when a newer 8.2.x security release comes out.
-FROM php:8.2.35-apache
+# Pinned to a patch version: 8.4.27 fixes CVE-2026-109618 and CVE-2026-109619 ("PHP2Shell", Oct 2026).
+# Raise this when a newer 8.4.x security release comes out.
+# FROM php:8.2.35-apache
+FROM php:8.4.27-apache
 
 # very important line
 RUN docker-php-ext-install mysqli
