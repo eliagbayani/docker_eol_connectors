@@ -44,6 +44,7 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **Production PHP settings** | `zz-production.ini` (production builds only): errors logged, not displayed; `expose_php=Off`; strict, `HttpOnly`, `SameSite=Lax` session cookies. `ini_set('display_errors', true)` still works per page. |
 | **Ports** | Every non-public port on `127.0.0.1`, Mac included (web `127.0.0.1:81`). Jenkins agent port 50000 not published. Prod web bound to the internal IP — see [Public access](#public-access-editorseolorg). |
 | **Container-to-container** | Code reaches MySQL at `db:3306` (`database.yml`) and Jenkins at `jenkins:8080` (`JENKINS_DOMAIN`), with a build-only Jenkins user (`web-trigger`). |
+| **Matching the old editors.eol.org server** | From eol-archive's saved config: `/eol_php_code/...` URLs served from `eol_php8_code` (`Alias` in `apache2.conf`); `max_execution_time`/`max_input_time` 900 and `max_input_vars` 100000 in `php.ini.txt`; PHP `zip`, `gd`, `xsl` added to web and `gd` to jenkins. Prod web port is **8080** on the internal IP (what .42 forwards to). |
 | **Env templates** | `.env.sample` renamed to **`.env.development.sample`** (pairs with `.env.production.sample`). An existing `.env` is unaffected. |
 | **Existing installs** | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). |
 
@@ -98,7 +99,7 @@ docker_eol_connectors/
 | PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python | — | embedded 3.9 | 3.11 |
 | gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
-| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:80`→80 (prod, internal IP) | `127.0.0.1:4001`→3306 | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
+| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:8080`→80 (prod, internal IP) | `127.0.0.1:4001`→3306 | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
 | Restart | unless-stopped | unless-stopped | unless-stopped |
 | Platform (web) | `linux/amd64` in compose | — | — |
 
@@ -162,7 +163,7 @@ sudo restorecon -Rv /opt/eol
 # In eol_php8_code: config/database.yml → host: db, port: 3306 (quoted new password);
 #                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
 
-# Port 80 belongs to the web container — the host's own Apache must not run
+# The web container takes 10.252.248.39:8080 — the host's own Apache must not run
 sudo systemctl disable --now httpd 2>/dev/null
 
 docker compose -f docker-compose.yml build --no-cache --pull
@@ -174,10 +175,10 @@ Check the build log for `PHP 8.4.27` (Jenkins PHP version guard).
 ### Public access (editors.eol.org)
 
 ```
-browser ──HTTPS──▶ Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:80──▶ server 10.252.248.39
+browser ──HTTPS──▶ Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ server 10.252.248.39
 ```
 
-HTTPS ends at 160.111.248.42, which forwards plain HTTP over the internal network — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:80:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → *Public access*.
+HTTPS ends at 160.111.248.42, which forwards plain HTTP to port 8080 over the internal network (as the old eol-archive Apache listened) — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:8080:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → *Public access*.
 
 **Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from your machine through an SSH tunnel:
 
@@ -208,7 +209,7 @@ Key variables:
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
-| `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:80:80` (internal IP; reached via 160.111.248.42) |
+| `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:8080:80` (internal IP; reached via 160.111.248.42; no clash with Jenkins on `127.0.0.1:8080`) |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
@@ -450,7 +451,7 @@ docker image prune -f
 | Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
 | Extra data | `/Volumes` mount + dev symlinks | `/opt/eol/extra` → `/extra` |
 | Non-public ports | `127.0.0.1` | `127.0.0.1` (SSH tunnel) |
-| Web port | `127.0.0.1:81` | `10.252.248.39:80` — public via Cloudflare → 160.111.248.42 |
+| Web port | `127.0.0.1:81` | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
 | PHP errors | displayed | logged only (`docker compose logs web`) |
 
 ---
@@ -461,7 +462,7 @@ docker image prune -f
 |---------|--------------|
 | MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
 | Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
-| Port 80 in use | Mac: often Docker (`com.docke`) — `docker ps --filter "publish=80"`. RHEL: the host's own `httpd` — `sudo systemctl disable --now httpd` |
+| Port 80 / 8080 in use | Mac: often Docker (`com.docke`) — `docker ps --filter "publish=80"`. RHEL: the host's own `httpd` — `sudo systemctl disable --now httpd` |
 | 403 on `eol_php8_code/config/…`, `*.yml`, `vendor/` | Expected — denied in `apache2.conf` (secrets/code not downloadable) |
 | Blank page / no PHP error in production | Errors are logged, not shown — `docker compose logs web`, or `ini_set('display_errors', true)` on that page |
 | Web tool can't start a Jenkins job | `JENKINS_DOMAIN` must be `jenkins:8080`; `web-trigger` token valid and has Build on the job |

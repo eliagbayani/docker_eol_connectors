@@ -6,6 +6,15 @@ FROM php:8.4.27-apache
 # very important line
 RUN docker-php-ext-install mysqli
 
+# Extensions the old eol-archive (PHP 5.6) had and eol_php8_code uses:
+# zip (PHPExcel .xlsx), gd (lib/ContentManager.php images), xsl (applications/GNI_connector).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype-dev libxslt1-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-freetype \
+    && docker-php-ext-install -j"$(nproc)" zip gd xsl \
+    && rm -rf /var/lib/apt/lists/*
+
 # We need these 2 files bec. we might have entered specific values to apache2.conf and 000-default.conf
 COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/

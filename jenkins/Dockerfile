@@ -52,6 +52,8 @@ RUN apt install -y php8.4 php8.4-cli php8.4-bz2 php8.4-curl php8.4-mbstring php8
 RUN apt install -y php8.4-fpm
 RUN apt install -y php8.4-mysqlnd php8.4-pdo php8.4-xml php8.4-bcmath
 RUN apt install -y php8.4-zip
+# gd: lib/ContentManager.php image handling (the old eol-archive PHP had it)
+RUN apt install -y php8.4-gd
 RUN apt install -y php8.4-yaml
 RUN a2enconf php8.4-fpm
 

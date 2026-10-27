@@ -404,7 +404,8 @@ expose_php = On
 ; Maximum execution time of each script, in seconds
 ; https://php.net/max-execution-time
 ; Note: This directive is hardcoded to 0 for the CLI SAPI
-max_execution_time = 30
+; 900 like the old eol-archive (PHP 5.6). Cloudflare still cuts web requests at 100 s.
+max_execution_time = 900
 
 ; Maximum amount of time each script may spend parsing request data. It's a good
 ; idea to limit this time on productions servers in order to eliminate unexpectedly
@@ -414,7 +415,7 @@ max_execution_time = 30
 ; Development Value: 60 (60 seconds)
 ; Production Value: 60 (60 seconds)
 ; https://php.net/max-input-time
-max_input_time = 60
+max_input_time = 900
 
 ; Maximum input variable nesting level
 ; https://php.net/max-input-nesting-level
@@ -422,6 +423,8 @@ max_input_time = 60
 
 ; How many GET/POST/COOKIE input variables may be accepted
 ;max_input_vars = 1000
+; 100000 like the old eol-archive: large web-tool forms lose fields above the limit.
+max_input_vars = 100000
 
 ; How many multipart body parts (combined input variable and file uploads) may
 ; be accepted.

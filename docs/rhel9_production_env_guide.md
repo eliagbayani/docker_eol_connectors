@@ -18,7 +18,7 @@ The stack **will run on RHEL 9** if you:
 4. Populate **`/opt/eol/extra`** subdirs expected by `docker-entrypoint_production.sh`
 5. Handle **SELinux** labels on bind mounts (`semanage fcontext` + `restorecon`)
 6. Keep non-public ports on **`127.0.0.1`** — Docker-published ports bypass firewalld
-7. Bind web to the server's **internal IP** (`WEB_PORTS=10.252.248.39:80:80`) — HTTPS ends upstream at 160.111.248.42, no certificate on the server (see *Public access: editors.eol.org*)
+7. Bind web to the server's **internal IP** (`WEB_PORTS=10.252.248.39:8080:80`) — HTTPS ends upstream at 160.111.248.42, no certificate on the server (see *Public access: editors.eol.org*)
 
 `docker-compose.override.yml` is **gitignored** — it stays on your Mac for dev (`/Volumes` mount + Neo4j) and is **not included in git clone/deploy** to RHEL.
 
@@ -175,7 +175,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | `MYSQL_USER` | `eagbayani` (sample default) | Created by MySQL image on first init; a generic name such as `eol_app` is preferable — must match the PHP app's DB config |
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
-| `WEB_PORTS` | `10.252.248.39:80:80` | Internal IP only — reached by 160.111.248.42, which forwards `editors.eol.org`. Or `…:8080:80` if 80 is taken (then .42 must forward to 8080) |
+| `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
 | `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
 | `PORT_7474` / `PORT_7687` | `127.0.0.1:…` | Only relevant if a neo4j service is added |
@@ -240,29 +240,31 @@ docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
 docker compose -f docker-compose.yml up -d
 
-# 7. Port 80 belongs to the web container — the host's own Apache must not run
-#    (the old RHEL 7 eol-archive ran Apache + PHP natively, no Docker)
-sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep ':80 '
-#    No firewall-cmd needed for 80: Docker bypasses firewalld; access is limited by
-#    binding web to the internal IP (WEB_PORTS=10.252.248.39:80:80)
+# 7. 10.252.248.39:8080 belongs to the web container — the host's own Apache must not run
+#    (the old RHEL 7 eol-archive ran Apache + PHP natively on that port, no Docker)
+sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep ':8080 '
+#    No firewall-cmd needed: Docker bypasses firewalld; access is limited by
+#    binding web to the internal IP (WEB_PORTS=10.252.248.39:8080:80)
 ```
 
 **Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL, Jenkins (8080) and Neo4j to `127.0.0.1` (the agent port 50000 is not published at all) instead of relying on `firewall-cmd`.
 
 ## Public access: editors.eol.org (HTTPS)
 
-Confirmed on eol-archive 2026-10-26 (a test request landed in Apache's `access_log`, port 80):
+Confirmed on eol-archive 2026-10-26/27 (a test request landed in Apache's `access_log`; its config has only `Listen 10.252.248.39:8080` and the `editors.eol.org` vhost on `*:8080`):
 
 ```
-browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.248.42 ──HTTP:80──▶ server 10.252.248.39
+browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ server 10.252.248.39
 ```
 
 - **HTTPS ends at 160.111.248.42** (a network device; it reaches the server from `10.252.248.42`). The last hop is plain HTTP on the internal network, so **no certificate is needed on the server**. The old `ssl.conf` / `apache.crt` on 443 is not used by this path.
-- **Bind web to the internal IP:** `WEB_PORTS=10.252.248.39:80:80`, so the site isn't reachable on the public `160.111.248.39`.
-- **Network team:** if the rebuilt server keeps internal IP `10.252.248.39`, nothing changes on .42; otherwise .42 must be re-pointed.
+- **Bind web to the internal IP, port 8080:** `WEB_PORTS=10.252.248.39:8080:80`, so .42 needs no change and the site isn't reachable on the public `160.111.248.39`.
+- **Network team:** if the rebuilt server keeps internal IP `10.252.248.39`, nothing changes on .42 (still port 8080); otherwise .42 must be re-pointed.
 - **Cloudflare** (zone `eol.org`, Business plan, SSL mode *full*): uploads over **200 MB** and requests over **100 s** fail (524) — run long work as Jenkins jobs.
 - **Visitor IPs:** Apache logs show `10.252.248.42` for everyone. To log real IPs, enable `mod_remoteip` trusting `10.252.248.42` with the header .42 passes (`X-Forwarded-For` or `CF-Connecting-IP`).
 - **Secure cookies:** PHP sees plain HTTP. If .42 sends `X-Forwarded-Proto`, add `SetEnvIf X-Forwarded-Proto https HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only if nobody uses the site over internal plain HTTP.
+- **Old URLs:** eol-archive served the PHP 5.6 tree at `/eol_php_code/...`; `apache2.conf` aliases that path to `eol_php8_code`, so existing links keep working.
+- **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443, the `/eoearth_images` alias.
 - `opendata.eol.org` / `ckan` (old vhosts on eol-archive) no longer resolve in DNS — not migrated.
 
 **Jenkins from your machine** (bound to localhost on the server):
@@ -306,7 +308,7 @@ $pass = '<MYSQL_ROOT_PASSWORD from .env>';
 $db   = 'eol_production';
 ```
 
-Browser (from inside the network): `http://10.252.248.39/test.php`, or `https://editors.eol.org/test.php` once .42 forwards to the new server
+Browser (from inside the network): `http://10.252.248.39:8080/test.php`, or `https://editors.eol.org/test.php` once .42 forwards to the new server
 
 ## eol_php8_code `config/database.yml` (gitignored — copy by hand)
 
@@ -360,7 +362,7 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 | Port open although firewalld blocks it | Docker bypasses firewalld — bind to `127.0.0.1` in `.env` |
 | Jenkins build: `ERROR: PHP is older than 8.4.27` | Stale apt layer → `build --no-cache --pull jenkins` |
 | Jenkins: `Failed Loading plugin … Update required` | Update the named dependency plugin(s), restart |
-| Port 80 conflicts | Check with `sudo ss -ltnp \| grep ':80 '` — usually the host's own `httpd`: `sudo systemctl disable --now httpd` |
+| Port 8080 conflicts | Check with `sudo ss -ltnp \| grep ':8080 '` — usually the host's own `httpd`: `sudo systemctl disable --now httpd` |
 | `JAVA_OPTS` spacing | Leading space in compose value — verify Jenkins starts cleanly |
 | PHP sessions reset once | `session.sid_*` php.ini settings removed for PHP 8.4 — existing session cookies are not recognised once |
 
@@ -380,7 +382,7 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 | Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
 | `NEO_DATABASE` | **`neo4j`** | **`neo4j`** (passed to jenkins) |
 | Admin ports (MySQL, Jenkins, Neo4j) | `127.0.0.1` only | `127.0.0.1` only — SSH tunnel |
-| Web port | `127.0.0.1:81` (Mac only) | `10.252.248.39:80` — public via Cloudflare → 160.111.248.42 |
+| Web port | `127.0.0.1:81` (Mac only) | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
 | Compose (Mac) | `docker compose up -d` | n/a |
 | Compose (RHEL) | n/a | `docker compose -f docker-compose.yml up -d` |
 | Web platform | `linux/amd64` in compose (emulated on Apple Silicon) | `platform: linux/amd64` in compose |
