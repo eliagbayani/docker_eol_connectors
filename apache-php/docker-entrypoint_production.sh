@@ -7,12 +7,9 @@ echo "PWD: ${PWD}"
 echo "TARGET_PATH: ${TARGET_PATH}"
 ls -lt
 
-# ========== Here copy test_{environment}.php, does not overwrite. Also copies info.php, it overwrites.
-# Below works OK. But now commented since we don't have test_development.php or test_production.php anymore. We only have test.php.
-# Use ${PWD} (/var/www/html mount), not host TARGET_PATH — that path is not visible in-container.
-### works OK but not do it in production
-###[ -f ${PWD}/test.php ]    && echo "File already exists (test.php)"    || cp /tmp/test.php ${PWD}
-###cp /tmp/info.php ${PWD}
+# ========== Production: test.php and info.php are NOT copied (the development entrypoint does that).
+# info.php (phpinfo) shows the server's full PHP setup, so it must not be public.
+[ -f ${PWD}/info.php ] && echo "WARNING: ${PWD}/info.php exists in the webroot. Delete it on production."
 
 # Create symlink in ${PWD}. Check against ${PWD}; use ln -sfn so existing dir symlinks are not followed into nested links.
 ensure_symlink() {

@@ -325,7 +325,7 @@ production:
 
 Same for `jenkins_production`. Quote the password. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
 
-`test.php` connects as **root** and runs `shell_exec`, and the production entrypoint also copies `info.php` (phpinfo) into the public webroot. Remove both from `/opt/eol/webroot` after the smoke test.
+`test.php` connects as **root** and runs `shell_exec`: put it in `/opt/eol/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
 
 ---
 

@@ -334,9 +334,13 @@ Notes:
 
 ## Entrypoint behaviour
 
-`MY_ENVIRONMENT` selects the web container startup script. Both scripts:
+`MY_ENVIRONMENT` selects the web container startup script.
 
-- Copy `test.php` / `info.php` into **`${PWD}`** (`/var/www/html`) — not `${TARGET_PATH}` (host path is not visible inside the container)
+- **development:** copies `test.php` (if missing) and `info.php` into **`${PWD}`** (`/var/www/html`) — not `${TARGET_PATH}` (host path is not visible inside the container)
+- **production:** copies neither. `info.php` (phpinfo) is also left out of the production image, and the script logs a warning if one is found in the webroot
+
+Both scripts:
+
 - Use shared **`ensure_symlink`** helper: `ln -sfn` into `${PWD}`; skip if link/path already exists
 
 | Value | Script | Symlink targets |

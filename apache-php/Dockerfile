@@ -19,7 +19,8 @@ RUN apt-get update \
 COPY apache2.conf /etc/apache2/
 COPY 000-default.conf  /etc/apache2/sites-available/
 
-# these 2 php files will be used in docker-entrypoint.sh
+# test.php / info.php are copied into the webroot by the development entrypoint only.
+# info.php (phpinfo) is removed from production builds below.
 ARG ENVIRONMENT_FROM_COMPOSE
 COPY /src/test.php /tmp/test.php
 COPY /src/info.php /tmp/info.php
@@ -91,5 +92,7 @@ WORKDIR /var/www/html
 COPY ./src /var/www/html
 # Step 3: Secure your files by setting the correct web server permissions
 RUN chown -R www-data:www-data /var/www/html
+# Production: no info.php (phpinfo) anywhere in the image
+RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then rm -f /tmp/info.php /var/www/html/info.php; fi
 # =============================================================================
 EXPOSE 81
