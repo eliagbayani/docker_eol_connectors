@@ -264,8 +264,7 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.2
 - **Visitor IPs:** Apache logs show `10.252.248.42` for everyone. To log real IPs, enable `mod_remoteip` trusting `10.252.248.42` with the header .42 passes (`X-Forwarded-For` or `CF-Connecting-IP`).
 - **Secure cookies:** PHP sees plain HTTP. If .42 sends `X-Forwarded-Proto`, add `SetEnvIf X-Forwarded-Proto https HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only if nobody uses the site over internal plain HTTP.
 - **Old URLs:** eol-archive served the PHP 5.6 tree at `/eol_php_code/...`; `apache2.conf` aliases that path to `eol_php8_code`, so existing links keep working.
-- **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443, the `/eoearth_images` alias.
-- `opendata.eol.org` / `ckan` (old vhosts on eol-archive) no longer resolve in DNS — not migrated.
+- **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443.
 
 **Jenkins from your machine** (bound to localhost on the server):
 
