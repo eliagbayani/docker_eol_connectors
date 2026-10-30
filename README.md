@@ -160,7 +160,7 @@ sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
 sudo restorecon -Rv /opt/eol
 
 # Populate /opt/eol/webroot and /opt/eol/extra before or after first up
-# In eol_php8_code: config/database.yml → host: db, port: 3306 (quoted new password);
+# In eol_php8_code: config/database.yml → host: db, port: 3306, username: eol_app (quoted MYSQL_PASSWORD);
 #                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
 
 # The web container takes 10.252.248.39:8080 — the host's own Apache must not run
@@ -208,6 +208,7 @@ Key variables:
 | `WEBROOT_PATH` | Host path → `/var/www/html` |
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
+| `MYSQL_USER` | App DB user, created on first init with rights on `eol_${MY_ENVIRONMENT}` only. Prod: `eol_app` — the PHP code logs in as it (`database.yml`) |
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
 | `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:8080:80` (internal IP; reached via 160.111.248.42; no clash with Jenkins on `127.0.0.1:8080`) |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
@@ -231,7 +232,7 @@ Key variables:
 - **Jenkins access** — Project-based Matrix Authorization; anonymous has no access. The web tools trigger jobs as a **build-only** user (`web-trigger`, API token in `production.php`), never an admin token.
 - **Apache (`apache2.conf`)** — `eol_php8_code` lives inside the webroot, so its `config/` (DB passwords), `vendor/`, `lib/`, logs and loose files are denied (403), dotfiles/`.git` return 404, and PHP is switched off in directories Jenkins jobs write to. A new web entry point outside `applications/`, `public/`, `html/` must be checked against these rules.
 - **PHP errors in production** — not displayed; read them with `docker compose logs web`. For one page, `ini_set('display_errors', true)` still shows them.
-- **MySQL** — the root password comes from `.env` at first init only; changing it later means `ALTER USER` in MySQL, not editing `.env`.
+- **MySQL** — production code logs in as the app user `eol_app` (`MYSQL_USER`), limited to `eol_production`; root is for admin by hand only and its password stays in `.env`. Passwords come from `.env` at first init only; changing them later means `ALTER USER` in MySQL, not editing `.env`.
 
 ### Changing the MySQL root password
 

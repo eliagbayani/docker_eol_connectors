@@ -172,7 +172,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | `EXTRA_PATH` | `/opt/eol/extra` | Mounted as `/extra`; symlinks at startup |
 | `WEBROOT_PATH` | `/opt/eol/webroot` | PHP connector codebase |
 | `MYSQL_DATA_DIR` | `/opt/eol/mysql_data` | **Empty** on first DB init |
-| `MYSQL_USER` | `eagbayani` (sample default) | Created by MySQL image on first init; a generic name such as `eol_app` is preferable — must match the PHP app's DB config |
+| `MYSQL_USER` | `eol_app` (sample default) | Created by the MySQL image on first init with rights on `eol_production` only; the PHP code logs in as it (`database.yml`, `test.php`) |
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
 | `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
@@ -302,8 +302,8 @@ Inside containers, MySQL host is **`db`**, port **`3306`** (not host-mapped 4001
 ```php
 $host = 'db';
 $port = 3306;
-$user = 'root';
-$pass = '<MYSQL_ROOT_PASSWORD from .env>';
+$user = 'eol_app';                      // MYSQL_USER
+$pass = '<MYSQL_PASSWORD from .env>';
 $db   = 'eol_production';
 ```
 
@@ -316,16 +316,16 @@ The `production` and `jenkins_production` sections must use the Compose service 
 ```yaml
 production:
   host: db
-  username: root
-  password: "<MYSQL_ROOT_PASSWORD from .env>"
+  username: eol_app
+  password: "<MYSQL_PASSWORD from .env>"
   database: eol_production
   encoding: utf8
   port: 3306
 ```
 
-Same for `jenkins_production`. Quote the password. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
+Same for `jenkins_production`. Quote the password. Use the app user, not root (N3): root stays for admin work by hand, and its password lives only in `.env`. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
 
-`test.php` connects as **root** and runs `shell_exec`: put it in `/opt/eol/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
+`test.php` runs `shell_exec`: put it in `/opt/eol/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
 
 ---
 
