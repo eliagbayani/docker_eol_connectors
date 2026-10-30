@@ -16,9 +16,12 @@ services:
   jenkins:
     # No env_file here (N1): keeps MYSQL_* passwords out of Jenkins.
     cpus: 5
-    mem_limit: 12gb
+    # Mac with 32 GB: jenkins 12g + neo4j 10g + web 1g + db 1g = 24 GB (WEB_/DB_MEM_LIMIT, NEO_* in .env).
+    # The Jenkins JVM needs little (~1.5 GB); the rest of 12g is for PHP/Python connector runs.
+    mem_limit: 12g
     environment:
-      - JAVA_OPTS=-Xmx10g -Xms6g
+      # Replaces the base JAVA_OPTS, so its two -D values are repeated here
+      - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp -Xmx4g -Xms1g
     volumes:
       - /Volumes:/Volumes #for development only
 

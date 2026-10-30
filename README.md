@@ -216,7 +216,7 @@ Key variables:
 | `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
 | `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:8080:80` (internal IP; reached via 160.111.248.42; no clash with Jenkins on `127.0.0.1:8080`) |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
-| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | Optional. Container memory limits; defaults `32g` / `6g` / `2g` (in `docker-compose.yml`) suit the 64 GB production server with light use; on a 16 GB machine use `8g` / `3g` / `1g` (M6) |
+| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | Optional. Container memory limits; defaults `32g` / `6g` / `2g` (in `docker-compose.yml`) suit the 64 GB production server with light use. The Mac (32 GB) sets `1g` web / `1g` db in `.env` and Jenkins `12g` in the override; Neo4j `10g` (M6) |
 | `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
 | `PATH_JENKINS_HOME` | Host Jenkins data, mounted at `/var/jenkins_home`. The in-container `JENKINS_HOME=/var/jenkins_home` is set in `docker-compose.yml` (`environment:`), not in `.env` |
