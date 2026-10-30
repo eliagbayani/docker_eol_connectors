@@ -167,6 +167,43 @@ for arg in "$@"; do
             done
         } >> "$OUT/summary.txt"
     done
+
+    # The 12 paths that the eol_php8_code git repo tracks as links into the Mac's drives. A git pull can put
+    # those Mac links here, so record what this copy has at each path (real folder, link, missing).
+    # Columns: path, type (dir / link / file / missing), link target, target visible in Docker (yes/no),
+    # exists on this machine (yes/no), KB, files. "-" = not applicable (no empty columns: tabs would collapse).
+    if [ -d "$root/eol_php8_code" ]; then
+        for p in applications/content_server/resources temp_dev temp applications/content_server/tmp \
+                 applications/branch_graft/temp applications/xls2dwca_jenkins/temp applications/trait_data_import/temp \
+                 applications/taxonomic_validation/temp tmp/cache applications/BOLD2iNAT/temp \
+                 applications/BOLD2iNAT_csv/temp applications/specimen_image_export/temp; do
+            f="$root/eol_php8_code/$p"; target="-"; docker="-"; here="no"; kb="-"; n="-"
+            if [ -L "$f" ]; then
+                type=link; target=$(readlink "$f")
+                case "$target" in /var/www/html/*|/extra/*|/extra) docker=yes ;; /*) docker=no ;; *) docker=yes ;; esac
+            elif [ -d "$f" ]; then type=dir
+            elif [ -e "$f" ]; then type=file
+            else type=missing; fi
+            [ -e "$f" ] && here=yes
+            if [ -d "$f" ]; then
+                kb=$(du -sk "$f/" 2>/dev/null | awk '{ print $1 }')
+                n=$(find "$f/" -type f 2>/dev/null | wc -l | tr -d ' ')
+            fi
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$p" "$type" "$target" "$docker" "$here" "${kb:--}" "${n:--}"
+        done > "$OUT/$label.eol_php8_code_linked_paths.tsv"
+        {
+            echo
+            echo "eol_php8_code paths that git tracks as Mac links (full list: $label.eol_php8_code_linked_paths.tsv):"
+            while IFS="$(printf '\t')" read -r p type target docker here kb n; do
+                size=""; [ "$kb" != - ] && size="$(human $((kb * 1024))), $n files"
+                case "$type" in
+                    link) [ "$here" = yes ] && st="target exists here" || st="target MISSING here"
+                          printf '  %-42s link -> %s (%s; usable in Docker: %s) %s\n' "$p" "$target" "$st" "$docker" "$size" ;;
+                    *)    printf '  %-42s %s %s\n' "$p" "$type" "$size" ;;
+                esac
+            done < "$OUT/$label.eol_php8_code_linked_paths.tsv"
+        } >> "$OUT/summary.txt"
+    fi
 done
 
 # Crontabs: scheduled jobs that exist only on this server. Values after password=/token=/key= are masked.
@@ -192,6 +229,7 @@ errs=$(wc -l < "$OUT/errors.txt" 2>/dev/null | tr -d ' ')
     echo
     echo "== Other files in this report"
     echo "  crontabs.txt            scheduled jobs (secrets masked)"
+    echo "  LABEL.eol_php8_code_linked_paths.tsv  the 12 paths git tracks as Mac links: what this copy has there"
     echo "  LABEL.links_not_in_docker.txt  symlinks whose target the containers can't see (fix after copying)"
     echo "  LABEL.tsv               every folder up to $DEPTH levels: path, type, bytes, files, newest (epoch), symlink target"
     echo "  errors.txt              ${errs:-0} lines (e.g. permission denied; run with sudo to avoid them)"
