@@ -137,6 +137,14 @@ for arg in "$@"; do
         head -30 "$OUT/$label.links_outside.txt" | sed 's/^/  /'
     } >> "$OUT/summary.txt"
 
+    # Of those, the ones that will break in the Docker containers, which see only /var/www/html (webroot) and /extra
+    awk -F' -> ' '$2 !~ /^\/(var\/www\/html|extra)(\/|$)/' "$OUT/$label.links_outside.txt" > "$OUT/$label.links_not_in_docker.txt"
+    {
+        echo
+        echo "Symlinks that won't work in Docker (target not under /var/www/html or /extra): $(wc -l < "$OUT/$label.links_not_in_docker.txt" | tr -d ' ') (full list: $label.links_not_in_docker.txt)"
+        head -30 "$OUT/$label.links_not_in_docker.txt" | sed 's/^/  /'
+    } >> "$OUT/summary.txt"
+
     # Code trees (git checkouts) in the first 2 levels: what is in them but not in git (data, config, caches)
     command -v git >/dev/null 2>&1 || { echo; echo "git is not installed: files not in git were not listed."; } >> "$OUT/summary.txt"
     command -v git >/dev/null 2>&1 &&
@@ -184,6 +192,7 @@ errs=$(wc -l < "$OUT/errors.txt" 2>/dev/null | tr -d ' ')
     echo
     echo "== Other files in this report"
     echo "  crontabs.txt            scheduled jobs (secrets masked)"
+    echo "  LABEL.links_not_in_docker.txt  symlinks whose target the containers can't see (fix after copying)"
     echo "  LABEL.tsv               every folder up to $DEPTH levels: path, type, bytes, files, newest (epoch), symlink target"
     echo "  errors.txt              ${errs:-0} lines (e.g. permission denied; run with sudo to avoid them)"
 } >> "$OUT/summary.txt"
