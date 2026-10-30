@@ -34,4 +34,5 @@ ensure_symlink gnfinder /extra/gnfinder
 echo "symlink end... ${MY_ENV}"
 
 # ========== This will continue the container. Without it, the container will exit.
-apache2-foreground
+# exec (M1): Apache replaces this shell as PID 1, so `docker stop` reaches it and it shuts down cleanly.
+exec apache2-foreground

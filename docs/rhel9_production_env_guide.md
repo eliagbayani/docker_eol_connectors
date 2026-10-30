@@ -175,6 +175,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | `MYSQL_USER` | `eol_app` (sample default) | Created by the MySQL image on first init with rights on `eol_production` only; the PHP code logs in as it (`database.yml`, `test.php`) |
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
+| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | *(unset)* → `8g` / `3g` / `1g` | Sized for ~16 GB RAM and ~10 users. On a bigger server raise `JENKINS_MEM_LIMIT` first (connector runs) |
 | `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
 | `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
@@ -351,6 +352,8 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 
 | Issue | Detail |
 |-------|--------|
+| Apache log looks cut off | `rotatelogs -n 5` cycles `access.log` → `access.log.1` … `.4` → back to `access.log` (50 MB each; `error.log` 20 MB). The newest lines may be in any of them: `ls -lt /opt/eol/apache2_logs` |
+| A container is killed with exit code 137 | It hit its memory limit (`docker inspect <container> --format '{{.State.OOMKilled}}'`). Raise `*_MEM_LIMIT` in `.env`, then `docker compose -f docker-compose.yml up -d` |
 | `UnsupportedAdministrationCommand: STOP DATABASE` | Enterprise-only — use `docker compose stop neo4j` |
 | `db.eol` not found | Community uses **`neo4j`** — update `NEO_DATABASE` and app configs |
 | Neo4j import "database in use" | Stop container before `neo4j-admin database import full` |
