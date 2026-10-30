@@ -298,11 +298,12 @@ Changes made in **`eol_php8_code`** (webroot, its own git repo) so it runs on 8.
 | `trigger_error(…, E_USER_ERROR)` (deprecated 8.4) | 4 in app code + 128 in `vendor/` | `E_USER_WARNING` followed by `exit(1)` (same halt + exit code as before) |
 | `E_STRICT` constant (deprecated 8.4) | `vendor/php_active_record/classes/active_record_error.php` | Removed from the handler's error-type map (never raised since PHP 8.0) |
 
+Also fixed: `vendor/google_client_lib_2023` (Google Sheets) — explicit nullable types in 61 files, 0 deprecations on PHP 8.4 (`d60049ad`). It's a hand-copied folder, not managed by Composer, so the fix stays; it won't be replaced with a newer google/apiclient. `lib/connectors/SummaryDataResourcesAllAPI.php` parses again (`5c15f310`).
+
 Still open (not changed):
 
 - Indirect `E_USER_ERROR` in adodb (`ADODB_ERROR_HANDLER_TYPE`) and SimpleTest mock defaults; `E_STRICT` in monolog / SimpleTest.
-- `vendor/google_client_lib_2023` is Composer-managed — `composer update` would undo the edits there.
-- Files that do not parse on PHP 8 (pre-existing): `applications/species_stat/moreinfo.php`, `lib/connectors/SummaryDataResourcesAllAPI.php`, and 12 files in `vendor/rdfapi-php` / PHPExcel unit tests (rdfapi-php is only loaded when `USING_SPM`).
+- Files that do not parse on PHP 8 (pre-existing): `applications/species_stat/moreinfo.php` and 12 files in `vendor/rdfapi-php` / PHPExcel unit tests (rdfapi-php is only loaded when `USING_SPM`).
 - `utf8_encode` / `utf8_decode` (194 calls) — deprecated since 8.2, still work in 8.4, removed in PHP 9.
 
 ---
