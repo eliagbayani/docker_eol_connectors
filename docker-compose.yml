@@ -74,7 +74,8 @@ services:
 
   # =================== Jenkins service ===================
   jenkins:
-    env_file: ./.env
+    # No env_file (N1): it would copy every .env value, incl. MYSQL_ROOT_PASSWORD, into Jenkins.
+    # Jenkins gets only what it needs under environment: below; ${...} in this file still reads .env.
     build:
       args:
         JENKINS_TMP_FROM_COMPOSE: ${PATH_JENKINS_TMP}
@@ -88,7 +89,7 @@ services:
 
     volumes:
       # Host folder → /var/jenkins_home. In-container JENKINS_HOME is set under environment: below
-      # (environment: wins over env_file). The host var is PATH_JENKINS_HOME so the two never mix.
+      # The host var is PATH_JENKINS_HOME so the two never mix.
       - ${PATH_JENKINS_HOME}:/var/jenkins_home:rw
       # -> works OK; better implementation
 

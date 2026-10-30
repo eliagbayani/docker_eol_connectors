@@ -14,7 +14,7 @@ services:
 
   # =================== Jenkins service ===================
   jenkins:
-    env_file: ./.env
+    # No env_file here (N1): keeps MYSQL_* passwords out of Jenkins.
     cpus: 5
     mem_limit: 12gb
     environment:
