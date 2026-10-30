@@ -42,8 +42,9 @@ RUN apt install wget -y
 # install PHP 8.4 (was 8.2) from: https://php.watch/articles/install-php82-ubuntu-debian
 RUN dpkg -l | grep php | tee packages.txt
 RUN apt install apt-transport-https lsb-release ca-certificates wget -y
-RUN wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg 
-RUN sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
+# M4: sury's key signs only the sury source (signed-by), not every apt source as in trusted.gpg.d
+RUN wget -O /usr/share/keyrings/sury-php.gpg https://packages.sury.org/php/apt.gpg
+RUN sh -c 'echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
 RUN apt update
 
 # Expand the curly braces with all extensions necessary.

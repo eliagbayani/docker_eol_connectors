@@ -13,7 +13,7 @@ tools.
 | Service | Image / build | Role |
 |---------|---------------|------|
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.4.27 — host web-based tools |
-| **db** | `mysql/Dockerfile` | MySQL 8.4.3 (Oracle Linux 9 base) |
+| **db** | `mysql/Dockerfile` | MySQL 8.4.13 (Oracle Linux 9 base) |
 | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.580.1 LTS + PHP 8.4.27 — maintains jobs for the web-based tools |
 
 **Mac development only:** Neo4j (`neo4j/Dockerfile`) is defined in **`docker-compose.override.yml`**, not in production `docker-compose.yml`. See [Neo4j (Mac dev only)](#neo4j-mac-dev-only).
@@ -48,6 +48,7 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **Env templates** | `.env.sample` renamed to **`.env.development.sample`** (pairs with `.env.production.sample`). An existing `.env` is unaffected. |
 | **Stop, health check, logs, memory** | Web entrypoints `exec apache2-foreground` (Apache is PID 1, stops cleanly). MySQL health check is `mysqladmin ping` with the password via `MYSQL_PWD`, not on the command line. Docker logs capped at 3 × 50 MB per service; Apache's `access.log` / `error.log` rotated by `rotatelogs` (5 files each, `.1`–`.4`). Memory limits jenkins 32g, web 6g, db 2g, for the 64 GB production server (override in `.env`). |
 | **Required settings, gnparser check** | Required `.env` values are written `${VAR:?…}` in `docker-compose.yml`: if one is missing or empty, Compose stops with `required variable VAR is missing a value` (M8). The gnparser download in both images must match a pinned SHA-256 (1.15.0, amd64 and arm64), or the build stops; Jenkins now also reads `GNPARSER_*` from `.env` (M3). |
+| **MySQL 8.4.13, sury key, Jenkins footer** | db image `mysql:8.4.13-oraclelinux9` (was 8.4.3); an existing 8.4 data dir upgrades itself on first start (M5). Jenkins image trusts sury's key only for the sury source (`signed-by`, M4). Jenkins footer link from `JENKINS_FOOTER_URL` (M9). Rebuild **db** and **jenkins**. |
 | **Real visitor IPs** | `mod_remoteip` (`apache-php/zz-remoteip.conf`): logs and PHP show the visitor's IP from `X-Forwarded-For`, believed only from `REMOTEIP_PROXY` (default `10.252.248.42`, the proxy in front of `editors.eol.org`); Cloudflare's ranges (`cloudflare-ips.txt`) are skipped. No effect on the Mac. Rebuild **web**. |
 | **Existing installs** | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). `apache2.conf`, `php.ini.txt` and the PHP modules are built into the images, so pull the repo and rebuild **web** and **jenkins** too: `docker compose build --no-cache --pull web jenkins && docker compose up -d` (add `-f docker-compose.yml` on RHEL). |
 
@@ -100,7 +101,7 @@ docker_eol_connectors/
 
 | Item | web | db | jenkins |
 |------|-----|-----|---------|
-| Base | `php:8.4.27-apache` | `mysql:8.4.3-oraclelinux9` | `jenkins/jenkins:2.580.1-jdk21` |
+| Base | `php:8.4.27-apache` | `mysql:8.4.13-oraclelinux9` | `jenkins/jenkins:2.580.1-jdk21` |
 | PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python | — | embedded 3.9 | 3.11 |
 | gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
@@ -222,6 +223,7 @@ Key variables:
 | `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
 | `PATH_JENKINS_HOME` | Host Jenkins data, mounted at `/var/jenkins_home`. The in-container `JENKINS_HOME=/var/jenkins_home` is set in `docker-compose.yml` (`environment:`), not in `.env` |
 | `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
+| `JENKINS_FOOTER_URL` | Optional. Link in the Jenkins page footer (default `http://dev_connectors.eol.org`) (M9) |
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
 | `GNPARSER_SHA256` | Optional. SHA-256 of the gnparser `.tar.gz`; needed only with another version or `GNPARSER_URL` (1.15.0 checksums are built into both Dockerfiles). It must match the platform being built: production images are amd64 (`linux-x86`), Jenkins on the Mac is arm64 (`linux-arm`) |
 | `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |

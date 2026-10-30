@@ -21,7 +21,7 @@ services:
     mem_limit: 12g
     environment:
       # Replaces the base JAVA_OPTS, so its two -D values are repeated here
-      - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp -Xmx4g -Xms1g
+      - JAVA_OPTS=-Dhudson.footerURL=${JENKINS_FOOTER_URL:-http://dev_connectors.eol.org} -Djava.io.tmpdir=/jenkins_tmp -Xmx4g -Xms1g
     volumes:
       - /Volumes:/Volumes #for development only
 

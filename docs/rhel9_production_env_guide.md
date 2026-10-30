@@ -30,7 +30,7 @@ The stack **will run on RHEL 9** if you:
 |---------|-------|-------|
 | web | `php:8.4.27-apache` | PHP 8.4.27 fixes PHP2Shell (CVE-2026-109618 / CVE-2026-109619) |
 | jenkins | `jenkins/jenkins:2.580.1-jdk21` | LTS; PHP 8.4.27 from packages.sury.org, build fails if older than `PHP_MIN_VERSION` |
-| db | `mysql:8.4.3-oraclelinux9` | |
+| db | `mysql:8.4.13-oraclelinux9` | |
 | neo4j | `neo4j:5.26.29-community-ubi10` | Mac dev only (override file) |
 
 Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgrading Jenkins*.

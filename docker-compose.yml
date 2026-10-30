@@ -134,7 +134,8 @@ services:
 
     environment:
       - JENKINS_HOME=/var/jenkins_home
-      - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp
+      # M9: footer link from .env (JENKINS_FOOTER_URL)
+      - JAVA_OPTS=-Dhudson.footerURL=${JENKINS_FOOTER_URL:-http://dev_connectors.eol.org} -Djava.io.tmpdir=/jenkins_tmp
       # eol_php8_code (config/boot.php) runs jobs as jenkins_${MY_ENVIRONMENT} in database.yml
       - MY_ENV=${MY_ENVIRONMENT:?set it in .env}
 

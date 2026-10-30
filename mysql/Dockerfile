@@ -1,5 +1,6 @@
-FROM mysql:8.4.3-oraclelinux9
-# https://hub.docker.com/layers/library/mysql/8.4.3-oraclelinux9/images/sha256-71da9b9b29db60ff36bae7c55b517428c86f56f97832b6cab5eb207e7e3ab5f8?context=explore
+# M5: newest 8.4 LTS patch (8.4.13, released 2026-10-20; was 8.4.3). Same LTS series: an existing data dir is
+# upgraded in place on first start. Keep to 8.4.x; a jump to 9.x needs its own upgrade check.
+FROM mysql:8.4.13-oraclelinux9
 
 # If you want to edit /etc/my.cnf
 # - this case enable the [includedir] provision
