@@ -262,7 +262,10 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.2
 - **Bind web to the internal IP, port 8080:** `WEB_PORTS=10.252.248.39:8080:80`, so .42 needs no change and the site isn't reachable on the public `160.111.248.39`.
 - **Network team:** if the rebuilt server keeps internal IP `10.252.248.39`, nothing changes on .42 (still port 8080); otherwise .42 must be re-pointed.
 - **Cloudflare** (zone `eol.org`, Business plan, SSL mode *full*): uploads over **200 MB** and requests over **100 s** fail (524) — run long work as Jenkins jobs.
-- **Visitor IPs:** Apache logs show `10.252.248.42` for everyone. To log real IPs, enable `mod_remoteip` trusting `10.252.248.42` with the header .42 passes (`X-Forwarded-For` or `CF-Connecting-IP`).
+- **Visitor IPs:** built in (`apache-php/zz-remoteip.conf`, `mod_remoteip`). Apache takes the visitor's IP from `X-Forwarded-For`, but only on requests from `REMOTEIP_PROXY` (default `10.252.248.42`; set it in `.env` if .42 changes). Cloudflare's own addresses (`apache-php/cloudflare-ips.txt`) are skipped. Logs and PHP's `REMOTE_ADDR` then show the visitor; nothing in the code uses it for access control.
+  - **Check after go-live:** open the site through `editors.eol.org`, then `tail /opt/eol/apache2_logs/access.log`. Your own public IP (e.g. from `curl ifconfig.me` on your laptop) should appear, not `10.252.248.42`.
+  - If it still shows `10.252.248.42`, .42 doesn't send `X-Forwarded-For`. Ask the network team which header it sends; if it only passes Cloudflare's `CF-Connecting-IP`, change `RemoteIPHeader` to that and rebuild web.
+  - If it shows a `104.x`/`162.158.x`/`172.64.x` address, Cloudflare's IP list has changed: refresh `cloudflare-ips.txt` from https://www.cloudflare.com/ips-v4 and `/ips-v6`, rebuild web.
 - **Secure cookies:** PHP sees plain HTTP. If .42 sends `X-Forwarded-Proto`, add `SetEnvIf X-Forwarded-Proto https HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only if nobody uses the site over internal plain HTTP.
 - **Old URLs:** eol-archive served the PHP 5.6 tree at `/eol_php_code/...`; `apache2.conf` aliases that path to `eol_php8_code`, so existing links keep working.
 - **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443.

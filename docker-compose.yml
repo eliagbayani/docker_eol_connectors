@@ -63,6 +63,8 @@ services:
       APACHE_LOG_DIR: /var/log/apache2
       TARGET_PATH: ${WEBROOT_PATH} #used only in entrypoint sh
       MY_ENV: ${MY_ENVIRONMENT} #entrypoint sh, and eol_php8_code picks its database.yml section from it
+      # H6: proxy whose X-Forwarded-For Apache trusts (apache-php/zz-remoteip.conf)
+      REMOTEIP_PROXY: ${REMOTEIP_PROXY:-10.252.248.42}
     volumes:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2

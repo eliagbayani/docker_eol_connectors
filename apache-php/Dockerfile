@@ -42,6 +42,12 @@ RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then cp /tmp/zz-product
 COPY zz-security.conf /etc/apache2/conf-available/
 RUN a2enconf zz-security
 
+# H6: real visitor IPs in the logs (behind Cloudflare → 10.252.248.42). The default keeps Apache startable
+# if compose doesn't set REMOTEIP_PROXY.
+ENV REMOTEIP_PROXY=10.252.248.42
+COPY zz-remoteip.conf cloudflare-ips.txt /etc/apache2/conf-available/
+RUN a2enmod remoteip && a2enconf zz-remoteip
+
 # =============================================================================
 # Update other OS stuff
 RUN apt-get update \
