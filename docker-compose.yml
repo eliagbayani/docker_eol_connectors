@@ -62,7 +62,7 @@ services:
       APACHE_PID_FILE: /var/run/apache2/apache2.pid
       APACHE_LOG_DIR: /var/log/apache2
       TARGET_PATH: ${WEBROOT_PATH} #used only in entrypoint sh
-      MY_ENV: ${MY_ENVIRONMENT} #used only in entrypoint sh
+      MY_ENV: ${MY_ENVIRONMENT} #entrypoint sh, and eol_php8_code picks its database.yml section from it
     volumes:
       - ${WEBROOT_PATH}:/var/www/html
       - ${APACHE_LOGS}:/var/log/apache2
@@ -127,6 +127,8 @@ services:
     environment:
       - JENKINS_HOME=/var/jenkins_home
       - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp
+      # eol_php8_code (config/boot.php) runs jobs as jenkins_${MY_ENVIRONMENT} in database.yml
+      - MY_ENV=${MY_ENVIRONMENT}
 
       # for python:
       - NEO_URI=${NEO_URI}

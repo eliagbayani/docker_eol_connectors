@@ -205,7 +205,7 @@ Key variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `MY_ENVIRONMENT` | `development` or `production` — selects entrypoint script |
+| `MY_ENVIRONMENT` | `development` or `production` — selects the entrypoint script, and the `database.yml` section eol_php8_code uses (`production`; Jenkins jobs `jenkins_production`) |
 | `WEBROOT_PATH` | Host path → `/var/www/html` |
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
@@ -337,7 +337,7 @@ Notes:
 
 ## Entrypoint behaviour
 
-`MY_ENVIRONMENT` selects the web container startup script.
+`MY_ENVIRONMENT` selects the web container startup script. It is also passed to web and jenkins as `MY_ENV`, and eol_php8_code uses it to pick its `database.yml` section (`development`/`production`; Jenkins jobs add `jenkins_`). No need to edit `config/environment.php` on the server.
 
 - **development:** copies `test.php` (if missing) and `info.php` into **`${PWD}`** (`/var/www/html`) — not `${TARGET_PATH}` (host path is not visible inside the container)
 - **production:** copies neither. `info.php` (phpinfo) is also left out of the production image, and the script logs a warning if one is found in the webroot

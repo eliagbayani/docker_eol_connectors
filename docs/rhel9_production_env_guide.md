@@ -168,7 +168,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 
 | Variable | Production value | Notes |
 |----------|------------------|-------|
-| `MY_ENVIRONMENT` | `production` | Uses `docker-entrypoint_production.sh` |
+| `MY_ENVIRONMENT` | `production` | Uses `docker-entrypoint_production.sh`; eol_php8_code then uses the `production` and `jenkins_production` sections of `database.yml` |
 | `EXTRA_PATH` | `/opt/eol/extra` | Mounted as `/extra`; symlinks at startup |
 | `WEBROOT_PATH` | `/opt/eol/webroot` | PHP connector codebase |
 | `MYSQL_DATA_DIR` | `/opt/eol/mysql_data` | **Empty** on first DB init |
