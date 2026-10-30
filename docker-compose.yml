@@ -1,4 +1,6 @@
 # M6: Docker keeps each container's output in one file with no size limit by default (Docker CE on RHEL).
+# M8: required .env values are written ${VAR:?...}: if one is missing or empty, Compose stops with
+# "required variable VAR is missing a value" instead of starting with a blank path, port or password.
 x-logging: &default-logging
   driver: json-file
   options:
@@ -11,14 +13,14 @@ services:
     env_file:
       - ./.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: eol_${MY_ENVIRONMENT}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set it in .env}
+      MYSQL_DATABASE: eol_${MY_ENVIRONMENT:?set it in .env}
+      MYSQL_USER: ${MYSQL_USER:?set it in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set it in .env}
     build:
       context: ./mysql
       args:
-        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT:?set it in .env}
       dockerfile: Dockerfile
     # image: eagbayani/db-service:1.0 #for Docker Hub
     # image: ${REGISTRY}/${REGISTRY_DB_IMAGE}:${REGISTRY_DB_TAG}
@@ -30,12 +32,12 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:?set it in .env}:/var/lib/mysql
     # M6: sized for the 64 GB production server, low use; override in .env
     mem_limit: ${DB_MEM_LIMIT:-2g}
     logging: *default-logging
     ports:
-      - ${MYSQL_PORTS} # 4001:3306
+      - ${MYSQL_PORTS:?set it in .env} # 4001:3306
 
   # =================== Apache and PHP service ===================
   web:
@@ -44,7 +46,8 @@ services:
       args:
         GNPARSER_VERSION: ${GNPARSER_VERSION:-1.15.0}
         GNPARSER_URL: ${GNPARSER_URL:-}
-        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT}
+        GNPARSER_SHA256: ${GNPARSER_SHA256:-}
+        ENVIRONMENT_FROM_COMPOSE: ${MY_ENVIRONMENT:?set it in .env}
       dockerfile: Dockerfile
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
@@ -61,21 +64,21 @@ services:
       APACHE_RUN_GROUP: www-data
       APACHE_PID_FILE: /var/run/apache2/apache2.pid
       APACHE_LOG_DIR: /var/log/apache2
-      TARGET_PATH: ${WEBROOT_PATH} #used only in entrypoint sh
-      MY_ENV: ${MY_ENVIRONMENT} #entrypoint sh, and eol_php8_code picks its database.yml section from it
+      TARGET_PATH: ${WEBROOT_PATH:?set it in .env} #used only in entrypoint sh
+      MY_ENV: ${MY_ENVIRONMENT:?set it in .env} #entrypoint sh, and eol_php8_code picks its database.yml section from it
       # H6: proxy whose X-Forwarded-For Apache trusts (apache-php/zz-remoteip.conf)
       REMOTEIP_PROXY: ${REMOTEIP_PROXY:-10.252.248.42}
     volumes:
-      - ${WEBROOT_PATH}:/var/www/html
-      - ${APACHE_LOGS}:/var/log/apache2
-      - ${EXTRA_PATH}:/extra
+      - ${WEBROOT_PATH:?set it in .env}:/var/www/html
+      - ${APACHE_LOGS:?set it in .env}:/var/log/apache2
+      - ${EXTRA_PATH:?set it in .env}:/extra
     # command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
     # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
 
-    command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT}.sh
+    command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT:?set it in .env}.sh
 
     ports:
-      - ${WEB_PORTS} # 81:80
+      - ${WEB_PORTS:?set it in .env} # 81:80
     # M6: one PHP request may use up to memory_limit (2000M); ~10 users
     mem_limit: ${WEB_MEM_LIMIT:-6g}
     logging: *default-logging
@@ -93,8 +96,11 @@ services:
     # Jenkins gets only what it needs under environment: below; ${...} in this file still reads .env.
     build:
       args:
-        JENKINS_TMP_FROM_COMPOSE: ${PATH_JENKINS_TMP}
-        PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP}
+        JENKINS_TMP_FROM_COMPOSE: ${PATH_JENKINS_TMP:?set it in .env}
+        PYTHON_APP_DIR_FROM_COMPOSE: ${PYTHON_APP:?set it in .env}
+        GNPARSER_VERSION: ${GNPARSER_VERSION:-1.15.0}
+        GNPARSER_URL: ${GNPARSER_URL:-}
+        GNPARSER_SHA256: ${GNPARSER_SHA256:-}
       context: ./jenkins
       dockerfile: Dockerfile
     # image: jenkins/jenkins:2.538-jdk21
@@ -105,21 +111,21 @@ services:
     volumes:
       # Host folder → /var/jenkins_home. In-container JENKINS_HOME is set under environment: below
       # The host var is PATH_JENKINS_HOME so the two never mix.
-      - ${PATH_JENKINS_HOME}:/var/jenkins_home:rw
+      - ${PATH_JENKINS_HOME:?set it in .env}:/var/jenkins_home:rw
       # -> works OK; better implementation
 
-      - ${WEBROOT_PATH}:/var/www/html
-      - ${PATH_JENKINS_TMP}:/jenkins_tmp
-      - ${EXTRA_PATH}:/extra
+      - ${WEBROOT_PATH:?set it in .env}:/var/www/html
+      - ${PATH_JENKINS_TMP:?set it in .env}:/jenkins_tmp
+      - ${EXTRA_PATH:?set it in .env}:/extra
 
       # for python
-      - ${PYTHON_APP}:/usr/src/app:rw # Mount your application code
+      - ${PYTHON_APP:?set it in .env}:/usr/src/app:rw # Mount your application code
 
     links:
       - web
       - db
     ports:
-      - ${JENKINS_PORTS} # 8081:8080
+      - ${JENKINS_PORTS:?set it in .env} # 8081:8080
       # Inbound-agent port 50000 not published (H3): there are no agents, and the TCP agent port is disabled in Jenkins.
       # If you ever add inbound agents: - ${JENKINS_PORTS_COMMUNICATION}
     # M6: connector runs (PHP has no memory_limit here) + the JVM (default heap = 25% of this)
@@ -130,7 +136,7 @@ services:
       - JENKINS_HOME=/var/jenkins_home
       - JAVA_OPTS=-Dhudson.footerURL=http://dev_connectors.eol.org -Djava.io.tmpdir=/jenkins_tmp
       # eol_php8_code (config/boot.php) runs jobs as jenkins_${MY_ENVIRONMENT} in database.yml
-      - MY_ENV=${MY_ENVIRONMENT}
+      - MY_ENV=${MY_ENVIRONMENT:?set it in .env}
 
       # for python:
       - NEO_URI=${NEO_URI}

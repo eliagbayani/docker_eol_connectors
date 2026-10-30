@@ -363,6 +363,8 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 |-------|--------|
 | Apache log looks cut off | `rotatelogs -n 5` cycles `access.log` → `access.log.1` … `.4` → back to `access.log` (50 MB each; `error.log` 20 MB). The newest lines may be in any of them: `ls -lt /opt/eol/apache2_logs` |
 | A container is killed with exit code 137 | It hit its memory limit (`docker inspect <container> --format '{{.State.OOMKilled}}'`). Raise `*_MEM_LIMIT` in `.env`, then `docker compose -f docker-compose.yml up -d` |
+| `required variable X is missing a value` | `X` is missing or empty in `.env` (M8). Add it (see `.env.production.sample`); Compose checks this before starting anything |
+| Build stops: `gnparser download does not match SHA-256` | The download changed or `GNPARSER_VERSION`/`GNPARSER_URL` was changed (M3). For a new version, take the SHA-256 from the GitHub release page, check it, and set `GNPARSER_SHA256` in `.env` |
 | `UnsupportedAdministrationCommand: STOP DATABASE` | Enterprise-only — use `docker compose stop neo4j` |
 | `db.eol` not found | Community uses **`neo4j`** — update `NEO_DATABASE` and app configs |
 | Neo4j import "database in use" | Stop container before `neo4j-admin database import full` |

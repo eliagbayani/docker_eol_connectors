@@ -72,21 +72,27 @@ RUN apt-get update \
 # =============================================================================
 # gnparser — arch follows image platform (amd64 → linux-x86, arm64 → linux-arm)
 # Override: --build-arg GNPARSER_URL=... or set GNPARSER_URL in .env for Compose
+# M3: the download must match a known SHA-256 (from the GitHub release, checked by download 2026-10-30).
+# For another version or URL, set GNPARSER_SHA256 (in .env for Compose); otherwise the build stops.
 ARG GNPARSER_VERSION=1.15.0
 ARG TARGETARCH
 ARG GNPARSER_URL=
+ARG GNPARSER_SHA256=
+ARG GNPARSER_SHA256_AMD64=50483cff07afedd9084ee122dc8bb25a454b567e5d99de66d30d7bf7ba3bbe7c
+ARG GNPARSER_SHA256_ARM64=80e93745b519faa8e3dec06fc12139991c36a47db70e2597bd7e08e9faa19096
 RUN set -eux; \
-    if [ -n "${GNPARSER_URL}" ]; then \
-      URL="${GNPARSER_URL}"; \
-    else \
-      case "${TARGETARCH}" in \
-        amd64) GNPARSER_ARCH=x86 ;; \
-        arm64) GNPARSER_ARCH=arm ;; \
+    case "${TARGETARCH}" in \
+        amd64) GNPARSER_ARCH=x86; SHA="${GNPARSER_SHA256_AMD64}" ;; \
+        arm64) GNPARSER_ARCH=arm; SHA="${GNPARSER_SHA256_ARM64}" ;; \
         *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
-      esac; \
-      URL="https://github.com/gnames/gnparser/releases/download/v${GNPARSER_VERSION}/gnparser-v${GNPARSER_VERSION}-linux-${GNPARSER_ARCH}.tar.gz"; \
-    fi; \
+    esac; \
+    URL="https://github.com/gnames/gnparser/releases/download/v${GNPARSER_VERSION}/gnparser-v${GNPARSER_VERSION}-linux-${GNPARSER_ARCH}.tar.gz"; \
+    if [ -n "${GNPARSER_URL}" ]; then URL="${GNPARSER_URL}"; fi; \
+    if [ -n "${GNPARSER_SHA256}" ]; then SHA="${GNPARSER_SHA256}"; fi; \
     wget -qO /tmp/gnparser.tar.gz "${URL}"; \
+    if ! echo "${SHA}  /tmp/gnparser.tar.gz" | sha256sum -c -; then \
+        echo "gnparser download does not match SHA-256 ${SHA}. For a new version or URL, set GNPARSER_SHA256." >&2; exit 1; \
+    fi; \
     tar -xzf /tmp/gnparser.tar.gz -C /tmp; \
     mv /tmp/gnparser /usr/local/bin/gnparser; \
     chmod 755 /usr/local/bin/gnparser; \
