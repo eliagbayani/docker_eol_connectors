@@ -43,6 +43,8 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 |------|---------|
 | `.env.production.sample` | RHEL 9 production `.env` template (`/opt/eol/...` paths, localhost-bound admin ports) |
 | `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/opt/eol` |
+| `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
+| `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
 | `docker-compose.yml` | Main compose file — **three services: web, db, jenkins** |
 | `neo4j/Dockerfile` | `FROM neo4j:5.26.29-community-ubi10` — used only by the Mac override file |
 | `.gitignore` | Excludes `docker-compose.override.yml`, `.env`, Mac-only files |
@@ -234,7 +236,11 @@ chmod 600 .env
 # replace CHANGE_ME_* (openssl rand -hex 24); check ports; NEO_DATABASE=neo4j
 
 # 5. Copy application code + datasets
-# rsync webroot (incl. eol_php8_code/) and extra/
+# rsync webroot (incl. eol_php8_code/) and extra/ — rsync -a, so file dates are kept
+# Check the copy against the old server's inventory (made on eol-archive before the wipe):
+#   on eol-archive:  sudo bash eol-archive-inventory.sh             (→ ~/eol_inventory_<host>_<date>/)
+#   here:            sudo bash scripts/eol-archive-inventory.sh /opt/eol/webroot=webroot /opt/eol/extra=extra
+#                    bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
