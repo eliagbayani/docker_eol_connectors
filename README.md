@@ -70,6 +70,7 @@ docker_eol_connectors/
 │   └── rhel9_production_env_guide.md
 ├── scripts/
 │   ├── rhel9-init-dirs.sh              ← create /opt/eol host dirs on RHEL
+│   ├── rhel9-verify.sh                 ← read-only OK/WARN/FAIL check of the running production stack
 │   ├── eol-archive-inventory.sh        ← read-only list of the old server's data (sizes, counts, not-in-git, crontabs)
 │   └── eol-inventory-compare.sh        ← check a copy against that list
 ├── apache-php/

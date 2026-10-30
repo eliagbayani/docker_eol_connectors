@@ -43,6 +43,7 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 |------|---------|
 | `.env.production.sample` | RHEL 9 production `.env` template (`/opt/eol/...` paths, localhost-bound admin ports) |
 | `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/opt/eol` |
+| `scripts/rhel9-verify.sh` | Read-only check of the running stack after `up -d`: containers, ports, headers, blocked files, `info.php`/`test.php`, environment and `eol_app`, `production.php` settings, web → Jenkins login, Jenkins security, PHP/gnparser, memory and log limits, webroot link warnings. One OK/WARN/FAIL line each; exit 1 on any FAIL; never prints secrets |
 | `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
 | `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
 | `docker-compose.yml` | Main compose file — **three services: web, db, jenkins** |
@@ -246,6 +247,8 @@ chmod 600 .env
 docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
 docker compose -f docker-compose.yml up -d
+# then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
+bash scripts/rhel9-verify.sh
 
 # 7. 10.252.248.39:8080 belongs to the web container — the host's own Apache must not run
 #    (the old RHEL 7 eol-archive ran Apache + PHP natively on that port, no Docker)
