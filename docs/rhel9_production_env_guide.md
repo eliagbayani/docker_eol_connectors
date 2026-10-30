@@ -177,7 +177,7 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | `MYSQL_USER` | `eol_app` (sample default) | Created by the MySQL image on first init with rights on `eol_production` only; the PHP code logs in as it (`database.yml`, `test.php`) |
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
-| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | *(unset)* → `8g` / `3g` / `1g` | Sized for ~16 GB RAM and ~10 users. On a bigger server raise `JENKINS_MEM_LIMIT` first (connector runs) |
+| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | *(unset)* → `32g` / `6g` / `2g` | Sized for the production server (at least 64 GB RAM, ~10 users): 40 GB in total, ~24 GB left for the OS and file cache. With more RAM, raise `JENKINS_MEM_LIMIT` first (connector runs) |
 | `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
 | `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
