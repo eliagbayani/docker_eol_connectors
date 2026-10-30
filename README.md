@@ -49,6 +49,7 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 | **Stop, health check, logs, memory** | Web entrypoints `exec apache2-foreground` (Apache is PID 1, stops cleanly). MySQL health check is `mysqladmin ping` with the password via `MYSQL_PWD`, not on the command line. Docker logs capped at 3 × 50 MB per service; Apache's `access.log` / `error.log` rotated by `rotatelogs` (5 files each, `.1`–`.4`). Memory limits jenkins 32g, web 6g, db 2g, for the 64 GB production server (override in `.env`). |
 | **Required settings, gnparser check** | Required `.env` values are written `${VAR:?…}` in `docker-compose.yml`: if one is missing or empty, Compose stops with `required variable VAR is missing a value` (M8). The gnparser download in both images must match a pinned SHA-256 (1.15.0, amd64 and arm64), or the build stops; Jenkins now also reads `GNPARSER_*` from `.env` (M3). |
 | **MySQL 8.4.13, sury key, Jenkins footer** | db image `mysql:8.4.13-oraclelinux9` (was 8.4.3); an existing 8.4 data dir upgrades itself on first start (M5). Jenkins image trusts sury's key only for the sury source (`signed-by`, M4). Jenkins footer link from `JENKINS_FOOTER_URL` (M9). Rebuild **db** and **jenkins**. |
+| **Cleanups (C1–C8)** | Web: `EXPOSE 80`; no build-time copy into `/var/www/html` (the webroot mount hides it); one apt layer, `vim`/`ping` only in dev. Jenkins: a few layers with apt lists removed, command-line PHP only (no Apache / PHP-FPM), no `packages.txt`. Compose: no `links:`, Jenkins waits for a healthy db, no `platform:` (images build for the host; amd64 on the server). Removed unused `docker-entrypoint.sh`, `docker-php-ext-mysqli.ini`, root `.dockerignore`; `Dockerfile Aug2` untracked. Rebuild **web** and **jenkins**. |
 | **Real visitor IPs** | `mod_remoteip` (`apache-php/zz-remoteip.conf`): logs and PHP show the visitor's IP from `X-Forwarded-For`, believed only from `REMOTEIP_PROXY` (default `10.252.248.42`, the proxy in front of `editors.eol.org`); Cloudflare's ranges (`cloudflare-ips.txt`) are skipped. No effect on the Mac. Rebuild **web**. |
 | **Existing installs** | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). `apache2.conf`, `php.ini.txt` and the PHP modules are built into the images, so pull the repo and rebuild **web** and **jenkins** too: `docker compose build --no-cache --pull web jenkins && docker compose up -d` (add `-f docker-compose.yml` on RHEL). |
 
@@ -77,9 +78,11 @@ docker_eol_connectors/
 │   ├── php.ini.txt
 │   ├── zz-production.ini                  ← production-only PHP settings
 │   ├── zz-security.conf                   ← ServerTokens Prod, ServerSignature Off
+│   ├── zz-remoteip.conf                   ← real visitor IPs (mod_remoteip)
+│   ├── cloudflare-ips.txt                 ← Cloudflare ranges skipped by mod_remoteip
 │   ├── docker-entrypoint_development.sh   ← Mac /Volumes symlinks
 │   ├── docker-entrypoint_production.sh    ← /extra symlinks
-│   └── src/                               ← test.php, info.php, list.php
+│   └── src/                               ← test.php, info.php, list.php (copied to /tmp; entrypoints copy test.php, and info.php in dev)
 ├── mysql/
 │   ├── Dockerfile
 │   ├── my.cnf

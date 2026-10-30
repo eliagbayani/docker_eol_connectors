@@ -17,46 +17,32 @@ FROM jenkins/jenkins:2.580.1-jdk21
 
 # =============================================================================
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
-# eagbayani j173
 
-# from: https://php.watch/articles/install-php82-ubuntu-debian
-# if we want to install via apt
 USER root
-RUN apt-get update
-RUN apt-get install file -y     # - important addition
-# =============================================================================
-# --------------------------- START python
-RUN apt-get install python3-full python3-pip -y 
-# Add any other Python-related packages or tools you need, e.g. python-pyset python3-flake8 etc.
-RUN apt update
-RUN [ -d /usr/src/app ] && echo "Folder exists" || mkdir /usr/src/app
-RUN pip install --break-system-packages neo4j 
+# C8: one layer per step, apt lists removed in the same layer.
+# OS tools + Python (neo4j driver for the Python connectors). `file` is used by connectors.
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends file zip unzip curl wget ca-certificates lsb-release \
+    python3-full python3-pip; \
+  rm -rf /var/lib/apt/lists/*; \
+  mkdir -p /usr/src/app; \
+  pip install --no-cache-dir --break-system-packages neo4j
 ENV PYTHONUNBUFFERED=1
-# --------------------------- END python
-# =============================================================================
 
-RUN apt install zip unzip -y
-RUN apt-get install curl -y
-RUN apt install wget -y
-
-# install PHP 8.4 (was 8.2) from: https://php.watch/articles/install-php82-ubuntu-debian
-RUN dpkg -l | grep php | tee packages.txt
-RUN apt install apt-transport-https lsb-release ca-certificates wget -y
+# PHP 8.4 from packages.sury.org (Debian's own PHP is older).
 # M4: sury's key signs only the sury source (signed-by), not every apt source as in trusted.gpg.d
-RUN wget -O /usr/share/keyrings/sury-php.gpg https://packages.sury.org/php/apt.gpg
-RUN sh -c 'echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
-RUN apt update
-
-# Expand the curly braces with all extensions necessary.
-# RUN apt install php8.4 php8.4-cli php8.4-{bz2,curl,mbstring,intl}
-RUN apt install -y php8.4 php8.4-cli php8.4-bz2 php8.4-curl php8.4-mbstring php8.4-intl php8.4-mysqli
-RUN apt install -y php8.4-fpm
-RUN apt install -y php8.4-mysqlnd php8.4-pdo php8.4-xml php8.4-bcmath
-RUN apt install -y php8.4-zip
-# gd: lib/ContentManager.php image handling (the old eol-archive PHP had it)
-RUN apt install -y php8.4-gd
-RUN apt install -y php8.4-yaml
-RUN a2enconf php8.4-fpm
+RUN set -eux; \
+  wget -qO /usr/share/keyrings/sury-php.gpg https://packages.sury.org/php/apt.gpg; \
+  echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+    > /etc/apt/sources.list.d/php.list
+# Command-line PHP only (C8): jobs run `php ...`; no Apache, mod_php or PHP-FPM in this image.
+# php8.4-mysql provides mysqli, mysqlnd and pdo_mysql; gd is for lib/ContentManager.php images.
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends php8.4-cli php8.4-bz2 php8.4-curl php8.4-mbstring \
+    php8.4-intl php8.4-mysql php8.4-xml php8.4-bcmath php8.4-zip php8.4-gd php8.4-yaml; \
+  rm -rf /var/lib/apt/lists/*
 
 # PHP2Shell (CVE-2026-109618 / CVE-2026-109619, Oct 2026) is fixed in 8.4.27.
 # Fail the build if sury gave us an older 8.4.x (e.g. stale cached apt layer -> rebuild with --no-cache).

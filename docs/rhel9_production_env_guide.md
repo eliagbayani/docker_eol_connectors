@@ -398,7 +398,7 @@ Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `l
 | Web port | `127.0.0.1:81` (Mac only) | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
 | Compose (Mac) | `docker compose up -d` | n/a |
 | Compose (RHEL) | n/a | `docker compose -f docker-compose.yml up -d` |
-| Web platform | `linux/amd64` in compose (emulated on Apple Silicon) | `platform: linux/amd64` in compose |
+| Web platform | Native arm64 (no `platform:` in compose); `DOCKER_DEFAULT_PLATFORM=linux/amd64` to rehearse the server's images | amd64 (the server's own platform) |
 | Jenkins image arch | native arm64 (sury arm64 PHP builds may lag a day or two) | amd64 |
 
 ---

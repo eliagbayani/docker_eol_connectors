@@ -49,25 +49,19 @@ COPY zz-remoteip.conf cloudflare-ips.txt /etc/apache2/conf-available/
 RUN a2enmod remoteip && a2enconf zz-remoteip
 
 # =============================================================================
-# Update other OS stuff
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        curl \
-        wget \
-        zip \
-        unzip \
-        iputils-ping \
-        vim \
-        libyaml-dev \
-        $PHPIZE_DEPS \
-    && pecl install yaml-2.2.4 \
-    && docker-php-ext-enable yaml \
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends file \
-    && rm -rf /var/lib/apt/lists/*
+# Other OS packages and the yaml extension, in one layer (C3).
+# vim and ping only in development builds. `file` is part of $PHPIZE_DEPS, so the purge removes it;
+# it is installed again at the end (connectors use it).
+RUN set -eux; \
+    EXTRA=""; \
+    if [ "${ENVIRONMENT_FROM_COMPOSE}" = "development" ]; then EXTRA="vim iputils-ping"; fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl wget zip unzip libyaml-dev ${EXTRA} $PHPIZE_DEPS; \
+    pecl install yaml-2.2.4; \
+    docker-php-ext-enable yaml; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS; \
+    apt-get install -y --no-install-recommends file; \
+    rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # gnparser — arch follows image platform (amd64 → linux-x86, arm64 → linux-arm)
@@ -98,13 +92,11 @@ RUN set -eux; \
     chmod 755 /usr/local/bin/gnparser; \
     rm -f /tmp/gnparser.tar.gz
 # =============================================================================
-# Step 1: Set the working directory inside the container
+# Working directory = webroot. The webroot is bind-mounted over /var/www/html at start, so nothing is
+# copied there at build time (C2); the entrypoints copy test.php (and info.php in dev) from /tmp.
 WORKDIR /var/www/html
-# Step 2: Copy your PHP source files into the container's working directory
-COPY ./src /var/www/html
-# Step 3: Secure your files by setting the correct web server permissions
-RUN chown -R www-data:www-data /var/www/html
 # Production: no info.php (phpinfo) anywhere in the image
-RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then rm -f /tmp/info.php /var/www/html/info.php; fi
+RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then rm -f /tmp/info.php; fi
 # =============================================================================
-EXPOSE 81
+# Apache listens on 80 (C1)
+EXPOSE 80

@@ -23,6 +23,7 @@ mysql/x eol_development.sql
 mysql/x eol_production.sql
 apache-php/src/list_old.php
 jenkins/Dockerfile Aug7
+apache-php/Dockerfile Aug2
 README old.md
 .DS_Store
 README v1.md

@@ -52,7 +52,8 @@ services:
     # image: php:8.2-apache
     # image: eagbayani/web-service:1.0 #for Docker Hub
     # image: ${REGISTRY}/${REGISTRY_WEB_IMAGE}:${REGISTRY_WEB_TAG} #works OK
-    platform: linux/amd64
+    # C7: no platform: line; images build for the host (RHEL server = amd64). To rehearse the server's
+    # images on an Apple Silicon Mac: DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build
     restart: unless-stopped #old value: always
     depends_on:
       db:
@@ -73,7 +74,6 @@ services:
       - ${APACHE_LOGS:?set it in .env}:/var/log/apache2
       - ${EXTRA_PATH:?set it in .env}:/extra
     # command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
-    # entrypoint: ${PWD}/apache-php/docker-entrypoint.sh #works OK as well
 
     command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT:?set it in .env}.sh
 
@@ -82,8 +82,6 @@ services:
     # M6: one PHP request may use up to memory_limit (2000M); ~10 users
     mem_limit: ${WEB_MEM_LIMIT:-6g}
     logging: *default-logging
-    links:
-      - db
     # Sol'n so u can curl local webserver from host.
     # Use 'host.docker.internal' instead of 'localhost' in PHP script.
     # https://medium.com/@gladevise/accessing-the-hosts-localhost-from-inside-a-docker-container-c5935e275953
@@ -121,9 +119,11 @@ services:
       # for python
       - ${PYTHON_APP:?set it in .env}:/usr/src/app:rw # Mount your application code
 
-    links:
-      - web
-      - db
+    # C6: no links: (legacy); services reach each other by name (db, web) on the default network.
+    # Jenkins starts after MySQL is healthy, like web.
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - ${JENKINS_PORTS:?set it in .env} # 8081:8080
       # Inbound-agent port 50000 not published (H3): there are no agents, and the TCP agent port is disabled in Jenkins.
