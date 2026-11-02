@@ -1,7 +1,7 @@
 # EOL Connectors — RHEL 9 production `.env` layout
 
 **Project:** `docker_eol_connectors`  
-**Updated:** 2026-10-26  
+**Updated:** 2026-11-02  
 **Repo path:** `My_Docker/docker_eol_connectors/`  
 **Template file:** `.env.production.sample`  
 **Init script:** `scripts/rhel9-init-dirs.sh`
@@ -357,6 +357,26 @@ REGISTRY_WEB_TAG=latest
 Login first: `echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin`
 
 Pre-built images must be rebuilt after each PHP / Jenkins security bump — a `latest` tag pushed before the bump still has the old versions.
+
+---
+
+## Keeping images up to date
+
+The three base images (`php:8.4.27-apache`, `mysql:8.4.13-oraclelinux9`, `jenkins/jenkins:2.580.2-jdk21`) are the official ones, built and maintained by their projects. **Leave them as they are while they work.** Don't patch, trim or swap them just because a scanner (`docker scout`, Docker Desktop) lists findings. Most findings either aren't fixed upstream yet or sit in parts this stack doesn't use, such as MySQL Shell in the db image.
+
+Routine:
+
+1. **Rebuild with `--pull` now and then** (e.g. monthly). The projects republish the same tags with fixed OS packages, so a rebuild picks them up with no file changes. Back up `/opt/eol/jenkins_home` first.
+   ```bash
+   docker compose -f docker-compose.yml build --no-cache --pull
+   docker compose -f docker-compose.yml up -d
+   bash scripts/rhel9-verify.sh
+   ```
+2. **Take patch releases on the same line**, e.g. Jenkins 2.580.1 → 2.580.2 or PHP 8.4.27 → 8.4.x. They carry security and bug fixes, and keep the job and data formats unchanged. Change the tag in the Dockerfile, test on the Mac, then rebuild here.
+3. **Keep our own layers current:** PHP from sury in jenkins (`PHP_MIN_VERSION` guard), gnparser (pinned version + SHA-256), and the apt packages the Dockerfiles add.
+4. **Exposure matters more than the scan count.** Only web is reachable from the network; Jenkins and MySQL listen on 127.0.0.1, and containers get only the passwords they need. `rhel9-verify.sh` checks this.
+
+**The exception:** a serious, actively exploited flaw in something the stack really uses (Apache, PHP, Jenkins, MySQL server). Update to the fixed version right away, as was done for PHP2Shell (PHP 8.4.27, Oct 2026).
 
 ---
 
