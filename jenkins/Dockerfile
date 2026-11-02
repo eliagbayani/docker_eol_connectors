@@ -10,10 +10,12 @@
 # -> https://hub.docker.com/layers/jenkins/jenkins/2.538-jdk21/images/sha256-4ce8e89ff3e6c9392fa82b08de98f5b3965c0228f43b90b82cfc2813a1f91f3f
 
 # FROM jenkins/jenkins:2.568.2-jdk21
-FROM jenkins/jenkins:2.580.1-jdk21
+# FROM jenkins/jenkins:2.580.1-jdk21
+FROM jenkins/jenkins:2.580.2-jdk21
 
 # https://hub.docker.com/layers/jenkins/jenkins/2.568.2-jdk21/images/sha256-25a061bfd6a7f954b8c2e0b6d5ad07c33e8e29364f50484ecdc4d4d7bf4800d3
 # https://hub.docker.com/layers/jenkins/jenkins/2.580.1-jdk21/images/sha256-5e70c4e8c97025f7784858bb5c4380912fc17e5fa0f0afa1d4833700a08666eb
+# https://hub.docker.com/layers/jenkins/jenkins/2.580.2-jdk21/images/sha256-19db581de85e7ce6a1ad89e55a0318d1114e4f103d2dc25493a235ff2b26d044
 
 # =============================================================================
 COPY --chown=jenkins:jenkins executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy

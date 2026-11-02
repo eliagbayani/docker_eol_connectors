@@ -29,7 +29,7 @@ The stack **will run on RHEL 9** if you:
 | Service | Image | Notes |
 |---------|-------|-------|
 | web | `php:8.4.27-apache` | PHP 8.4.27 fixes PHP2Shell (CVE-2026-109618 / CVE-2026-109619) |
-| jenkins | `jenkins/jenkins:2.580.1-jdk21` | LTS; PHP 8.4.27 from packages.sury.org, build fails if older than `PHP_MIN_VERSION` |
+| jenkins | `jenkins/jenkins:2.580.2-jdk21` | LTS; PHP 8.4.27 from packages.sury.org, build fails if older than `PHP_MIN_VERSION` |
 | db | `mysql:8.4.13-oraclelinux9` | |
 | neo4j | `neo4j:5.26.29-community-ubi10` | Mac dev only (override file) |
 
@@ -202,7 +202,7 @@ chmod 600 .env
 | Setting | Value | Notes |
 |---------|-------|-------|
 | `web` base image | `php:8.4.27-apache` | Raise the tag for new 8.4.x security releases |
-| `jenkins` base image | `jenkins/jenkins:2.580.1-jdk21` | PHP from sury; `PHP_MIN_VERSION=8.4.27` guard in `jenkins/Dockerfile` |
+| `jenkins` base image | `jenkins/jenkins:2.580.2-jdk21` | PHP from sury; `PHP_MIN_VERSION=8.4.27` guard in `jenkins/Dockerfile` |
 | `db` → `MYSQL_PASSWORD` | `${MYSQL_PASSWORD}` | Official MySQL env var |
 | `web` → `platform` | `linux/amd64` | Explicit amd64 for RHEL x86_64 |
 | `neo4j` | not in `docker-compose.yml` | Mac override only |
@@ -302,7 +302,7 @@ docker compose -f docker-compose.yml exec web php -v
 docker compose -f docker-compose.yml exec jenkins php -v
 
 # Jenkins version + startup
-cat /opt/eol/jenkins_home/jenkins.install.InstallUtil.lastExecVersion   # 2.580.1
+cat /opt/eol/jenkins_home/jenkins.install.InstallUtil.lastExecVersion   # 2.580.2
 docker compose -f docker-compose.yml logs jenkins | grep -E "fully up and running|Failed Loading plugin"
 ```
 

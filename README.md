@@ -14,7 +14,7 @@ tools.
 |---------|---------------|------|
 | **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.4.27 — host web-based tools |
 | **db** | `mysql/Dockerfile` | MySQL 8.4.13 (Oracle Linux 9 base) |
-| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.580.1 LTS + PHP 8.4.27 — maintains jobs for the web-based tools |
+| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.580.2 LTS + PHP 8.4.27 — maintains jobs for the web-based tools |
 
 **Mac development only:** Neo4j (`neo4j/Dockerfile`) is defined in **`docker-compose.override.yml`**, not in production `docker-compose.yml`. See [Neo4j (Mac dev only)](#neo4j-mac-dev-only).
 
@@ -35,7 +35,7 @@ This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/el
 |------|--------|
 | **PHP** | 8.2 → **8.4.27** in both **web** (`php:8.4.27-apache`) and **jenkins** (`php8.4-*` from packages.sury.org). 8.4.27 fixes **PHP2Shell** (CVE-2026-109618 / CVE-2026-109619, Oct 2026). PHP 8.2 security support ends 2026-12-31. |
 | **PHP version guard** | `jenkins/Dockerfile` fails the build if apt installs PHP older than `PHP_MIN_VERSION` (8.4.27). See [PHP version pins](#php-version-pins). |
-| **Jenkins** | 2.538 (weekly) → **2.580.1 LTS** — picks up 2026 security advisories (incl. CVE-2026-70426). See [Upgrading Jenkins](#upgrading-jenkins). |
+| **Jenkins** | 2.538 (weekly) → 2.580.1 LTS → **2.580.2 LTS** — picks up 2026 security advisories (incl. CVE-2026-70426); 2.580.2 (Nov 2026) adds only security and bug fixes. See [Upgrading Jenkins](#upgrading-jenkins). |
 | **php.ini** | `session.sid_length` / `session.sid_bits_per_character` commented out (deprecated in 8.4; PHP defaults 32 / 4 apply). |
 | **`.env.production.sample`** | Jenkins (8080) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes). |
 | **`eol_php8_code`** (webroot, separate repo) | PHP 8.4 deprecations fixed. See [PHP 8.4 migration notes](#php-84-migration-notes). |
@@ -106,7 +106,7 @@ docker_eol_connectors/
 
 | Item | web | db | jenkins |
 |------|-----|-----|---------|
-| Base | `php:8.4.27-apache` | `mysql:8.4.13-oraclelinux9` | `jenkins/jenkins:2.580.1-jdk21` |
+| Base | `php:8.4.27-apache` | `mysql:8.4.13-oraclelinux9` | `jenkins/jenkins:2.580.2-jdk21` |
 | PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python | — | embedded 3.9 | 3.11 |
 | gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
