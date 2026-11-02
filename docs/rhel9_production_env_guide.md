@@ -239,7 +239,8 @@ chmod 600 .env
 # 5. Copy application code + datasets
 # rsync webroot (incl. eol_php8_code/) and extra/ — rsync -a, so file dates are kept
 # Check the copy against the old server's inventory (made on eol-archive before the wipe):
-#   on eol-archive:  sudo bash eol-archive-inventory.sh             (→ ~/eol_inventory_<host>_<date>/)
+#   on eol-archive:  sudo env OUT=$HOME/eol_inventory_$(date +%Y%m%d) bash eol-archive-inventory.sh /var/www/html=webroot /extra=extra
+#                    (/html is the same folder as /var/www/html there; OUT keeps the report out of /root)
 #   here:            sudo bash scripts/eol-archive-inventory.sh /opt/eol/webroot=webroot /opt/eol/extra=extra
 #                    bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
 

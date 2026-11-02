@@ -5,7 +5,8 @@
 # It changes nothing: it only reads, and writes its report to a new folder.
 #
 # Usage:  bash eol-archive-inventory.sh [PATH[=LABEL] ...]
-#   No arguments: /var/www/html=webroot  /extra=extra  /html=html  (those that exist).
+#   No arguments: /var/www/html=webroot  /extra=extra  (those that exist).
+#   On eol-archive /html is the same folder as /var/www/html, so it is not scanned separately.
 #   Run it the same way on a copy (backup disk, Mac, new server), with the same labels, then compare:
 #     bash eol-inventory-compare.sh <eol-archive report folder> <copy report folder>
 # Settings (environment):
@@ -20,7 +21,7 @@ HOST=$(hostname -s 2>/dev/null || hostname)
 OUT=${OUT:-$HOME/eol_inventory_${HOST}_$(date +%Y%m%d_%H%M)}
 
 if [ "$#" -eq 0 ]; then
-    for p in /var/www/html=webroot /extra=extra /html=html; do
+    for p in /var/www/html=webroot /extra=extra; do
         [ -d "${p%%=*}" ] && set -- "$@" "$p"
     done
 fi
