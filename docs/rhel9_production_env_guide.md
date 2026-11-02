@@ -236,21 +236,35 @@ cp .env.production.sample .env
 chmod 600 .env
 # replace CHANGE_ME_* (openssl rand -hex 24); check ports; NEO_DATABASE=neo4j
 
-# 5. Copy application code + datasets
-# rsync webroot (incl. eol_php8_code/) and extra/ — rsync -a, so file dates are kept
+# 5. Application code (fresh git clones) + datasets (rsync from eol-archive)
+# The code does NOT come from eol-archive: its webroot has the PHP 5.6 tree eol_php_code (plus FreshData,
+# LiteratureEditor), which eol_php8_code replaces. Clone the PHP 8 repos, as the user who will own the checkouts:
+cd /opt/eol/webroot
+git clone https://github.com/eliagbayani/eol_php8_code.git
+git clone https://github.com/eliagbayani/FreshData_min.git
+git clone https://github.com/eliagbayani/LiteratureEditor_min.git
+# Work folders git doesn't track (since 2026-11-02; on the Mac they are links to other drives).
+# temp_dev is a Mac-only development area: leave it out.
+cd /opt/eol/webroot/eol_php8_code
+mkdir -p temp tmp/cache applications/content_server/tmp \
+  applications/{BOLD2iNAT,BOLD2iNAT_csv,branch_graft,specimen_image_export,taxonomic_validation,trait_data_import,xls2dwca_jenkins}/temp \
+  ../FreshData_min/sh_files
+ln -s /extra/eol_php_resources/ applications/content_server/resources   # target as seen inside the containers
+# web (www-data, uid 33) and Jenkins (uid 1000) both write there:
+chmod 777 temp tmp/cache applications/content_server/tmp applications/*/temp ../FreshData_min/sh_files
+# rhel9-verify.sh (step 6) checks all 13 work folders: present, not a broken link, writable by web and Jenkins
+
+# Datasets: rsync /extra from eol-archive into /opt/eol/extra — rsync -a, so file dates are kept.
+# It must include eol_php_resources/ (the resources link above points there).
+# From eol-archive's /var/www/html copy only folders still served from here (eoearth, eoearth_redirect_sys,
+# Leaflet_Cluster_map, github-php-client: decide per folder). Not eol_php_code, FreshData, LiteratureEditor.
 # Check the copy against the old server's inventory (made on eol-archive before the wipe):
 #   on eol-archive:  sudo env OUT=/home/<you>/eol_inventory_$(date +%Y%m%d) bash /home/<you>/eol-archive-inventory.sh /var/www/html=webroot /extra=extra
 #                    (/html is the same folder as /var/www/html there; full paths: in a root shell ~ is /root)
 #   here:            sudo bash scripts/eol-archive-inventory.sh /opt/eol/webroot=webroot /opt/eol/extra=extra
 #                    bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
-# Bring the code up to date (eol-archive's copy is older than this week's fixes), as the owner of the checkouts:
-cd /opt/eol/webroot/eol_php8_code && git pull && cd /opt/eol/webroot/FreshData_min && git pull
-# Since 2026-11-02 git no longer tracks the work folders that were links (12 in eol_php8_code, sh_files in
-# FreshData_min). A pull keeps real folders and removes old tracked links, so check the main one afterwards:
-cd /opt/eol/webroot/eol_php8_code/applications/content_server
-ls -ld resources        # real folder, or a link to /extra/eol_php_resources/ — if missing:
-#   ln -s /extra/eol_php_resources/ resources      (target as seen inside the containers)
-# rhel9-verify.sh (step 6) checks all 13 work folders: present, not a broken link, writable by web and Jenkins
+# Expected differences in webroot: eol_php_code, FreshData, LiteratureEditor (and any folder left behind) only
+# on the old side; eol_php8_code, FreshData_min, LiteratureEditor_min only on the new side.
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
