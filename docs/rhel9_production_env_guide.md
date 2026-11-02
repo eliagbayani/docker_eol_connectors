@@ -239,10 +239,18 @@ chmod 600 .env
 # 5. Copy application code + datasets
 # rsync webroot (incl. eol_php8_code/) and extra/ — rsync -a, so file dates are kept
 # Check the copy against the old server's inventory (made on eol-archive before the wipe):
-#   on eol-archive:  sudo env OUT=$HOME/eol_inventory_$(date +%Y%m%d) bash eol-archive-inventory.sh /var/www/html=webroot /extra=extra
-#                    (/html is the same folder as /var/www/html there; OUT keeps the report out of /root)
+#   on eol-archive:  sudo env OUT=/home/<you>/eol_inventory_$(date +%Y%m%d) bash /home/<you>/eol-archive-inventory.sh /var/www/html=webroot /extra=extra
+#                    (/html is the same folder as /var/www/html there; full paths: in a root shell ~ is /root)
 #   here:            sudo bash scripts/eol-archive-inventory.sh /opt/eol/webroot=webroot /opt/eol/extra=extra
 #                    bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
+# Bring the code up to date (eol-archive's copy is older than this week's fixes), as the owner of the checkouts:
+cd /opt/eol/webroot/eol_php8_code && git pull && cd /opt/eol/webroot/FreshData_min && git pull
+# Since 2026-11-02 git no longer tracks the work folders that were links (12 in eol_php8_code, sh_files in
+# FreshData_min). A pull keeps real folders and removes old tracked links, so check the main one afterwards:
+cd /opt/eol/webroot/eol_php8_code/applications/content_server
+ls -ld resources        # real folder, or a link to /extra/eol_php_resources/ — if missing:
+#   ln -s /extra/eol_php_resources/ resources      (target as seen inside the containers)
+# rhel9-verify.sh (step 6) checks all 13 work folders: present, not a broken link, writable by web and Jenkins
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull

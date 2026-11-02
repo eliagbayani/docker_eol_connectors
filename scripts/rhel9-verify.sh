@@ -107,6 +107,39 @@ PHPTOK='include "config/environment.php"; $c=curl_init("http://".JENKINS_USER_TO
 read -r _ hc tu <<< "$(docker exec -w /var/www/html/eol_php8_code "$WEB" php -r "$PHPTOK" 2>&1 | grep '^RESULT')"
 [ "$hc" = 200 ] && OK "web → Jenkins login as '$tu' works (H3, N12)" || FAIL "web → Jenkins as '$tu' → HTTP $hc: create the web-trigger token in Jenkins and put it in production.php"
 
+echo "== Work folders the code writes to (were Mac links in git until 2026-11-02)"
+# A missing or broken folder doesn't stop the code: writes fail with a PHP warning and the Jenkins build still shows SUCCESS.
+# Each must be a folder (or a link whose target the containers see) that both www-data (web) and jenkins can write.
+# temp_dev is the Mac's development area: fine if absent, but a broken link there is still reported.
+WORKDIRS="eol_php8_code/applications/content_server/resources eol_php8_code/applications/content_server/tmp
+eol_php8_code/temp eol_php8_code/tmp/cache eol_php8_code/temp_dev FreshData_min/sh_files
+eol_php8_code/applications/BOLD2iNAT/temp eol_php8_code/applications/BOLD2iNAT_csv/temp
+eol_php8_code/applications/branch_graft/temp eol_php8_code/applications/specimen_image_export/temp
+eol_php8_code/applications/taxonomic_validation/temp eol_php8_code/applications/trait_data_import/temp
+eol_php8_code/applications/xls2dwca_jenkins/temp"
+WDCHECK='cd /var/www/html; for d in $0; do
+  if [ -L "$d" ] && [ ! -e "$d" ]; then echo "$d|broken|$(readlink "$d")"
+  elif [ ! -e "$d" ]; then echo "$d|missing|"
+  elif [ ! -d "$d" ]; then echo "$d|notdir|"
+  elif [ -w "$d" ]; then echo "$d|ok|"; else echo "$d|readonly|"; fi; done'
+wd_web=$(docker exec -u www-data "$WEB" sh -c "$WDCHECK" "$WORKDIRS" 2>/dev/null)
+wd_jen=$(docker exec "$JEN" sh -c "$WDCHECK" "$WORKDIRS" 2>/dev/null)
+for d in $WORKDIRS; do
+    IFS='|' read -r _ sw tgt <<< "$(printf '%s\n' "$wd_web" | grep "^$d|")"
+    IFS='|' read -r _ sj _ <<< "$(printf '%s\n' "$wd_jen" | grep "^$d|")"
+    case "$sw" in
+        broken)  FAIL "$d → $tgt is a broken link in the containers (replace with a real folder or a link under /var/www/html or /extra)" ;;
+        missing) case "$d" in
+                     */temp_dev)  OK "$d absent (Mac-only development area)" ;;
+                     */resources) FAIL "$d is missing: ln -s /extra/eol_php_resources/ $d (see RHEL guide, step 5)" ;;
+                     *)           FAIL "$d is missing: create the folder (mkdir) so web and Jenkins can write to it" ;;
+                 esac ;;
+        notdir)  FAIL "$d is a file, not a folder" ;;
+        ok)      [ "$sj" = ok ] && OK "$d writable by web and Jenkins" || FAIL "$d: writable by web but not by Jenkins (uid 1000)" ;;
+        *)       [ "$sj" = ok ] && FAIL "$d: writable by Jenkins but not by web (www-data, uid 33)" || FAIL "$d: not writable by web or Jenkins" ;;
+    esac
+done
+
 echo "== Jenkins (B1, H3, N7)"
 jl=$(docker logs "$JEN" 2>&1)
 printf '%s\n' "$jl" | grep -q 'Jenkins is fully up and running' && OK "Jenkins is fully up" || FAIL "Jenkins not fully up yet (check docker logs)"
