@@ -19,7 +19,7 @@ The EOL tools (website, MySQL and Jenkins) run as three Docker containers. Chang
 | **SELinux** (stays Enforcing) | persistent rules: `/extra(/.*)?` → `container_file_t`; `/extra/docker` and `/extra/containerd` labelled like `/var/lib/docker` and `/var/lib/containerd`. A one-time `restorecon -R /extra` (3.8 TB) relabels the existing data from `default_t` | 1, 3 |
 | **`/extra`** | new folders `docker/`, `containerd/`, `eol_docker/` (mode 700, owned by the deploying login; it holds `certs/`, the website's HTTPS certificate) and `gnfinder/`. ACLs on `dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files` and `gnfinder` give uid 33 (website) and uid 1000 (Jenkins) write access. **Existing data, owners and modes are not changed** | 1, 3 |
 | **Network: listening** | **`160.111.248.39:443`**: the website over HTTPS, for Cloudflare. HTTPS ends in the web container (the front device 160.111.248.42 is being retired). Port 443 accepts only Cloudflare's published ranges, plus the server itself for tests; others get 403. The certificate is self-signed (`/extra/eol_docker/certs`), which Cloudflare's SSL mode *Full* accepts; for *Full (strict)* a Cloudflare Origin certificate replaces the 2 files, no rebuild. **`10.252.248.39:8080`**: plain HTTP on the internal address, as the old Apache listened (for .42 while it still forwards, and internal tests). `127.0.0.1:8080` (Jenkins) and `127.0.0.1:4001` (MySQL): local only, reached through SSH. Docker adds its own nftables rules for the published ports; firewalld isn't changed | 6 |
-| **DNS (network team)** | after the go-live checks, Cloudflare's record for `editors.eol.org` moves from 160.111.248.42 to **160.111.248.39** (proxied, as now). The network firewall must let Cloudflare reach 160.111.248.39 on 443. To roll back: point the record back to .42 | Go-live |
+| **Firewall and DNS (network team)** | Cloudflare reaches 160.111.248.39 on 443 (the network team's firewall change), then Cloudflare's record for `editors.eol.org` moves from 160.111.248.42 to **160.111.248.39**. Until then, the site works through .42 as today (→ `10.252.248.39:8080`). To roll back: point the record back to .42 | Go-live |
 | **Network: outgoing** (HTTPS, during the build and plugin install) | Docker Hub (base images `php`, `jenkins/jenkins`, `mysql`), `deb.debian.org` and `packages.sury.org` (PHP), `github.com` (code, gnparser), `updates.jenkins.io` and its download mirrors (`get.jenkins.io`, `mirrors.jenkins-ci.org` and others; Jenkins plugins) | 2, 5, 6 |
 | **Users and groups** | the deploying login joins the `docker` group (**equivalent to root**, as for any Docker host). No new system users. Inside the containers, the website runs as uid 33 and Jenkins as uid 1000 | 1 |
 | **Cron** | one line in the deploying login's crontab: a nightly MySQL dump at 2:30 into `/extra/eol_docker/backups` (14 kept) | 8 |
@@ -39,7 +39,8 @@ The `.env` settings this depends on (all in the production sample): `WEB_HTTPS_P
   ip -4 addr show | grep -E 'inet (10\.252\.248\.39|160\.111\.248\.39)'
   ```
   → `10.252.248.39/24` on `eno1` (internal) and `160.111.248.39/24` on `eno2` (public). The public address sits directly on the server, and Docker bypasses firewalld. That's why every published port names its address (`0.0.0.0` would publish on all of them), and why Apache itself turns away anyone on 443 who isn't Cloudflare.
-- [x] **The network team answered** (2026-11-05): .42 goes away, HTTPS ends on .39, and they change the DNS record once things are up and running.
+- [x] **The network team answered** (2026-11-05): .42 goes away, HTTPS ends on .39, and they change the DNS record once things are up and running. Their Varnish and ssl-terminator containers on .42 aren't needed on eol-archive (the web container ends HTTPS itself).
+- [ ] **The network team opens the firewall** so Cloudflare can reach 160.111.248.39 on 443 (their change request). It doesn't hold up deployment: until it's done, .42 keeps forwarding to `10.252.248.39:8080`, which the new setup still answers.
 - Assumed, not yet confirmed (no need to wait): Cloudflare's SSL mode is *Full*, as the guide records, so the self-signed certificate works. If it's *Full (strict)*, Cloudflare shows error **526** after the DNS switch: ask the network team for a Cloudflare Origin certificate and swap it in (*If something goes wrong*, below).
 
 ---
@@ -326,7 +327,7 @@ bash scripts/rhel9-verify.sh
 - [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used, and `du` shows `/var/lib/docker` and `/var/lib/containerd` as absent or tiny (the images are under `/extra`).
 - [ ] The plugin tool ends with `Done`, and `ls … | wc -l` prints **94**. **STOP** if it's fewer, or the tool can't reach `updates.jenkins.io`: Jenkins can't read its security settings or folders without them. Run the command again (it retries mirrors), or copy the plugins from the Mac instead: `rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/plugins/ archive:/extra/eol_docker/jenkins_home/plugins/`, then `sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home/plugins`.
 - [ ] `ps`: db `healthy`; web and jenkins `Up`. The stack's network is a **`10.10.x.0/24`** (e.g. `10.10.0.0/24`), from the network team's range. The web log says `HTTPS certificate: created a self-signed one for editors.eol.org (10 years)` (or, on a later start, the certificate's name and end date).
-- [ ] The HTTPS section shows `HTTPS published on 160.111.248.39:443` and `https://editors.eol.org/eol_php8_code/ on 160.111.248.39:443 → … (same as plain HTTP)`.
+- [ ] The HTTPS section shows `HTTPS published on 160.111.248.39:443` and `https://editors.eol.org/eol_php8_code/applications/dwc_validator_jenkins/main.php on 160.111.248.39:443 → 200 (plain HTTP 200 too)`.
 - [ ] **`rhel9-verify.sh` ends with `0 FAIL`.** Every FAIL line says what to fix. Fix it and run the check again. Don't go on with a FAIL.
 
 **Jenkins** listens only on the server's `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to your `archive` host (eol-archive, reached through `si`; see the guide, *Jenkins from your Mac*). No Safari proxy setting is needed (the old SOCKS + `http://160.111.248.39:8090` way no longer works):
@@ -386,9 +387,9 @@ crontab -l
 
 ```bash
 # On the server: the HTTPS site on the public address, with the real name (-k: the certificate is self-signed)
-curl -sk -o /dev/null -w '%{http_code}\n' --resolve editors.eol.org:443:160.111.248.39 https://editors.eol.org/eol_php8_code/
+curl -sk -o /dev/null -w '%{http_code}\n' --resolve editors.eol.org:443:160.111.248.39 https://editors.eol.org/eol_php8_code/applications/dwc_validator_jenkins/main.php
 
-# On the Mac: a tunnel to the server's port 443 (keep it open), then open https://localhost:8443/eol_php8_code/ in Safari
+# On the Mac: a tunnel to the server's port 443 (keep it open), then open https://localhost:8443/eol_php8_code/applications/dwc_validator_jenkins/main.php in Safari
 ssh -N -L 8443:160.111.248.39:443 archive
 ```
 
@@ -397,7 +398,9 @@ ssh -N -L 8443:160.111.248.39:443 archive
   - DwC validator: upload an archive → "Valid Archive"
   - submit one job from a web tool (e.g. trait_data_import)
 
-**The DNS switch.** Ask the network team to point Cloudflare's `editors.eol.org` record to **160.111.248.39** (proxied, as now) and to let Cloudflare reach 160.111.248.39 on port 443. Then:
+**Meanwhile, through .42:** right after step 6 the old path works again (Cloudflare → .42 → `10.252.248.39:8080`). Open `https://editors.eol.org/…` and `tail /extra/eol_docker/apache2_logs/access.log`: it shows your own IP, or `10.252.248.42` if .42 doesn't send `X-Forwarded-For` (only the log is affected, and only until the switch).
+
+**The DNS switch**, once Cloudflare can reach 160.111.248.39 on 443 (the network team's firewall change). Ask the network team to point Cloudflare's `editors.eol.org` record to **160.111.248.39** (proxied, as now). Then:
 
 - [ ] **Through the public name:** open `https://editors.eol.org/…` (no certificate warning: Cloudflare shows its own), then `tail /extra/eol_docker/apache2_logs/access.log`. It should show **your own** IP (`curl ifconfig.me` on the Mac), not a Cloudflare address (`104.x`, `162.158.x`, `172.64.x`). Errors 526 / 521 / 522: see below.
 - [ ] **The next morning:** `ls -l /extra/eol_docker/backups/` has a new dump from 2:30.

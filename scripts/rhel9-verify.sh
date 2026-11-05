@@ -87,11 +87,13 @@ if [ -z "$HADDR" ]; then FAIL "web port 443 is not published: set WEB_HTTPS_PORT
     # Same request as Cloudflare will send (Host editors.eol.org), straight to this server; -k: self-signed is fine
     HU="https://editors.eol.org:$HP"; R="editors.eol.org:$HP:$HIP"
     hcode() { curl -sk -m 10 -o /dev/null -w '%{http_code}' --resolve "$R" "$HU$1"; }
-    h=$(hcode /eol_php8_code/); p=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "${U:-http://none}/eol_php8_code/")
+    # A page that exists (the DwC validator's form); /eol_php8_code/ itself is 403 (no index page) on both
+    PG=/eol_php8_code/applications/dwc_validator_jenkins/main.php
+    h=$(hcode $PG); p=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "${U:-http://none}$PG")
     if [ "$h" = 000 ]; then FAIL "https://editors.eol.org/ on $HIP:$HP: no TLS answer (docker logs web | grep -i ssl)"
-    elif [ "$h" = "$p" ]; then OK "https://editors.eol.org/eol_php8_code/ on $HIP:$HP → $h (same as plain HTTP)"
-    elif [ "$h" = 403 ]; then FAIL "HTTPS → 403 but HTTP → $p: this server's address is not allowed on 443; add it to HTTPS_ALSO_ALLOW in .env"
-    else FAIL "HTTPS /eol_php8_code/ → $h, HTTP → $p (expected the same)"; fi
+    elif [ "$h" = 200 ] && [ "$p" = 200 ]; then OK "https://editors.eol.org$PG on $HIP:$HP → 200 (plain HTTP 200 too)"
+    elif [ "$h" = 403 ] && [ "$p" = 200 ]; then FAIL "HTTPS → 403 but HTTP → 200: this server's address is not allowed on 443; add it to HTTPS_ALSO_ALLOW in .env"
+    else FAIL "$PG: HTTPS → $h, HTTP → $p (expected 200 on both; is the code in the webroot?)"; fi
     c=$(hcode /eol_php8_code/config/database.yml); [ "$c" = 403 ] && OK "HTTPS /eol_php8_code/config/database.yml → 403" || FAIL "HTTPS /eol_php8_code/config/database.yml → $c (expected 403)"
     c=$(curl -sk -m 10 -o /dev/null -w '%{http_code}' --resolve "$R" -H 'Host: editors.eol.org' "http://$HIP:$HP/" 2>/dev/null)
     [ "$c" = 400 ] && OK "plain HTTP on the HTTPS port is refused (400)" || WARN "plain HTTP on the HTTPS port → $c (expected 400)"
