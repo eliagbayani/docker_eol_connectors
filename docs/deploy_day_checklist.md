@@ -11,6 +11,22 @@ Before you start:
 - [ ] The Mac's repo, `eol_php8_code`, `FreshData_min` and `LiteratureEditor_min` are pushed to GitHub.
 - [ ] Nothing to prepare for passwords: step 4 makes new ones on the server with `openssl rand -hex 24`. Never reuse old ones.
 
+### Before deployment: the network path
+
+Visitors reach the site like this: Cloudflare (HTTPS) → front device **160.111.248.42** (ends HTTPS; internal address 10.252.248.42) → eol-archive **10.252.248.39:8080** (plain HTTP). The setup depends on this path: `WEB_PORTS=10.252.248.39:8080:80` in `.env`, and `REMOTEIP_PROXY=10.252.248.42` for real visitor IPs (the default; set it in `.env` only if it changes).
+
+- [x] **The internal address survived the rebuild** (checked 2026-11-05):
+  ```bash
+  ip -4 addr show | grep -E 'inet (10\.252\.248\.39|160\.111\.248\.39)'
+  ```
+  → `10.252.248.39/24` on `eno1` (internal) and `160.111.248.39/24` on `eno2` (public). The public address sits directly on the server. That's why the web container binds to the internal address only: Docker bypasses firewalld, so `0.0.0.0:8080` would put the site straight on the internet, around Cloudflare.
+- [ ] **The admins confirm the forwarding:**
+  - .42 still sends `editors.eol.org` to 10.252.248.39, port 8080, from 10.252.248.42
+  - nothing in between blocks port 8080
+  - .42 sends `X-Forwarded-For` (and `X-Forwarded-Proto`?)
+
+  If something differs: a new address → `WEB_PORTS` in `.env`; a different .42 address → `REMOTEIP_PROXY=<address>` in `.env`; other headers → the `RemoteIPHeader` note in the guide (*Public access*).
+
 ---
 
 ## 1. Docker, with its storage on `/extra`
