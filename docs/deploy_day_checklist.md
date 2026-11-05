@@ -47,6 +47,14 @@ Visitors reach the site like this: Cloudflare (HTTPS) → front device **160.111
 
 ## 1. Docker, with its storage on `/extra`
 
+First, check that you're in your own login, not a root shell (`sudo su` / `sudo -i`). The `$USER` in this step and in steps 2, 3 and 5 must be you:
+
+```bash
+echo $USER
+```
+
+- [ ] It prints **your login name**. If it prints `root`, type `exit` until it prints your name. **STOP and fix it before proceeding.**
+
 ```bash
 sudo dnf remove -y podman-docker buildah 2>/dev/null || true
 sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
