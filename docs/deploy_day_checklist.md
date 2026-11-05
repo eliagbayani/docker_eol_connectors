@@ -251,7 +251,7 @@ ls -ld /extra/eol_php_resources/ /extra/FreshData_TSV_files/
 
 - [ ] `git status` gives **0**, and both `ls -ld` lines show real folders.
 
-**On the Mac**, copy the 2 config files that aren't in git. Only these two are used: the code loads `environments/production.php` for the website and for every Jenkins job. `jenkins_production.php` is never loaded (a Jenkins job only switches to the `jenkins_production:` section of `database.yml`), so it stays on the Mac.
+**On the Mac**, copy the 2 config files that aren't in git: `database.yml` (the database logins) and `environments/production.php` (the code's settings, used by the website and by every Jenkins job). No other settings file is needed.
 
 ```bash
 # database.yml: database connections; production.php: the code's settings (e.g. how the web tools reach Jenkins)
@@ -266,10 +266,11 @@ scp environments/production.php archive:/extra/eol_docker/webroot/eol_php8_code/
 cd /extra/eol_docker/webroot/eol_php8_code/config
 
 # 1. Put the new database password from .env into database.yml, without showing it:
-#    production + jenkins_production get the MYSQL_PASSWORD from .env; the other sections (the Mac's) get an empty password
+#    the two production sections (one for the website, one for Jenkins jobs; both names end in "production:")
+#    get the MYSQL_PASSWORD from .env; the Mac's sections get an empty password
 P=$(grep '^MYSQL_PASSWORD=' /extra/eol_docker/docker_eol_connectors/.env | cut -d= -f2)
 awk -v p="$P" '/^[a-z_]+:[[:space:]]*$/ { s = $1 }
-  /^[[:space:]]+password:/ { if (s == "production:" || s == "jenkins_production:") sub(/password:.*/, "password: \"" p "\""); else sub(/password:.*/, "password: \"\"") }
+  /^[[:space:]]+password:/ { if (s ~ /production:$/) sub(/password:.*/, "password: \"" p "\""); else sub(/password:.*/, "password: \"\"") }
   { print }' database.yml > database.yml.new && mv database.yml.new database.yml
 grep -cF "\"$P\"" database.yml; unset P
 
@@ -278,10 +279,10 @@ chmod 640 database.yml environments/production.php
 ls environments/
 
 # 3. Check the production sections connect to the db container as eol_app
-grep -A4 -E '^(production|jenkins_production):' database.yml | grep -E '^\s+(host|username):'
+grep -A4 -E '^[a-z_]*production:' database.yml | grep -E '^\s+(host|username):'
 ```
 
-- [ ] `ls environments/` shows `production.php` next to the three files from git (`development_sample.php`, `production_sample.php`, `test_sample.php`), and no `jenkins_production.php`.
+- [ ] `ls environments/` shows `production.php` next to the three files from git (`development_sample.php`, `production_sample.php`, `test_sample.php`), and nothing else.
 - [ ] `grep -cF` prints **2** (both production sections have the password), and the last command shows `host: db` and `username: eol_app` twice.
 - [ ] `production.php` has `JENKINS_DOMAIN` set to `jenkins:8080`. The token is replaced after step 6.
 
