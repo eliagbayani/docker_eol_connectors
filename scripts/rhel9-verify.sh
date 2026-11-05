@@ -37,7 +37,7 @@ while read -r name cport host; do
     [ -n "$cport" ] || continue
     hip=${host%:*}
     if [ "$name" != web ] && [ "$hip" != 127.0.0.1 ]; then FAIL "$name $cport published on $host (must be 127.0.0.1)"
-    elif [ "$name" = web ] && { [ "$hip" = 0.0.0.0 ] || [ "$hip" = "::" ] || [ -z "$hip" ]; }; then WARN "web $cport published on all interfaces ($host); production uses the internal IP (WEB_PORTS=10.252.248.39:8080:80)"
+    elif [ "$name" = web ] && { [ "$hip" = 0.0.0.0 ] || [ "$hip" = "::" ] || [ -z "$hip" ]; }; then FAIL "web $cport published on all interfaces ($host), incl. the public IP: set WEB_PORTS=10.252.248.39:8080:80 in .env"
     else OK "$name $cport → $host"; fi
 done <<< "$ports"
 command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet httpd 2>/dev/null && FAIL "host httpd is running; the web container must own the web port"

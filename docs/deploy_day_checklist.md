@@ -114,9 +114,10 @@ sed -i "s/^MYSQL_PASSWORD=CHANGE_ME.*/MYSQL_PASSWORD=$(openssl rand -hex 24)/" .
 sed -i "s/^NEO_PASSWORD=CHANGE_ME.*/NEO_PASSWORD=$(openssl rand -hex 24)/" .env
 grep -v '^\s*#' .env | grep -c CHANGE_ME
 grep -E '^(MYSQL_ROOT_PASSWORD|MYSQL_PASSWORD|NEO_PASSWORD)=' .env | awk -F= '{ print $1, length($2), "chars" }'
+grep -E '^(WEB_PORTS|JENKINS_PORTS|MYSQL_PORTS)=' .env
 ```
 - [ ] `grep -c` prints **0**, and the last command prints the three names with **48 chars** each (the passwords themselves aren't shown).
-- [ ] Leave the ports and paths as they are in the sample.
+- [ ] The ports are **`WEB_PORTS=10.252.248.39:8080:80`**, `JENKINS_PORTS=127.0.0.1:8080:8080` and `MYSQL_PORTS=127.0.0.1:4001:3306`. **STOP** if `WEB_PORTS` has no address in front (e.g. `80:80`): the site would be on the public IP, around Cloudflare. Leave the paths as they are in the sample.
 - To see a password later (e.g. to log in to MySQL by hand): `grep '^MYSQL_ROOT_PASSWORD=' .env`. Don't paste it anywhere.
 
 ## 5. Code, work folders, config files
