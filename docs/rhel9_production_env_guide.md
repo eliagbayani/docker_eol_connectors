@@ -348,7 +348,7 @@ df -h /     # root disk (10 GB) should still be about as full as before the buil
 docker compose -f docker-compose.yml up -d
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
-# Jenkins (port 8080 is on 127.0.0.1 only): from the Mac, ssh -N -L 8090:127.0.0.1:8080 eagbayani@160.111.248.39 -J archive
+# Jenkins (port 8080 is on 127.0.0.1 only): from the Mac, ssh -N -L 8090:127.0.0.1:8080 archive
 #   then open http://localhost:8090 → Jenkins URL: http://localhost:8090/ (the copy has the Mac's :8081);
 #   change the admin password (it came from the Mac);
 #   user web-trigger → revoke the copied API token, create a new one → production.php JENKINS_USER_TOKEN;
@@ -403,21 +403,33 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.2
 - **Old URLs:** eol-archive served the PHP 5.6 tree at `/eol_php_code/...`; `apache2.conf` aliases that path to `eol_php8_code`, so existing links keep working.
 - **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443.
 
-**Jenkins from your Mac.** Jenkins listens only on the server's `127.0.0.1:8080` (Docker bypasses firewalld, so a published Jenkins port would be open to the network). Reach it through an SSH tunnel via the `archive` jump host:
+**Jenkins from your Mac.** Jenkins listens only on the server's `127.0.0.1:8080` (Docker bypasses firewalld, so a published Jenkins port would be open to the network). Reach it through an SSH tunnel to `archive`, the Mac's `~/.ssh/config` name for eol-archive (internal address 10.252.248.39, reached through the jump host `si`, 160.111.248.30):
 
 ```bash
-ssh -N -L 8090:127.0.0.1:8080 eagbayani@160.111.248.39 -J archive    # Ctrl-C closes it
+ssh -N -L 8090:127.0.0.1:8080 archive    # Ctrl-C closes it
 ```
 
-Then browse **http://localhost:8090**. No browser proxy is needed. The old way (`ssh -D 3000 … -J archive`, Safari SOCKS proxy `localhost:3000`, `http://160.111.248.39:8090`) no longer works, because Jenkins isn't on the public address any more. Through SOCKS you'd need `http://127.0.0.1:8080`, and Safari sends localhost addresses to your own Mac, not through the proxy.
+Then browse **http://localhost:8090**. No browser proxy is needed. The old way (`ssh -D 3000 eagbayani@160.111.248.39 -J archive`, Safari SOCKS proxy `localhost:3000`, `http://160.111.248.39:8090`) no longer works, because Jenkins isn't on the public address any more. Through SOCKS you'd need `http://127.0.0.1:8080`, and Safari sends localhost addresses to your own Mac, not through the proxy.
 
-Shorter, with this in the Mac's `~/.ssh/config`: `ssh -N eol-jenkins`
+The Mac's `~/.ssh/config` entries for this (`eol-jenkins` is optional and shortens the command to `ssh -N eol-jenkins`):
 
 ```
+host si
+  User eagbayani
+  HostName 160.111.248.30
+  ServerAliveInterval 30
+
+host archive
+  User eagbayani
+  HostName 10.252.248.39
+  ServerAliveInterval 30
+  ProxyCommand ssh si nc %h %p
+
 Host eol-jenkins
-    HostName 160.111.248.39
+    HostName 10.252.248.39
     User eagbayani
-    ProxyJump archive
+    ProxyCommand ssh si nc %h %p
+    ServerAliveInterval 30
     LocalForward 8090 127.0.0.1:8080
 ```
 

@@ -169,9 +169,9 @@ bash scripts/rhel9-verify.sh
 - [ ] `ps`: db `healthy`; web and jenkins `Up`.
 - [ ] **`rhel9-verify.sh` ends with `0 FAIL`.** Every FAIL line says what to fix. Fix it and run the check again. Don't go on with a FAIL.
 
-**Jenkins** listens only on the server's `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel, via the same `archive` jump host as before. No Safari proxy setting is needed (the old SOCKS + `http://160.111.248.39:8090` way no longer works):
+**Jenkins** listens only on the server's `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to your `archive` host (eol-archive, reached through `si`; see the guide, *Jenkins from your Mac*). No Safari proxy setting is needed (the old SOCKS + `http://160.111.248.39:8090` way no longer works):
 ```bash
-ssh -N -L 8090:127.0.0.1:8080 eagbayani@160.111.248.39 -J archive    # keep this window open; Ctrl-C closes the tunnel
+ssh -N -L 8090:127.0.0.1:8080 archive    # keep this window open; Ctrl-C closes the tunnel
 ```
 Then open **http://localhost:8090** in Safari. (Optional: the `~/.ssh/config` entry in the guide, *Jenkins from your Mac*, shortens this to `ssh -N eol-jenkins`.)
 - [ ] Manage Jenkins → System → **Jenkins URL** → `http://localhost:8090/` (the copied setting is the Mac's `http://localhost:8081/`), then Save.

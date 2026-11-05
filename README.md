@@ -199,10 +199,10 @@ browser ──HTTPS──▶ Cloudflare ──HTTPS──▶ 160.111.248.42 ─�
 
 HTTPS ends at 160.111.248.42, which forwards plain HTTP to port 8080 over the internal network (as the old eol-archive Apache listened) — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:8080:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → *Public access*.
 
-**Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel via the `archive` jump host (details, `~/.ssh/config` entry and the Jenkins URL setting: RHEL guide → *Jenkins from your Mac*):
+**Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to `archive` (the Mac's `~/.ssh/config` name for eol-archive, reached through `si`; details, `~/.ssh/config` entry and the Jenkins URL setting: RHEL guide → *Jenkins from your Mac*):
 
 ```bash
-ssh -N -L 8090:127.0.0.1:8080 eagbayani@160.111.248.39 -J archive   # then browse http://localhost:8090
+ssh -N -L 8090:127.0.0.1:8080 archive   # then browse http://localhost:8090
 ```
 
 **Do not deploy:** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount + Neo4j). Production uses only `docker-compose.yml` (web, db, jenkins).
@@ -503,7 +503,7 @@ docker image prune -f
 | Jenkins build: `ERROR: PHP is older than 8.4.27` | Stale apt cache → `--no-cache --pull`; on Apple Silicon, sury arm64 may lag amd64 — see [PHP version pins](#php-version-pins) |
 | `requested image's platform (linux/amd64) does not match the detected host platform` | Image built for amd64 on an arm64 Mac — runs emulated. Rebuild without `DOCKER_DEFAULT_PLATFORM` for a native image |
 | Jenkins log: `Failed Loading plugin … Update required` | Dependency plugin too old — update the named plugin(s) (e.g. `ssh-credentials`, `cloudbees-folder`), restart |
-| Jenkins on server not reachable from browser | Bound to `127.0.0.1` by design — `ssh -N -L 8090:127.0.0.1:8080 eagbayani@160.111.248.39 -J archive`, then http://localhost:8090 (no SOCKS proxy) |
+| Jenkins on server not reachable from browser | Bound to `127.0.0.1` by design — `ssh -N -L 8090:127.0.0.1:8080 archive`, then http://localhost:8090 (no SOCKS proxy) |
 | `Deprecated:` lines in PHP output | PHP 8.4 deprecations echoed by `ActiveRecordError::handleError` — see [PHP 8.4 migration notes](#php-84-migration-notes) |
 
 ---
