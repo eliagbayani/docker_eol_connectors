@@ -273,6 +273,12 @@ cd /extra/eol_docker/docker_eol_connectors
 # 3. Host directories + SELinux (persistent labels — survive a relabel)
 # Creates /extra/eol_docker/... and only the missing data folders in /extra (existing ones are kept)
 sudo bash scripts/rhel9-init-dirs.sh
+# Jenkins jobs, settings, users and build history come from the Mac's jenkins_home (1.8 GB). Stop Jenkins on
+# the Mac first, so the copy is consistent; then hand the folder to Jenkins (uid 1000):
+sudo chown $USER: /extra/eol_docker/jenkins_home
+#   on the Mac:  docker compose stop jenkins
+#                rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/ <you>@eol-archive:/extra/eol_docker/jenkins_home/
+#                docker compose start jenkins
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 # /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers
@@ -306,13 +312,14 @@ mkdir -p temp tmp/cache applications/content_server/tmp \
   applications/{dwc_validator_jenkins,DwC_branch_extractor,genHigherClass,genHigherClass_jenkins,CheckListBank_tool}/temp \
   ../FreshData_min/sh_files
 ln -s /extra/eol_php_resources/ applications/content_server/resources   # target as seen inside the containers
+ln -s /extra/FreshData_TSV_files ../FreshData_min/TSV_files   # FreshData monitor downloads (gitignored); on the data volume
 # web (www-data, uid 33) and Jenkins (uid 1000) both write there:
 chmod 777 temp tmp/cache applications/content_server/tmp applications/*/temp ../FreshData_min/sh_files
 # GBIF download jobs (checklists, data coverage, NMNH/iNat images, map data) mkdir their own folders inside
 # update_resources/connectors/files, which git created as yours: let web and Jenkins write there too.
 # ACLs don't change owners or modes git tracks, so git pull / git status are unaffected.
 setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX update_resources/connectors/files
-# rhel9-verify.sh (step 6) checks all 19 work folders: present, not a broken link, writable by web and Jenkins
+# rhel9-verify.sh (step 6) checks all 20 work folders: present, not a broken link, writable by web and Jenkins
 # (without dwc_validator_jenkins/temp every DwC validator upload fails, while Jenkins still shows SUCCESS: rehearsal 2026-11-05)
 
 # Data: eol-archive was rebuilt in place (2026-11-04) and kept its /extra volume (9.1 TB, 3.8 TB used),
@@ -321,6 +328,17 @@ ls -ld /extra/eol_php_resources/
 # The old webroot folders (eoearth, eoearth_redirect_sys, Leaflet_Cluster_map, github-php-client) are no
 # longer needed and are not moved.
 
+# Config files with passwords and tokens (gitignored): copy from the Mac, then set the server's values
+#   on the Mac:  cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
+#                scp database.yml <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/
+#                scp environments/production.php environments/jenkins_production.php \
+#                    <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+cd /extra/eol_docker/webroot/eol_php8_code/config
+chmod 640 database.yml environments/production.php environments/jenkins_production.php
+# database.yml: production + jenkins_production → host: db, port: 3306, username: eol_app,
+#   password: the MYSQL_PASSWORD from .env (step 4), quoted (see "eol_php8_code config/database.yml" below)
+# production.php: JENKINS_DOMAIN 'jenkins:8080'; JENKINS_USER_TOKEN replaced after step 6 (new web-trigger token)
+
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
@@ -328,6 +346,11 @@ df -h /     # root disk (10 GB) should still be about as full as before the buil
 docker compose -f docker-compose.yml up -d
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
+# Jenkins (port 8080 is on 127.0.0.1 only): from the Mac, ssh -L 18080:127.0.0.1:8080 <you>@eol-archive
+#   then open http://localhost:18080 → change the admin password (it came from the Mac);
+#   user web-trigger → revoke the copied API token, create a new one → production.php JENKINS_USER_TOKEN;
+#   Security: matrix authorization eagbayani = Administer, web-trigger = Read + Build; agents TCP port Disabled
+bash scripts/rhel9-verify.sh   # again: "web → Jenkins login as 'web-trigger' works" with the new token
 
 # 7. 10.252.248.39:8080 belongs to the web container — the host's own Apache must not run
 #    (the old RHEL 7 eol-archive ran Apache + PHP natively on that port, no Docker)

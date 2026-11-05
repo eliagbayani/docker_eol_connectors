@@ -120,7 +120,7 @@ eol_php8_code/applications/xls2dwca_jenkins/temp
 eol_php8_code/applications/dwc_validator_jenkins/temp eol_php8_code/applications/DwC_branch_extractor/temp
 eol_php8_code/applications/genHigherClass/temp eol_php8_code/applications/genHigherClass_jenkins/temp
 eol_php8_code/applications/CheckListBank_tool/temp
-eol_php8_code/update_resources/connectors/files"
+eol_php8_code/update_resources/connectors/files FreshData_min/TSV_files"
 WDCHECK='cd /var/www/html; for d in $0; do
   if [ -L "$d" ] && [ ! -e "$d" ]; then echo "$d|broken|$(readlink "$d")"
   elif [ ! -e "$d" ]; then echo "$d|missing|"
@@ -136,6 +136,7 @@ for d in $WORKDIRS; do
         missing) case "$d" in
                      */temp_dev)  OK "$d absent (Mac-only development area)" ;;
                      */resources) FAIL "$d is missing: ln -s /extra/eol_php_resources/ $d (see RHEL guide, step 5)" ;;
+                     */TSV_files) FAIL "$d is missing: ln -s /extra/FreshData_TSV_files $d (see RHEL guide, step 5)" ;;
                      *)           FAIL "$d is missing: create the folder (mkdir) so web and Jenkins can write to it" ;;
                  esac ;;
         notdir)  FAIL "$d is a file, not a folder" ;;
