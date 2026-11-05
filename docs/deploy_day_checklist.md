@@ -47,6 +47,8 @@ Visitors reach the site like this: Cloudflare (HTTPS) → front device **160.111
 
 ## 1. Docker, with its storage on `/extra`
 
+**This step installs Docker, the container runtime, on eol-archive. Nothing else gets installed on the server itself.** PHP, Apache, MySQL and Jenkins come inside the three containers (web, db, jenkins), which are built in step 6. After this step the server has Docker, with its storage on `/extra`, starting at boot.
+
 First, check that you're in your own login, not a root shell (`sudo su` / `sudo -i`). The `$USER` in this step and in steps 2, 3 and 5 must be you:
 
 ```bash
@@ -56,25 +58,45 @@ echo $USER
 - [ ] It prints **your login name**. If it prints `root`, type `exit` until it prints your name. **STOP and fix it before proceeding.**
 
 ```bash
+# 1. Remove Podman's docker look-alike and buildah if present (they clash with the real Docker; harmless if absent)
 sudo dnf remove -y podman-docker buildah 2>/dev/null || true
+
+# 2. Add Docker's official package source for RHEL (RHEL itself doesn't include Docker)
 sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+
+# 3. Install the runtime: the engine (docker-ce), the docker command (docker-ce-cli),
+#    the layer that runs the containers (containerd.io) and `docker compose` (docker-compose-plugin).
+#    policycoreutils-python-utils isn't Docker: it gives `semanage`, used below for SELinux.
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin policycoreutils-python-utils
+
+# 4. Put Docker's and containerd's storage on /extra (the 10 GB system disk is too small)
 sudo mkdir -p /etc/docker /extra/docker /extra/containerd
 echo '{ "data-root": "/extra/docker" }' | sudo tee /etc/docker/daemon.json
 sudo sed -i '1i root = "/extra/containerd"' /etc/containerd/config.toml
+
+# 5. SELinux: label the new storage folders like Docker's default ones
 sudo semanage fcontext -a -e /var/lib/docker /extra/docker
 sudo semanage fcontext -a -e /var/lib/containerd /extra/containerd
 sudo restorecon -R /extra/docker /extra/containerd
 sudo systemctl restart containerd
+
+# 6. At boot, start Docker and containerd only after /extra is mounted
 sudo mkdir -p /etc/systemd/system/docker.service.d /etc/systemd/system/containerd.service.d
 printf '[Unit]\nRequiresMountsFor=/extra\n' | sudo tee /etc/systemd/system/docker.service.d/extra.conf
 sudo cp /etc/systemd/system/docker.service.d/extra.conf /etc/systemd/system/containerd.service.d/
 sudo systemctl daemon-reload
+
+# 7. Start Docker now and at every boot
 sudo systemctl enable --now docker
+
+# 8. Check where the storage went (see the two checks below)
 sudo docker info -f '{{.DockerRootDir}}'
 sudo containerd config dump | grep -m1 '^root'
+
+# 9. Let your login run docker without sudo (takes effect after you log in again)
 sudo usermod -aG docker $USER
 ```
+
 - [ ] **Check that Docker uses `/extra`:** `docker info` prints **`/extra/docker`**. If it prints `/var/lib/docker` (Docker's default), the `daemon.json` setting didn't take effect. **STOP and fix it before proceeding.**
 - [ ] **Check that containerd uses `/extra`:** the `grep` prints **`root = '/extra/containerd'`** (a warning line before it, "Configuration migrated from version 0", is normal). If it prints `/var/lib/containerd` (containerd's default), the `config.toml` line didn't take effect. **STOP and fix it before proceeding.**
 - [ ] **Log out and back in** (for the `docker` group), then `docker ps` works without `sudo`.
