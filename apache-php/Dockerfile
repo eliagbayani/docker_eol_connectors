@@ -42,11 +42,27 @@ RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then cp /tmp/zz-product
 COPY zz-security.conf /etc/apache2/conf-available/
 RUN a2enconf zz-security
 
-# H6: real visitor IPs in the logs (behind Cloudflare → 10.252.248.42). The default keeps Apache startable
+# H6: real visitor IPs in the logs (behind Cloudflare, or the old proxy 10.252.248.42). The default keeps Apache startable
 # if compose doesn't set REMOTEIP_PROXY.
 ENV REMOTEIP_PROXY=10.252.248.42
 COPY zz-remoteip.conf cloudflare-ips.txt /etc/apache2/conf-available/
 RUN a2enmod remoteip && a2enconf zz-remoteip
+
+# HTTPS: Cloudflare connects straight to eol-archive (160.111.248.39:443); the old front device .42 is being retired.
+# editors-https.conf = the HTTPS site; https-cert.sh (run by the entrypoints) makes a self-signed certificate
+# when the mounted certs folder is empty. https-allow.inc is built from cloudflare-ips.txt: only Cloudflare
+# (plus HTTPS_ALSO_ALLOW, set in compose) may connect on 443.
+ENV HTTPS_ALSO_ALLOW=127.0.0.1
+COPY editors-https.conf /etc/apache2/sites-available/
+COPY https-cert.sh /usr/local/bin/
+RUN set -eu; chmod 755 /usr/local/bin/https-cert.sh; \
+    { echo '<RequireAny>'; \
+      grep -E '^[0-9a-f]' /etc/apache2/conf-available/cloudflare-ips.txt | while read -r r; do \
+        echo "  Require expr \"%{CONN_REMOTE_ADDR} -ipmatch '$r'\""; done; \
+      echo '  Require ip ${HTTPS_ALSO_ALLOW}'; \
+      echo '</RequireAny>'; } > /etc/apache2/https-allow.inc; \
+    a2enmod ssl; a2ensite editors-https; \
+    a2disconf other-vhosts-access-log   # access.log (apache2.conf) already logs both sites; this one is never rotated
 
 # =============================================================================
 # Other OS packages and the yaml extension, in one layer (C3).
@@ -98,5 +114,5 @@ WORKDIR /var/www/html
 # Production: no info.php (phpinfo) anywhere in the image
 RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then rm -f /tmp/info.php; fi
 # =============================================================================
-# Apache listens on 80 (C1)
-EXPOSE 80
+# Apache listens on 80 (C1) and 443 (HTTPS)
+EXPOSE 80 443

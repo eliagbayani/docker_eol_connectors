@@ -69,16 +69,21 @@ services:
       MY_ENV: ${MY_ENVIRONMENT:?set it in .env} #entrypoint sh, and eol_php8_code picks its database.yml section from it
       # H6: proxy whose X-Forwarded-For Apache trusts (apache-php/zz-remoteip.conf)
       REMOTEIP_PROXY: ${REMOTEIP_PROXY:-10.252.248.42}
+      # HTTPS site (apache-php/editors-https.conf): besides Cloudflare, who may connect on 443 (tests from the server)
+      HTTPS_ALSO_ALLOW: ${HTTPS_ALSO_ALLOW:-127.0.0.1}
     volumes:
       - ${WEBROOT_PATH:?set it in .env}:/var/www/html
       - ${APACHE_LOGS:?set it in .env}:/var/log/apache2
       - ${EXTRA_PATH:?set it in .env}:/extra
+      # HTTPS certificate + key (editors.eol.org.crt / .key); a self-signed pair is made at start if empty
+      - ${HTTPS_CERTS_PATH:-./certs}:/etc/apache2/certs
     # command: ${PWD}/apache-php/docker-entrypoint_${MY_ENVIRONMENT}.sh #works OK
 
     command: /usr/local/bin/docker-entrypoint_${MY_ENVIRONMENT:?set it in .env}.sh
 
     ports:
       - ${WEB_PORTS:?set it in .env} # 81:80
+      - ${WEB_HTTPS_PORTS:-127.0.0.1:8443:443} # HTTPS; production: 160.111.248.39:443:443 (Cloudflare connects here)
     # M6: one PHP request may use up to memory_limit (2000M); ~10 users
     mem_limit: ${WEB_MEM_LIMIT:-6g}
     logging: *default-logging

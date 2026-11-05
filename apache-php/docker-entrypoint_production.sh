@@ -57,4 +57,7 @@ fi
 
 # ========== This will continue the container. Without it, the container will exit.
 # exec (M1): Apache replaces this shell as PID 1, so `docker stop` reaches it and it shuts down cleanly.
+# ========== HTTPS certificate (self-signed if the certs folder is empty); stop if it cannot be made
+/usr/local/bin/https-cert.sh || exit 1
+
 exec apache2-foreground

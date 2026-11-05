@@ -37,7 +37,9 @@ while read -r name cport host; do
     [ -n "$cport" ] || continue
     hip=${host%:*}
     if [ "$name" != web ] && [ "$hip" != 127.0.0.1 ]; then FAIL "$name $cport published on $host (must be 127.0.0.1)"
-    elif [ "$name" = web ] && { [ "$hip" = 0.0.0.0 ] || [ "$hip" = "::" ] || [ -z "$hip" ]; }; then FAIL "web $cport published on all interfaces ($host), incl. the public IP: set WEB_PORTS=10.252.248.39:8080:80 in .env"
+    elif [ "$name" = web ] && { [ "$hip" = 0.0.0.0 ] || [ "$hip" = "::" ] || [ -z "$hip" ]; }; then
+        if [ "$cport" = 443/tcp ]; then FAIL "web $cport published on all interfaces ($host): set WEB_HTTPS_PORTS=160.111.248.39:443:443 in .env"
+        else FAIL "web $cport published on all interfaces ($host), incl. the public IP: set WEB_PORTS=10.252.248.39:8080:80 in .env"; fi
     else OK "$name $cport → $host"; fi
 done <<< "$ports"
 command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet httpd 2>/dev/null && FAIL "host httpd is running; the web container must own the web port"
@@ -75,6 +77,43 @@ if [ -z "$ADDR" ]; then FAIL "web port 80 is not published"; else
     elif [ "$c" = 404 ]; then OK "no test.php in the webroot"
     else FAIL "test.php → HTTP $c (fails, e.g. wrong eol_app password in it); fix or delete it"; fi
 fi
+
+echo "== HTTPS: Cloudflare connects to eol-archive directly (editors-https.conf, WEB_HTTPS_PORTS)"
+HADDR=$(dc port web 443 2>/dev/null | head -1)
+if [ -z "$HADDR" ]; then FAIL "web port 443 is not published: set WEB_HTTPS_PORTS=160.111.248.39:443:443 in .env"; else
+    HIP=${HADDR%:*}; HP=${HADDR##*:}; [ "$HIP" = 0.0.0.0 ] && HIP=127.0.0.1
+    case "$HIP" in 127.*) FAIL "HTTPS only on $HADDR: Cloudflare can't reach it (set WEB_HTTPS_PORTS=160.111.248.39:443:443 in .env)" ;;
+                   *) OK "HTTPS published on $HADDR" ;; esac
+    # Same request as Cloudflare will send (Host editors.eol.org), straight to this server; -k: self-signed is fine
+    HU="https://editors.eol.org:$HP"; R="editors.eol.org:$HP:$HIP"
+    hcode() { curl -sk -m 10 -o /dev/null -w '%{http_code}' --resolve "$R" "$HU$1"; }
+    h=$(hcode /eol_php8_code/); p=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "${U:-http://none}/eol_php8_code/")
+    if [ "$h" = 000 ]; then FAIL "https://editors.eol.org/ on $HIP:$HP: no TLS answer (docker logs web | grep -i ssl)"
+    elif [ "$h" = "$p" ]; then OK "https://editors.eol.org/eol_php8_code/ on $HIP:$HP → $h (same as plain HTTP)"
+    elif [ "$h" = 403 ]; then FAIL "HTTPS → 403 but HTTP → $p: this server's address is not allowed on 443; add it to HTTPS_ALSO_ALLOW in .env"
+    else FAIL "HTTPS /eol_php8_code/ → $h, HTTP → $p (expected the same)"; fi
+    c=$(hcode /eol_php8_code/config/database.yml); [ "$c" = 403 ] && OK "HTTPS /eol_php8_code/config/database.yml → 403" || FAIL "HTTPS /eol_php8_code/config/database.yml → $c (expected 403)"
+    c=$(curl -sk -m 10 -o /dev/null -w '%{http_code}' --resolve "$R" -H 'Host: editors.eol.org' "http://$HIP:$HP/" 2>/dev/null)
+    [ "$c" = 400 ] && OK "plain HTTP on the HTTPS port is refused (400)" || WARN "plain HTTP on the HTTPS port → $c (expected 400)"
+fi
+CERT=/etc/apache2/certs/editors.eol.org.crt
+if docker exec "$WEB" test -s "$CERT"; then
+    docker exec "$WEB" openssl x509 -in "$CERT" -noout -ext subjectAltName 2>/dev/null | grep -q 'DNS:editors.eol.org' \
+        && OK "certificate is for editors.eol.org" || FAIL "certificate has no DNS:editors.eol.org (check the files in HTTPS_CERTS_PATH)"
+    docker exec "$WEB" openssl x509 -in "$CERT" -noout -checkend 2592000 >/dev/null 2>&1 \
+        && OK "certificate valid for 30+ days ($(docker exec "$WEB" openssl x509 -in "$CERT" -noout -enddate | cut -d= -f2))" \
+        || FAIL "certificate expires within 30 days ($(docker exec "$WEB" openssl x509 -in "$CERT" -noout -enddate | cut -d= -f2))"
+    sub=$(docker exec "$WEB" openssl x509 -in "$CERT" -noout -subject -nameopt RFC2253 | cut -d= -f2-)
+    iss=$(docker exec "$WEB" openssl x509 -in "$CERT" -noout -issuer -nameopt RFC2253 | cut -d= -f2-)
+    if [ "$sub" = "$iss" ]; then OK "certificate is self-signed: fine for Cloudflare SSL mode Full; for Full (strict) put an Origin certificate in HTTPS_CERTS_PATH"
+    else OK "certificate issued by: $iss"; fi
+    k=$(docker exec "$WEB" stat -c %a /etc/apache2/certs/editors.eol.org.key 2>/dev/null)
+    [ "$k" = 600 ] && OK "certificate key readable by root only (600)" || FAIL "certificate key mode is '$k' (chmod 600 it in HTTPS_CERTS_PATH)"
+else FAIL "no certificate at HTTPS_CERTS_PATH/editors.eol.org.crt (docker logs web | grep -i certificate)"; fi
+nr=$(docker exec "$WEB" grep -cE '^[0-9a-f]' /etc/apache2/conf-available/cloudflare-ips.txt)
+na=$(docker exec "$WEB" grep -c -- '-ipmatch' /etc/apache2/https-allow.inc)
+[ "$na" -gt 0 ] && [ "$na" = "$nr" ] && OK "port 443 allows only Cloudflare's $na ranges + HTTPS_ALSO_ALLOW='$(docker exec "$WEB" printenv HTTPS_ALSO_ALLOW)'" \
+    || FAIL "HTTPS allow-list has $na of Cloudflare's $nr ranges (rebuild web)"
 
 echo "== Web container"
 [ "$(docker exec "$WEB" cat /proc/1/comm 2>/dev/null)" = apache2 ] && OK "Apache is PID 1 (M1)" || FAIL "Apache is not PID 1"

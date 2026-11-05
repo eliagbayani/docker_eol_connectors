@@ -35,6 +35,8 @@ ensure_dir "${EOL_BASE}/apache2_logs"
 ensure_dir "${EOL_BASE}/jenkins_home"
 ensure_dir "${EOL_BASE}/jenkins_tmp"
 ensure_dir "${EOL_BASE}/python_projects"
+ensure_dir "${EOL_BASE}/certs"            # HTTPS certificate + key (self-signed one made at first start)
+chmod 700 "${EOL_BASE}/certs"
 
 # EXTRA_PATH — subdirs expected by docker-entrypoint_production.sh
 EXTRA="${EXTRA_PATH}"

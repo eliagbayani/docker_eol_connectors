@@ -20,7 +20,7 @@ The stack **will run on RHEL 9** (the deployment server runs **9.8**) if you:
 4. Keep the data in eol-archive's own **`/extra`** volume (`EXTRA_PATH=/extra`) and everything else in **`/extra/eol_docker`**: the root disk is only 10 GB
 5. Handle **SELinux** labels on bind mounts (`semanage fcontext` + `restorecon`)
 6. Keep non-public ports on **`127.0.0.1`** — Docker-published ports bypass firewalld
-7. Bind web to the server's **internal IP** (`WEB_PORTS=10.252.248.39:8080:80`) — HTTPS ends upstream at 160.111.248.42, no certificate on the server (see *Public access: editors.eol.org*)
+7. Publish web's **HTTPS on the public IP** (`WEB_HTTPS_PORTS=160.111.248.39:443:443`) for Cloudflare, and plain HTTP on the **internal IP** (`WEB_PORTS=10.252.248.39:8080:80`). HTTPS ends in the web container; the front device 160.111.248.42 is being retired (see *Public access: editors.eol.org*)
 
 `docker-compose.override.yml` is **gitignored** — it stays on your Mac for dev (`/Volumes` mount + Neo4j) and is **not included in git clone/deploy** to RHEL.
 
@@ -190,7 +190,10 @@ Other paths: `sudo EOL_BASE=/srv/eol EXTRA_PATH=/srv/eol/extra bash scripts/rhel
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
 | `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | *(unset)* → `32g` / `6g` / `2g` | Sized for the production server (at least 64 GB RAM, ~10 users): 40 GB in total, ~24 GB left for the OS and file cache. With more RAM, raise `JENKINS_MEM_LIMIT` first (connector runs) |
-| `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
+| `WEB_HTTPS_PORTS` | `160.111.248.39:443:443` | The website over HTTPS on the public IP: Cloudflare connects here. Only Cloudflare's ranges (and `HTTPS_ALSO_ALLOW`) are let in. Mac default `127.0.0.1:8443:443` |
+| `HTTPS_CERTS_PATH` | `/extra/eol_docker/certs` | `editors.eol.org.crt` + `.key`. Empty: a self-signed pair is made at web's start. Replace both and `restart web` for a real one. Mac default `./certs` (gitignored) |
+| `HTTPS_ALSO_ALLOW` | `127.0.0.1 10.10.0.0/16 160.111.248.39 10.252.248.39` | Besides Cloudflare, who may connect on 443: the server itself (its own tests and SSH tunnels arrive from `160.111.248.39`) |
+| `WEB_PORTS` | `10.252.248.39:8080:80` | Plain HTTP on the internal IP, as the old native Apache listened: for .42 while it still forwards, and internal tests. No clash with Jenkins on `127.0.0.1:8080` |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
 | `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
 | `NEO_*`, `PATH_NEO4J_*`, `PORT_7474` / `PORT_7687` | *(none)* | Neo4j runs only on the Mac; not in the production sample |
@@ -351,11 +354,11 @@ bash scripts/rhel9-verify.sh
 #   email-ext, gradle, ldap, pipeline-build-step, pipeline-groovy-lib, workflow-cps, workflow-multibranch), restart
 bash scripts/rhel9-verify.sh   # again: "web → Jenkins login as 'web-trigger' works" with the new token
 
-# 7. 10.252.248.39:8080 belongs to the web container — the host's own Apache must not run
-#    (the old RHEL 7 eol-archive ran Apache + PHP natively on that port, no Docker)
-sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep ':8080 '
-#    No firewall-cmd needed: Docker bypasses firewalld; access is limited by
-#    binding web to the internal IP (WEB_PORTS=10.252.248.39:8080:80)
+# 7. 160.111.248.39:443 and 10.252.248.39:8080 belong to the web container — the host's own Apache must not run
+#    (the old RHEL 7 eol-archive ran Apache + PHP natively on 8080, no Docker)
+sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep -E ':(443|8080) '
+#    No firewall-cmd needed: Docker bypasses firewalld. Each port names its address in .env, and
+#    Apache lets only Cloudflare (and HTTPS_ALSO_ALLOW) in on 443
 
 # 8. Nightly MySQL dump (as your own login): copying mysql_data while MySQL runs can give a broken copy
 cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # first run by hand → "OK …sql.gz"
@@ -381,23 +384,25 @@ Restore a dump: `gunzip -c /extra/eol_docker/backups/<file>.sql.gz | docker comp
 
 ## Public access: editors.eol.org (HTTPS)
 
-Confirmed on eol-archive 2026-10-26/27 (a test request landed in Apache's `access_log`; its config has only `Listen 10.252.248.39:8080` and the `editors.eol.org` vhost on `*:8080`):
+From deployment day (network team, 2026-11-05: the front device 160.111.248.42, eol-datastore1, is being retired; HTTPS ends on eol-archive; they move the DNS record once the site runs):
 
 ```
-browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ server 10.252.248.39
+browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ eol-archive 160.111.248.39:443 (web container)
 ```
 
-- **HTTPS ends at 160.111.248.42** (a network device; it reaches the server from `10.252.248.42`). The last hop is plain HTTP on the internal network, so **no certificate is needed on the server**. The old `ssl.conf` / `apache.crt` on 443 is not used by this path.
-- **Bind web to the internal IP, port 8080:** `WEB_PORTS=10.252.248.39:8080:80`, so .42 needs no change and the site isn't reachable on the public `160.111.248.39`.
-- **Network team:** if the rebuilt server keeps internal IP `10.252.248.39`, nothing changes on .42 (still port 8080); otherwise .42 must be re-pointed.
+Before (confirmed on the old eol-archive 2026-10-26/27, and still working until the DNS switch): Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ 10.252.248.39. So both stay published: `WEB_HTTPS_PORTS=160.111.248.39:443:443` and `WEB_PORTS=10.252.248.39:8080:80`.
+
+- **HTTPS in the web container:** `apache-php/editors-https.conf` (`mod_ssl`, TLS 1.2 and 1.3 only). Same webroot, aliases and blocked paths as the plain-HTTP site (they're in `apache2.conf`), and the same `access.log` / `error.log`. PHP sees `HTTPS=on`.
+- **Certificate:** `HTTPS_CERTS_PATH` (`/extra/eol_docker/certs`), mounted at `/etc/apache2/certs`. If the folder is empty, `apache-php/https-cert.sh` makes a self-signed pair for `editors.eol.org` (10 years, key mode 600) at web's start. An existing pair is never touched. If only one of the 2 files is there, web stops with a message. Cloudflare's SSL mode *Full* accepts self-signed; *Full (strict)* needs a trusted one. To use a Cloudflare Origin certificate (or another one), save it as `editors.eol.org.crt` and its key as `editors.eol.org.key`, `chmod 600` the key, then `docker compose -f docker-compose.yml restart web` (no rebuild). `rhel9-verify.sh` shows who issued it and FAILs it 30 days before it ends.
+- **Only Cloudflare on 443:** the public address sits on the server and Docker bypasses firewalld, so Apache checks the connection's address itself (`CONN_REMOTE_ADDR`) against `apache-php/cloudflare-ips.txt`; everyone else gets 403. `HTTPS_ALSO_ALLOW` adds the server's own addresses: a `curl --resolve editors.eol.org:443:160.111.248.39 …` on the server, or an SSH tunnel `ssh -N -L 8443:160.111.248.39:443 archive`, arrives from `160.111.248.39`. (Tested in Docker 29.9 with the network team's `daemon.json`: outside connections keep their own address through Docker, so Cloudflare's addresses are what Apache sees.)
+- **The DNS switch (network team):** after the go-live checks, Cloudflare's `editors.eol.org` record moves from 160.111.248.42 to 160.111.248.39, still proxied, and their firewall must let Cloudflare reach .39 on 443. Roll back by pointing it back to .42 while it exists. 526 = *Full (strict)* (swap in an Origin certificate); 521/522 = Cloudflare can't reach 443.
 - **Cloudflare** (zone `eol.org`, Business plan, SSL mode *full*): uploads over **200 MB** and requests over **100 s** fail (524) — run long work as Jenkins jobs.
-- **Visitor IPs:** built in (`apache-php/zz-remoteip.conf`, `mod_remoteip`). Apache takes the visitor's IP from `X-Forwarded-For`, but only on requests from `REMOTEIP_PROXY` (default `10.252.248.42`; set it in `.env` if .42 changes). Cloudflare's own addresses (`apache-php/cloudflare-ips.txt`) are skipped. Logs and PHP's `REMOTE_ADDR` then show the visitor; nothing in the code uses it for access control.
-  - **Check after go-live:** open the site through `editors.eol.org`, then `tail /extra/eol_docker/apache2_logs/access.log`. Your own public IP (e.g. from `curl ifconfig.me` on your laptop) should appear, not `10.252.248.42`.
-  - If it still shows `10.252.248.42`, .42 doesn't send `X-Forwarded-For`. Ask the network team which header it sends; if it only passes Cloudflare's `CF-Connecting-IP`, change `RemoteIPHeader` to that and rebuild web.
-  - If it shows a `104.x`/`162.158.x`/`172.64.x` address, Cloudflare's IP list has changed: refresh `cloudflare-ips.txt` from https://www.cloudflare.com/ips-v4 and `/ips-v6`, rebuild web.
-- **Secure cookies:** PHP sees plain HTTP. If .42 sends `X-Forwarded-Proto`, add `SetEnvIf X-Forwarded-Proto https HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only if nobody uses the site over internal plain HTTP.
+- **Visitor IPs:** built in (`apache-php/zz-remoteip.conf`, `mod_remoteip`). Apache takes the visitor's IP from `X-Forwarded-For`, but only on requests from Cloudflare's ranges (`apache-php/cloudflare-ips.txt`) or from `REMOTEIP_PROXY` (default `10.252.248.42`, the old path). Logs and PHP's `REMOTE_ADDR` then show the visitor; nothing in the code uses it for access control.
+  - **Check after the switch:** open the site through `editors.eol.org`, then `tail /extra/eol_docker/apache2_logs/access.log`. Your own public IP (e.g. from `curl ifconfig.me` on your laptop) should appear.
+  - If it shows a `104.x`/`162.158.x`/`172.64.x` address, or everyone gets 403 on HTTPS, Cloudflare's IP list has changed: refresh `cloudflare-ips.txt` from https://www.cloudflare.com/ips-v4 and `/ips-v6`, rebuild web.
+- **Secure cookies:** over HTTPS PHP sees `HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only once nobody uses the site over internal plain HTTP (`10.252.248.39:8080`).
 - **Old URLs:** eol-archive served the PHP 5.6 tree at `/eol_php_code/...`; `apache2.conf` aliases that path to `eol_php8_code`, so existing links keep working.
-- **Not carried over:** mod_security rule exceptions (no mod_security in the container), the stock `localhost.crt` on 443.
+- **Not carried over:** mod_security rule exceptions (no mod_security in the container), the old server's stock `localhost.crt`.
 
 **Jenkins from your Mac.** Jenkins listens only on the server's `127.0.0.1:8080` (Docker bypasses firewalld, so a published Jenkins port would be open to the network). Reach it through an SSH tunnel to `archive`, the Mac's `~/.ssh/config` name for eol-archive (internal address 10.252.248.39, reached through the jump host `si`, 160.111.248.30):
 
@@ -466,7 +471,7 @@ $pass = '<MYSQL_PASSWORD from .env>';
 $db   = 'eol_production';
 ```
 
-Browser (from inside the network): `http://10.252.248.39:8080/test.php`, or `https://editors.eol.org/test.php` once .42 forwards to the new server
+Browser (from inside the network): `http://10.252.248.39:8080/test.php`; from the Mac through `ssh -N -L 8443:160.111.248.39:443 archive`: `https://localhost:8443/test.php`; after the DNS switch: `https://editors.eol.org/test.php`
 
 ## eol_php8_code `config/database.yml` (gitignored — copy by hand)
 
@@ -565,7 +570,7 @@ Routine:
 | Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
 | `NEO_DATABASE` | **`neo4j`** | *(not set: no Neo4j)* |
 | Admin ports (MySQL, Jenkins, Neo4j) | `127.0.0.1` only | `127.0.0.1` only — SSH tunnel |
-| Web port | `127.0.0.1:81` (Mac only) | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
+| Web port | `127.0.0.1:81`, HTTPS `127.0.0.1:8443` (Mac only) | HTTPS `160.111.248.39:443` (Cloudflare only); plain HTTP `10.252.248.39:8080` (internal) |
 | Compose (Mac) | `docker compose up -d` | n/a |
 | Compose (RHEL) | n/a | `docker compose -f docker-compose.yml up -d` |
 | Web platform | Native arm64 (no `platform:` in compose); `DOCKER_DEFAULT_PLATFORM=linux/amd64` to rehearse the server's images | amd64 (the server's own platform) |

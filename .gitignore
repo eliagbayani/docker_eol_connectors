@@ -27,3 +27,5 @@ apache-php/Dockerfile Aug2
 README old.md
 .DS_Store
 README v1.md
+# HTTPS certificate and key (Mac default HTTPS_CERTS_PATH=./certs); never in git
+certs/
