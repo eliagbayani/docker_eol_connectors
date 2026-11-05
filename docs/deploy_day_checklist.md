@@ -382,7 +382,6 @@ crontab -l
 
 - [ ] **Test with the real data:**
   - DwC validator: upload an archive → "Valid Archive"
-  - run 2–3 connectors from Jenkins
   - submit one job from a web tool (e.g. trait_data_import)
 - [ ] **Through the public name:** open `https://editors.eol.org/…`, then `tail /extra/eol_docker/apache2_logs/access.log`. It should show **your own** IP, not `10.252.248.42`. If it shows `10.252.248.42`, see "Public access" in the guide.
 - [ ] **The next morning:** `ls -l /extra/eol_docker/backups/` has a new dump from 2:30.
