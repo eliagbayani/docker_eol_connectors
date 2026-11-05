@@ -23,6 +23,25 @@ The stack **will run on RHEL 9** (the deployment server runs **9.8**) if you:
 
 `docker-compose.override.yml` is **gitignored** — it stays on your Mac for dev (`/Volumes` mount + Neo4j) and is **not included in git clone/deploy** to RHEL.
 
+### Which user runs what
+
+Do the setup as **your own login, added to the `docker` group** (deploy step 1), not in a root shell (`sudo su` / `sudo -i`). Put `sudo` only in front of the commands that need it; the deploy steps below already show which.
+
+| As root (`sudo …`) | As your own login |
+|---|---|
+| `dnf install` (Docker, `policycoreutils-python-utils`), `systemctl`, `usermod -aG docker` | `git clone` / `git pull` of this repo and of `eol_php8_code`, `FreshData_min`, `LiteratureEditor_min` |
+| creating `/opt/eol` and handing it to you; `scripts/rhel9-init-dirs.sh` | `.env`: copy, `chmod 600`, edit |
+| `chown 1000:1000` on `jenkins_home` / `jenkins_tmp`; `chown` of `webroot` to you | the work folders: `mkdir`, `ln -s`, `chmod 777` (step 5) |
+| SELinux (`semanage fcontext`, `restorecon`), firewalld | `docker compose build / up -d / logs / restart` |
+| rsync of `/extra` (keeps owners and reads every file); the inventory scripts | `bash scripts/rhel9-verify.sh` |
+
+Why not everything as root:
+- **Files get the wrong owner.** Clones, `.env` and work folders made as root belong to root: a later `git pull` as yourself fails ("dubious ownership" / permission denied), and Jenkins (uid 1000) can't write where it should.
+- **`~` and `$HOME` mean `/root`** in a root shell, so commands that use them point at the wrong place.
+- **The containers don't change.** The Docker service runs as root whoever types `docker compose`; inside, Apache runs as `www-data` (33) and Jenkins as uid 1000, set by the images.
+
+The `docker` group is **root-equivalent** (a member can start a container that mounts `/`): add only the people who run the stack.
+
 ---
 
 ## Stack versions (Oct 2026)
@@ -221,13 +240,15 @@ sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 sudo systemctl enable --now docker
 sudo usermod -aG docker $USER   # re-login after. Note: docker group = root-equivalent access
 
-# 2. Clone repo (override file not included — gitignored)
+# 2. Clone repo as your own login (override file not included — gitignored)
+sudo mkdir -p /opt/eol && sudo chown $USER: /opt/eol   # /opt belongs to root
 git clone <repo-url> /opt/eol/docker_eol_connectors
 cd /opt/eol/docker_eol_connectors
 
 # 3. Host directories + SELinux (persistent labels — survive a relabel)
 sudo bash scripts/rhel9-init-dirs.sh
 sudo chown -R 1000:1000 /opt/eol/jenkins_home /opt/eol/jenkins_tmp
+sudo chown $USER: /opt/eol/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 sudo dnf install -y policycoreutils-python-utils   # provides semanage
 sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
 sudo restorecon -Rv /opt/eol

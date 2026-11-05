@@ -155,10 +155,13 @@ $db   = 'eol_development'; // matches MY_ENVIRONMENT
 ## Quick start — RHEL 9 production
 
 ```bash
+# As your own login (in the docker group), sudo only where shown; see "Which user runs what" in the RHEL guide
+sudo mkdir -p /opt/eol && sudo chown $USER: /opt/eol
 git clone <repo> /opt/eol/docker_eol_connectors
 cd /opt/eol/docker_eol_connectors
 
 sudo bash scripts/rhel9-init-dirs.sh
+sudo chown $USER: /opt/eol/webroot
 cp .env.production.sample .env
 chmod 600 .env
 # Replace every CHANGE_ME_* value — generate each password with:  openssl rand -hex 24
@@ -170,7 +173,7 @@ sudo chown -R 1000:1000 /opt/eol/jenkins_home /opt/eol/jenkins_tmp
 sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
 sudo restorecon -Rv /opt/eol
 
-# Populate /opt/eol/webroot and /opt/eol/extra before or after first up
+# Populate /opt/eol/webroot (git clone the PHP 8 repos + work folders) and /opt/eol/extra (rsync): RHEL guide step 5
 # In eol_php8_code: config/database.yml → host: db, port: 3306, username: eol_app (quoted MYSQL_PASSWORD);
 #                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
 
