@@ -15,7 +15,7 @@ The EOL tools (website, MySQL and Jenkins) run as three Docker containers. Chang
 |---|---|---|
 | **Packages** | Docker's repository (`download.docker.com/linux/rhel`) added; `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-compose-plugin` and `policycoreutils-python-utils` installed; `podman-docker` / `buildah` removed if present | 1 |
 | **Services** | `docker` (and `containerd`) enabled at boot, and wait for the `/extra` mount (drop-ins in `/etc/systemd/system/{docker,containerd}.service.d/extra.conf`). The host's own `httpd` is disabled if present | 1, 7 |
-| **System files** | `/etc/docker/daemon.json` (`data-root` = `/extra/docker`); one line at the top of `/etc/containerd/config.toml` (`root = "/extra/containerd"`). The 10 GB root disk stays essentially unchanged | 1 |
+| **System files** | `/etc/docker/daemon.json` (`data-root` = `/extra/docker`); one line at the top of `/etc/containerd/config.toml` (`root = "/extra/containerd"`), both checked in step 1. The 10 GB root disk stays essentially unchanged | 1, 6 |
 | **SELinux** (stays Enforcing) | persistent rules: `/extra(/.*)?` → `container_file_t`; `/extra/docker` and `/extra/containerd` labelled like `/var/lib/docker` and `/var/lib/containerd`. A one-time `restorecon -R /extra` (3.8 TB) relabels the existing data from `default_t` | 1, 3 |
 | **`/extra`** | new folders `docker/`, `containerd/`, `eol_docker/` (mode 700, owned by the deploying login) and `gnfinder/`. ACLs on `dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files` and `gnfinder` give uid 33 (website) and uid 1000 (Jenkins) write access. **Existing data, owners and modes are not changed** | 1, 3 |
 | **Network: listening** | **`10.252.248.39:8080`**: the website, plain HTTP, for the front device 160.111.248.42. `127.0.0.1:8080` (Jenkins) and `127.0.0.1:4001` (MySQL): local only, reached through SSH. **Nothing listens on the public 160.111.248.39.** Docker adds its own nftables rules for the published port; firewalld isn't changed | 6 |
@@ -64,9 +64,11 @@ sudo cp /etc/systemd/system/docker.service.d/extra.conf /etc/systemd/system/cont
 sudo systemctl daemon-reload
 sudo systemctl enable --now docker
 sudo docker info -f '{{.DockerRootDir}}'
+sudo containerd config dump | grep -m1 '^root'
 sudo usermod -aG docker $USER
 ```
-- [ ] The last `docker info` prints **`/extra/docker`**. **STOP** if it prints `/var/lib/docker`: the 10 GB root disk would fill up.
+- [ ] **Check that Docker uses `/extra`:** `docker info` prints **`/extra/docker`**. If it prints `/var/lib/docker` (Docker's default), the `daemon.json` setting didn't take effect. **STOP and fix it before proceeding.**
+- [ ] **Check that containerd uses `/extra`:** the `grep` prints **`root = '/extra/containerd'`** (a warning line before it, "Configuration migrated from version 0", is normal). If it prints `/var/lib/containerd` (containerd's default), the `config.toml` line didn't take effect. **STOP and fix it before proceeding.**
 - [ ] **Log out and back in** (for the `docker` group), then `docker ps` works without `sudo`.
 
 ## 2. The Docker package
@@ -187,6 +189,7 @@ pgrep restorecon || echo "relabel done"
 docker compose -f docker-compose.yml build --no-cache --pull 2>&1 | tee /tmp/build.log | tail -3
 grep -m1 "PHP 8.4" /tmp/build.log
 df -h /
+sudo du -sh /var/lib/docker /var/lib/containerd 2>/dev/null
 # Jenkins' plugins, from the list copied in step 3 (needs HTTPS to updates.jenkins.io; about 3 minutes)
 docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plugin-cli jenkins \
   --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins 2>&1 | tail -3
@@ -195,7 +198,7 @@ docker compose -f docker-compose.yml up -d
 docker compose -f docker-compose.yml ps
 bash scripts/rhel9-verify.sh
 ```
-- [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used.
+- [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used, and `du` shows `/var/lib/docker` and `/var/lib/containerd` as absent or tiny (the images are under `/extra`).
 - [ ] The plugin tool ends with `Done`, and `ls … | wc -l` prints **94**. **STOP** if it's fewer, or the tool can't reach `updates.jenkins.io`: Jenkins can't read its security settings or folders without them. Run the command again (it retries mirrors), or copy the plugins from the Mac instead: `rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/plugins/ archive:/extra/eol_docker/jenkins_home/plugins/`, then `sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home/plugins`.
 - [ ] `ps`: db `healthy`; web and jenkins `Up`.
 - [ ] **`rhel9-verify.sh` ends with `0 FAIL`.** Every FAIL line says what to fix. Fix it and run the check again. Don't go on with a FAIL.

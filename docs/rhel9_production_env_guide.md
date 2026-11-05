@@ -263,6 +263,7 @@ sudo cp /etc/systemd/system/docker.service.d/extra.conf /etc/systemd/system/cont
 sudo systemctl daemon-reload
 sudo systemctl enable --now docker
 docker info -f '{{.DockerRootDir}}' 2>/dev/null || sudo docker info -f '{{.DockerRootDir}}'   # → /extra/docker
+sudo containerd config dump | grep -m1 '^root'   # → root = '/extra/containerd' (if not: stop and fix config.toml)
 sudo usermod -aG docker $USER   # re-login after. Note: docker group = root-equivalent access
 
 # 2. Clone repo as your own login (override file not included — gitignored)
