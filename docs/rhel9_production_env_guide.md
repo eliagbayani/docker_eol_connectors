@@ -265,16 +265,18 @@ cd /opt/eol/webroot
 git clone https://github.com/eliagbayani/eol_php8_code.git
 git clone https://github.com/eliagbayani/FreshData_min.git
 git clone https://github.com/eliagbayani/LiteratureEditor_min.git
-# Work folders git doesn't track (since 2026-11-02; on the Mac they are links to other drives).
+# Work folders git doesn't track (on the Mac most are links to other drives or untracked folders).
 # temp_dev is a Mac-only development area: leave it out.
 cd /opt/eol/webroot/eol_php8_code
 mkdir -p temp tmp/cache applications/content_server/tmp \
   applications/{BOLD2iNAT,BOLD2iNAT_csv,branch_graft,specimen_image_export,taxonomic_validation,trait_data_import,xls2dwca_jenkins}/temp \
+  applications/{dwc_validator_jenkins,DwC_branch_extractor,genHigherClass,genHigherClass_jenkins,CheckListBank_tool}/temp \
   ../FreshData_min/sh_files
 ln -s /extra/eol_php_resources/ applications/content_server/resources   # target as seen inside the containers
 # web (www-data, uid 33) and Jenkins (uid 1000) both write there:
 chmod 777 temp tmp/cache applications/content_server/tmp applications/*/temp ../FreshData_min/sh_files
-# rhel9-verify.sh (step 6) checks all 13 work folders: present, not a broken link, writable by web and Jenkins
+# rhel9-verify.sh (step 6) checks all 18 work folders: present, not a broken link, writable by web and Jenkins
+# (without dwc_validator_jenkins/temp every DwC validator upload fails, while Jenkins still shows SUCCESS: rehearsal 2026-11-05)
 
 # Datasets: rsync /extra from eol-archive into /opt/eol/extra — rsync -a, so file dates are kept.
 # It must include eol_php_resources/ (the resources link above points there).
