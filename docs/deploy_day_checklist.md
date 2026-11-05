@@ -59,8 +59,8 @@ sudo chown $USER: /extra/eol_docker/jenkins_home
 ```bash
 cd /Volumes/OWC_Express/other_files/My_Docker/docker_eol_connectors && docker compose stop jenkins
 rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/ <you>@eol-archive:/extra/eol_docker/jenkins_home/
-docker compose start jenkins
 ```
+- [ ] **Leave the Mac's Jenkins stopped.** 22 jobs run on a timer (e.g. *Zenodo monthly stats*, the *Dynamic Hierarchy* tasks, some connectors). From step 6 the server runs them, and two machines must not run them both. If you need the Mac's Jenkins later, first disable those timers there: Configure → Build Triggers → untick *Build periodically*.
 
 **Back on the server:**
 ```bash

@@ -279,7 +279,8 @@ sudo bash scripts/rhel9-init-dirs.sh
 sudo chown $USER: /extra/eol_docker/jenkins_home
 #   on the Mac:  docker compose stop jenkins
 #                rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/ <you>@eol-archive:/extra/eol_docker/jenkins_home/
-#                docker compose start jenkins
+#   and leave it stopped: 22 jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
+#   To use the Mac's Jenkins again, first untick "Build periodically" in those jobs there.
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 # /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers
