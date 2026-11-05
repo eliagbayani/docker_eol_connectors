@@ -5,7 +5,8 @@
 **Target OS:** RHEL 9.8 (Plow), x86_64: the deployment server, confirmed 2026-11-05 (`cat /etc/redhat-release`)  
 **Repo path:** `My_Docker/docker_eol_connectors/`  
 **Template file:** `.env.production.sample`  
-**Init script:** `scripts/rhel9-init-dirs.sh`
+**Init script:** `scripts/rhel9-init-dirs.sh`  
+**On deployment day:** `docs/deploy_day_checklist.md` (the deploy steps as a checklist, with expected output)
 
 ---
 

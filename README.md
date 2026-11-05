@@ -67,7 +67,8 @@ docker_eol_connectors/
 ├── .env.production.sample              ← RHEL 9 production template
 ├── .gitignore
 ├── docs/
-│   └── rhel9_production_env_guide.md
+│   ├── rhel9_production_env_guide.md
+│   └── deploy_day_checklist.md      ← deploy steps 1–8 as a checklist: commands, expected output, STOP points
 ├── scripts/
 │   ├── rhel9-init-dirs.sh              ← create /extra/eol_docker host dirs on RHEL
 │   ├── rhel9-verify.sh                 ← read-only OK/WARN/FAIL check of the running production stack
@@ -206,7 +207,7 @@ ssh -L 8080:127.0.0.1:8080 <user>@<server>   # then browse http://localhost:8080
 
 **Do not deploy:** `docker-compose.override.yml` — it is **gitignored** (Mac `/Volumes` mount + Neo4j). Production uses only `docker-compose.yml` (web, db, jenkins).
 
-Full guide: **`docs/rhel9_production_env_guide.md`**.
+Full guide: **`docs/rhel9_production_env_guide.md`**. On the day: **`docs/deploy_day_checklist.md`**.
 
 ---
 
