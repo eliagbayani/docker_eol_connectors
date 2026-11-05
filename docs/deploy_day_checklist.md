@@ -197,17 +197,16 @@ cp .env.production.sample .env && chmod 600 .env
 # 2. Replace each CHANGE_ME with a new random password
 sed -i "s/^MYSQL_ROOT_PASSWORD=CHANGE_ME.*/MYSQL_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env
 sed -i "s/^MYSQL_PASSWORD=CHANGE_ME.*/MYSQL_PASSWORD=$(openssl rand -hex 24)/" .env
-sed -i "s/^NEO_PASSWORD=CHANGE_ME.*/NEO_PASSWORD=$(openssl rand -hex 24)/" .env
 
 # 3. Check: no CHANGE_ME left, each password 48 characters (lengths only, never the passwords)
 grep -v '^\s*#' .env | grep -c CHANGE_ME
-grep -E '^(MYSQL_ROOT_PASSWORD|MYSQL_PASSWORD|NEO_PASSWORD)=' .env | awk -F= '{ print $1, length($2), "chars" }'
+grep -E '^(MYSQL_ROOT_PASSWORD|MYSQL_PASSWORD)=' .env | awk -F= '{ print $1, length($2), "chars" }'
 
 # 4. Check the addresses and ports the containers listen on
 grep -E '^(WEB_PORTS|JENKINS_PORTS|MYSQL_PORTS)=' .env
 ```
 
-- [ ] `grep -c` prints **0**, and the last command prints the three names with **48 chars** each (the passwords themselves aren't shown).
+- [ ] `grep -c` prints **0**, and the last command prints the two names with **48 chars** each (the passwords themselves aren't shown).
 - [ ] The ports are **`WEB_PORTS=10.252.248.39:8080:80`**, `JENKINS_PORTS=127.0.0.1:8080:8080` and `MYSQL_PORTS=127.0.0.1:4001:3306`. **STOP** if `WEB_PORTS` has no address in front (e.g. `80:80`): the site would be on the public IP, around Cloudflare. Leave the paths as they are in the sample.
 - To see a password later (e.g. to log in to MySQL by hand): `grep '^MYSQL_ROOT_PASSWORD=' .env`. Don't paste it anywhere.
 

@@ -36,13 +36,6 @@ ensure_dir "${EOL_BASE}/jenkins_home"
 ensure_dir "${EOL_BASE}/jenkins_tmp"
 ensure_dir "${EOL_BASE}/python_projects"
 
-# Neo4j
-ensure_dir "${EOL_BASE}/neo4j/data"
-ensure_dir "${EOL_BASE}/neo4j/logs"
-ensure_dir "${EOL_BASE}/neo4j/import"
-ensure_dir "${EOL_BASE}/neo4j/import2"
-ensure_dir "${EOL_BASE}/neo4j/plugins"
-
 # EXTRA_PATH — subdirs expected by docker-entrypoint_production.sh
 EXTRA="${EXTRA_PATH}"
 ensure_dir "${EXTRA}/ckan_resources"

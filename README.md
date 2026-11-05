@@ -240,7 +240,7 @@ Key variables:
 | `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
 | `GNPARSER_SHA256` | Optional. SHA-256 of the gnparser `.tar.gz`; needed only with another version or `GNPARSER_URL` (1.15.0 checksums are built into both Dockerfiles). It must match the platform being built: production images are amd64 (`linux-x86`), Jenkins on the Mac is arm64 (`linux-arm`) |
 | `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |
-| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474`, `PORT_7687` | Neo4j vars. Used by the Mac override; present in `.env.production.sample` with ports bound to `127.0.0.1` (testing only, not public) |
+| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474`, `PORT_7687` | Neo4j vars. Mac only (`.env.development.sample`, used by the override). Not in `.env.production.sample`: eol-archive has no Neo4j |
 | `REGISTRY_*` | GHCR image names when using pre-built images (optional) |
 
 ---
@@ -421,7 +421,7 @@ Neo4j is **not** part of the RHEL production stack. It lives only in **`docker-c
 |--|---------|-----------|
 | Neo4j in compose | `docker-compose.override.yml` | **not defined** |
 | Start command | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
-| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.development.sample`) | present in `.env.production.sample` (ports on `127.0.0.1`), unused while no `neo4j` service is defined |
+| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.development.sample`) | none (not in `.env.production.sample`) |
 | Browser | `http://localhost:7494/browser/` (when `PORT_7474=7494:7474`) | — |
 
 **First-time Mac setup:**
@@ -435,7 +435,7 @@ The override adds:
 1. **`/Volumes:/Volumes`** mount on web + jenkins (dev symlinks)
 2. **`neo4j`** service — builds from `neo4j/Dockerfile` (`neo4j:5.26.29-community-ubi10`)
 
-Jenkins receives `NEO_URI=bolt://neo4j:7687` from `.env` so Python jobs can reach the graph DB on Mac. On production, Jenkins still starts but Neo4j-dependent jobs should not run (no `neo4j` container on the network).
+Jenkins receives `NEO_URI=bolt://neo4j:7687` from `.env` so Python jobs can reach the graph DB on Mac. On production (eol-archive) these are empty: there's no Neo4j, and no job there uses it.
 
 ---
 

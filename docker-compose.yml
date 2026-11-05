@@ -139,11 +139,11 @@ services:
       # eol_php8_code (config/boot.php) runs jobs as jenkins_${MY_ENVIRONMENT} in database.yml
       - MY_ENV=${MY_ENVIRONMENT:?set it in .env}
 
-      # for python:
-      - NEO_URI=${NEO_URI}
-      - NEO_USERNAME=${NEO_USERNAME}
-      - NEO_PASSWORD=${NEO_PASSWORD}
-      - NEO_DATABASE=${NEO_DATABASE}
+      # for python: Neo4j connection (Mac only; empty on eol-archive, which has no Neo4j)
+      - NEO_URI=${NEO_URI:-}
+      - NEO_USERNAME=${NEO_USERNAME:-}
+      - NEO_PASSWORD=${NEO_PASSWORD:-}
+      - NEO_DATABASE=${NEO_DATABASE:-}
 
   # =================== Python service ===================
   # python:

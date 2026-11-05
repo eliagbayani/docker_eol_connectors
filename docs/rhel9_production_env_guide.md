@@ -97,25 +97,9 @@ _Neo4j is **not** part of the RHEL production stack: `docker-compose.yml` has no
 | Multiple user databases (`db.eol`, etc.) | **Not supported** — use **`neo4j`** only |
 | `neo4j-admin database import full` | **Supported** — stop Neo4j container first |
 
-### `.env` Neo4j settings (production sample)
+### `.env` Neo4j settings (Mac only)
 
-On RHEL only the four connection vars are used — compose passes them to **jenkins** for Python jobs. The rest are unused unless a `neo4j` service is added.
-
-```env
-NEO_URI=bolt://neo4j:7687
-NEO_USERNAME=neo4j
-NEO_PASSWORD=CHANGE_ME_neo4j_password
-NEO_DATABASE=neo4j          # was db.eol on Enterprise — must be neo4j on Community
-
-PATH_NEO4J_DATA=/extra/eol_docker/neo4j/data
-PATH_NEO4J_LOGS=/extra/eol_docker/neo4j/logs
-PATH_NEO4J_IMPORT=/extra/eol_docker/neo4j/import
-PATH_NEO4J_IMPORT2=/extra/eol_docker/neo4j/import2   # TraitBank CSV imports
-PATH_NEO4J_PLUGINS=/extra/eol_docker/neo4j/plugins
-
-PORT_7474=127.0.0.1:7474:7474   # localhost only — SSH tunnel
-PORT_7687=127.0.0.1:7687:7687
-```
+eol-archive doesn't use Neo4j, so `.env.production.sample` has no `NEO_*`, `PATH_NEO4J_*` or `PORT_7474`/`PORT_7687` settings. They're in `.env.development.sample` (the Mac). Compose passes the four connection settings (`NEO_URI`, `NEO_USERNAME`, `NEO_PASSWORD`, `NEO_DATABASE`) to **jenkins** for Python jobs; on eol-archive they're empty.
 
 APOC is enabled in the override's neo4j service: `NEO4J_PLUGINS=["apoc"]`.
 
@@ -179,8 +163,7 @@ eol-archive's root disk is only 10 GB, so everything lives on its 9.1 TB data vo
     ├── apache2_logs/            ← APACHE_LOGS
     ├── jenkins_home/            ← PATH_JENKINS_HOME → /var/jenkins_home
     ├── jenkins_tmp/             ← PATH_JENKINS_TMP → /jenkins_tmp
-    ├── python_projects/         ← PYTHON_APP → /usr/src/app
-    └── neo4j/                   ← created by the init script; used only if a neo4j service is added
+    └── python_projects/         ← PYTHON_APP → /usr/src/app
 ```
 
 The PHP code doesn't change: it only sees the container paths `/var/www/html/...` and `/extra/...`.
@@ -210,8 +193,7 @@ Other paths: `sudo EOL_BASE=/srv/eol EXTRA_PATH=/srv/eol/extra bash scripts/rhel
 | `WEB_PORTS` | `10.252.248.39:8080:80` | Internal IP only — 160.111.248.42 forwards `editors.eol.org` to port 8080 (as with the old native Apache). No clash with Jenkins on `127.0.0.1:8080`. Port 80 instead needs .42 re-pointed |
 | `JENKINS_PORTS` | `127.0.0.1:8080:8080` | Localhost only — SSH tunnel. Option B (`8080:8080`) only behind a TLS reverse proxy |
 | `JENKINS_PORTS_COMMUNICATION` | *(commented out)* | Inbound-agent port. Not published: no agents, and the agent TCP port is disabled in Jenkins |
-| `PORT_7474` / `PORT_7687` | `127.0.0.1:…` | Only relevant if a neo4j service is added |
-| `NEO_DATABASE` | **`neo4j`** | Community single database (not `db.eol`) |
+| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474` / `PORT_7687` | *(none)* | Neo4j runs only on the Mac; not in the production sample |
 | MySQL DB name (auto) | `eol_production` | From `eol_${MY_ENVIRONMENT}` in compose |
 
 Full template: **`.env.production.sample`**
@@ -299,7 +281,7 @@ sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &   # walks all 3.8 T
 # 4. Configure env
 cp .env.production.sample .env
 chmod 600 .env
-# replace CHANGE_ME_* (openssl rand -hex 24); check ports; NEO_DATABASE=neo4j
+# replace CHANGE_ME_* (openssl rand -hex 24); check ports
 
 # 5. Application code (fresh git clones); the data is already in /extra
 # The code does NOT come from eol-archive: its webroot has the PHP 5.6 tree eol_php_code (plus FreshData,
@@ -577,7 +559,7 @@ Routine:
 | Base path | `/Volumes/OWC_Express/...` | `/extra/eol_docker/...` |
 | Env template | `.env.development.sample` | `.env.production.sample` |
 | Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
-| `NEO_DATABASE` | **`neo4j`** | **`neo4j`** (passed to jenkins) |
+| `NEO_DATABASE` | **`neo4j`** | *(not set: no Neo4j)* |
 | Admin ports (MySQL, Jenkins, Neo4j) | `127.0.0.1` only | `127.0.0.1` only — SSH tunnel |
 | Web port | `127.0.0.1:81` (Mac only) | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
 | Compose (Mac) | `docker compose up -d` | n/a |
