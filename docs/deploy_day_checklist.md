@@ -251,13 +251,13 @@ ls -ld /extra/eol_php_resources/ /extra/FreshData_TSV_files/
 
 - [ ] `git status` gives **0**, and both `ls -ld` lines show real folders.
 
-**On the Mac**, copy the 3 config files that aren't in git:
+**On the Mac**, copy the 2 config files that aren't in git. Only these two are used: the code loads `environments/production.php` for the website and for every Jenkins job. `jenkins_production.php` is never loaded (a Jenkins job only switches to the `jenkins_production:` section of `database.yml`), so it stays on the Mac.
 
 ```bash
-# database.yml: database connections; production.php and jenkins_production.php: the code's settings (e.g. how the web tools reach Jenkins)
+# database.yml: database connections; production.php: the code's settings (e.g. how the web tools reach Jenkins)
 cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
 scp database.yml archive:/extra/eol_docker/webroot/eol_php8_code/config/
-scp environments/production.php environments/jenkins_production.php archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+scp environments/production.php archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
 ```
 
 **On the server:**
@@ -274,12 +274,14 @@ awk -v p="$P" '/^[a-z_]+:[[:space:]]*$/ { s = $1 }
 grep -cF "\"$P\"" database.yml; unset P
 
 # 2. Close the config files to other users
-chmod 640 database.yml environments/production.php environments/jenkins_production.php
+chmod 640 database.yml environments/production.php
+ls environments/
 
 # 3. Check the production sections connect to the db container as eol_app
 grep -A4 -E '^(production|jenkins_production):' database.yml | grep -E '^\s+(host|username):'
 ```
 
+- [ ] `ls environments/` shows `production.php` next to the three files from git (`development_sample.php`, `production_sample.php`, `test_sample.php`), and no `jenkins_production.php`.
 - [ ] `grep -cF` prints **2** (both production sections have the password), and the last command shows `host: db` and `username: eol_app` twice.
 - [ ] `production.php` has `JENKINS_DOMAIN` set to `jenkins:8080`. The token is replaced after step 6.
 

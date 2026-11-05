@@ -320,10 +320,11 @@ ls -ld /extra/eol_php_resources/
 # Config files with passwords and tokens (gitignored): copy from the Mac, then set the server's values
 #   on the Mac:  cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
 #                scp database.yml archive:/extra/eol_docker/webroot/eol_php8_code/config/
-#                scp environments/production.php environments/jenkins_production.php \
-#                    archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+#                scp environments/production.php archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+#   (jenkins_production.php isn't needed: the code loads production.php for the website and for Jenkins jobs;
+#   a Jenkins job only switches to the jenkins_production: section of database.yml)
 cd /extra/eol_docker/webroot/eol_php8_code/config
-chmod 640 database.yml environments/production.php environments/jenkins_production.php
+chmod 640 database.yml environments/production.php
 # database.yml: production + jenkins_production → host: db, port: 3306, username: eol_app,
 #   password: the MYSQL_PASSWORD from .env (step 4), quoted (see "eol_php8_code config/database.yml" below)
 # production.php: JENKINS_DOMAIN 'jenkins:8080'; JENKINS_USER_TOKEN replaced after step 6 (new web-trigger token)
@@ -368,7 +369,7 @@ cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # f
 | `/extra/eol_docker/backups` | nightly MySQL dumps (`scripts/mysql-backup.sh`, newest 14 kept) | **yes**: this, not `mysql_data`, is the database backup |
 | `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, secrets, build history (the server's own; the Mac's history isn't copied) | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
 | `/extra/eol_docker/docker_eol_connectors/.env` | passwords | **yes**, kept private |
-| `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php`, `jenkins_production.php` (not in git) | **yes**, kept private |
+| `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php` (not in git) | **yes**, kept private |
 | `/extra/eol_docker/mysql_data` | live MySQL files | no: use the dumps |
 | `/extra/docker`, `/extra/containerd` | images, build cache, container logs | no: rebuilt with `docker compose build` |
 | `/extra/eol_docker/webroot` (rest), `docker_eol_connectors` | git clones | no: clone again (work folders: step 5) |
