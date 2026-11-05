@@ -33,7 +33,7 @@ Do the setup as **your own login, added to the `docker` group** (deploy step 1),
 | creating `/extra/eol_docker` and handing it to you; `scripts/rhel9-init-dirs.sh` | `.env`: copy, `chmod 600`, edit |
 | `chown 1000:1000` on `jenkins_home` / `jenkins_tmp`; `chown` of `webroot` to you | the work folders: `mkdir`, `ln -s`, `chmod 777` (step 5) |
 | Docker's `daemon.json` and the mount drop-in; SELinux (`semanage fcontext`, `restorecon`); `setfacl` on `/extra`; firewalld | `docker compose build / up -d / logs / restart` |
-| the inventory scripts | `bash scripts/rhel9-verify.sh` |
+| the inventory scripts | `bash scripts/rhel9-verify.sh`; `scripts/mysql-backup.sh` and its crontab entry |
 
 Why not everything as root:
 - **Files get the wrong owner.** Clones, `.env` and work folders made as root belong to root: a later `git pull` as yourself fails ("dubious ownership" / permission denied), and Jenkins (uid 1000) can't write where it should.
@@ -64,6 +64,7 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 | `.env.production.sample` | RHEL 9 production `.env` template (`/extra/eol_docker/...` paths, localhost-bound admin ports) |
 | `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/extra/eol_docker` |
 | `scripts/rhel9-verify.sh` | Read-only check of the running stack after `up -d`: containers, ports, headers, blocked files, `info.php`/`test.php`, environment and `eol_app`, `production.php` settings, web → Jenkins login, Jenkins security, PHP/gnparser, memory and log limits, webroot link warnings. One OK/WARN/FAIL line each; exit 1 on any FAIL; never prints secrets |
+| `scripts/mysql-backup.sh` | Nightly dump of all databases from the db container (`--single-transaction`), gzip'd into `/extra/eol_docker/backups`, newest 14 kept; the root password stays in the container. Deploy step 8 |
 | `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
 | `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
 | `docker-compose.yml` | Main compose file — **three services: web, db, jenkins** |
@@ -317,11 +318,8 @@ setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX update_resources/conne
 # Data: eol-archive was rebuilt in place (2026-11-04) and kept its /extra volume (9.1 TB, 3.8 TB used),
 # so nothing is copied. Check that the resources link above points at a real folder:
 ls -ld /extra/eol_php_resources/
-# Old webroot folders (eoearth, eoearth_redirect_sys, Leaflet_Cluster_map, github-php-client) were on the old
-# root disk: copy any that should still be served into /extra/eol_docker/webroot from a backup.
-# Optional check against the inventory made before the rebuild (if its report folder was saved):
-#   sudo bash scripts/eol-archive-inventory.sh /extra=extra    then
-#   bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
+# The old webroot folders (eoearth, eoearth_redirect_sys, Leaflet_Cluster_map, github-php-client) are no
+# longer needed and are not moved.
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
@@ -336,7 +334,26 @@ bash scripts/rhel9-verify.sh
 sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep ':8080 '
 #    No firewall-cmd needed: Docker bypasses firewalld; access is limited by
 #    binding web to the internal IP (WEB_PORTS=10.252.248.39:8080:80)
+
+# 8. Nightly MySQL dump (as your own login): copying mysql_data while MySQL runs can give a broken copy
+cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # first run by hand → "OK …sql.gz"
+( crontab -l 2>/dev/null; echo '30 2 * * * cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh >> /extra/eol_docker/backups/mysql-backup.log 2>&1' ) | crontab -
 ```
+
+### What to back up on /extra
+
+| Path | Contents | Back up? |
+|---|---|---|
+| `/extra/eol_docker/backups` | nightly MySQL dumps (`scripts/mysql-backup.sh`, newest 14 kept) | **yes**: this, not `mysql_data`, is the database backup |
+| `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, build history | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
+| `/extra/eol_docker/docker_eol_connectors/.env` | passwords | **yes**, kept private |
+| `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php`, `jenkins_production.php` (not in git) | **yes**, kept private |
+| `/extra/eol_docker/mysql_data` | live MySQL files | no: use the dumps |
+| `/extra/docker`, `/extra/containerd` | images, build cache, container logs | no: rebuilt with `docker compose build` |
+| `/extra/eol_docker/webroot` (rest), `docker_eol_connectors` | git clones | no: clone again (work folders: step 5) |
+| the rest of `/extra` | eol-archive's data | as before |
+
+Restore a dump: `gunzip -c /extra/eol_docker/backups/<file>.sql.gz | docker compose -f docker-compose.yml exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot'`
 
 **Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL, Jenkins (8080) and Neo4j to `127.0.0.1` (the agent port 50000 is not published at all) instead of relying on `firewall-cmd`.
 
@@ -519,7 +536,7 @@ docker compose -f docker-compose.yml up -d --force-recreate web
 docker compose -f docker-compose.yml build --no-cache --pull jenkins
 docker compose -f docker-compose.yml up -d jenkins
 
-# Re-init MySQL (destroys data — backup first)
+# Re-init MySQL (destroys data — run scripts/mysql-backup.sh first)
 docker compose -f docker-compose.yml down
 sudo rm -rf /extra/eol_docker/mysql_data/*
 docker compose -f docker-compose.yml build --no-cache db
