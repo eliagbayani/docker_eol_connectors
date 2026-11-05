@@ -307,7 +307,11 @@ mkdir -p temp tmp/cache applications/content_server/tmp \
 ln -s /extra/eol_php_resources/ applications/content_server/resources   # target as seen inside the containers
 # web (www-data, uid 33) and Jenkins (uid 1000) both write there:
 chmod 777 temp tmp/cache applications/content_server/tmp applications/*/temp ../FreshData_min/sh_files
-# rhel9-verify.sh (step 6) checks all 18 work folders: present, not a broken link, writable by web and Jenkins
+# GBIF download jobs (checklists, data coverage, NMNH/iNat images, map data) mkdir their own folders inside
+# update_resources/connectors/files, which git created as yours: let web and Jenkins write there too.
+# ACLs don't change owners or modes git tracks, so git pull / git status are unaffected.
+setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX update_resources/connectors/files
+# rhel9-verify.sh (step 6) checks all 19 work folders: present, not a broken link, writable by web and Jenkins
 # (without dwc_validator_jenkins/temp every DwC validator upload fails, while Jenkins still shows SUCCESS: rehearsal 2026-11-05)
 
 # Data: eol-archive was rebuilt in place (2026-11-04) and kept its /extra volume (9.1 TB, 3.8 TB used),

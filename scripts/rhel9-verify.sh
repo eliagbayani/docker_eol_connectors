@@ -119,7 +119,8 @@ eol_php8_code/applications/taxonomic_validation/temp eol_php8_code/applications/
 eol_php8_code/applications/xls2dwca_jenkins/temp
 eol_php8_code/applications/dwc_validator_jenkins/temp eol_php8_code/applications/DwC_branch_extractor/temp
 eol_php8_code/applications/genHigherClass/temp eol_php8_code/applications/genHigherClass_jenkins/temp
-eol_php8_code/applications/CheckListBank_tool/temp"
+eol_php8_code/applications/CheckListBank_tool/temp
+eol_php8_code/update_resources/connectors/files"
 WDCHECK='cd /var/www/html; for d in $0; do
   if [ -L "$d" ] && [ ! -e "$d" ]; then echo "$d|broken|$(readlink "$d")"
   elif [ ! -e "$d" ]; then echo "$d|missing|"
