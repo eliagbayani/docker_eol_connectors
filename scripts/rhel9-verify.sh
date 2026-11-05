@@ -42,6 +42,17 @@ while read -r name cport host; do
 done <<< "$ports"
 command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet httpd 2>/dev/null && FAIL "host httpd is running; the web container must own the web port"
 
+echo "== Docker networks: the network team's range 10.10.x.x (/etc/docker/daemon.json, checklist step 1)"
+for n in $(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}}{{"\n"}}{{end}}' "$DB" "$WEB" "$JEN" | sort -u); do
+    sub=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}} {{end}}' "$n" 2>/dev/null); sub=${sub% }
+    case "$sub" in
+        10.10.*) OK "stack network $n: $sub" ;;
+        *) FAIL "stack network $n: ${sub:-unknown} (expected 10.10.x.x: check daemon.json, restart docker, then 'docker compose -f docker-compose.yml down' and 'up -d' to recreate the network)" ;;
+    esac
+done
+br=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' bridge 2>/dev/null)
+[ "$br" = 10.10.1.0/24 ] && OK "Docker's default bridge: $br" || FAIL "Docker's default bridge: ${br:-unknown} (expected 10.10.1.0/24: \"bip\" in daemon.json, then restart docker)"
+
 echo "== Web: headers and blocked files (H1, H2, B3, B4, N11)"
 ADDR=$(dc port web 80 2>/dev/null | head -1); ADDR=${ADDR/0.0.0.0/127.0.0.1}
 if [ -z "$ADDR" ]; then FAIL "web port 80 is not published"; else
