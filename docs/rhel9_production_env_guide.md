@@ -343,6 +343,8 @@ docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plu
   --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins
 ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l   # → 94
 docker compose -f docker-compose.yml up -d
+# web makes a self-signed HTTPS certificate in /extra/eol_docker/certs at its first start:
+docker compose -f docker-compose.yml logs web | grep 'HTTPS certificate'
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
 # Jenkins (port 8080 is on 127.0.0.1 only): from the Mac, ssh -N -L 8090:127.0.0.1:8080 archive
@@ -373,6 +375,7 @@ cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # f
 | `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, secrets, build history (the server's own; the Mac's history isn't copied) | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
 | `/extra/eol_docker/docker_eol_connectors/.env` | passwords | **yes**, kept private |
 | `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php` (not in git) | **yes**, kept private |
+| `/extra/eol_docker/certs` | the HTTPS certificate and key | only once it holds a real (e.g. Cloudflare Origin) certificate, kept private; a self-signed one is made again if the folder is empty |
 | `/extra/eol_docker/mysql_data` | live MySQL files | no: use the dumps |
 | `/extra/docker`, `/extra/containerd` | images, build cache, container logs | no: rebuilt with `docker compose build` |
 | `/extra/eol_docker/webroot` (rest), `docker_eol_connectors` | git clones | no: clone again (work folders: step 5) |
@@ -380,11 +383,11 @@ cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # f
 
 Restore a dump: `gunzip -c /extra/eol_docker/backups/<file>.sql.gz | docker compose -f docker-compose.yml exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot'`
 
-**Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL, Jenkins (8080) and Neo4j to `127.0.0.1` (the agent port 50000 is not published at all) instead of relying on `firewall-cmd`.
+**Firewall note:** Docker writes its own nftables rules for published ports, so firewalld does **not** restrict them. A port published on all interfaces is reachable even if firewalld never opens it. That is why `.env.production.sample` binds MySQL and Jenkins (8080) to `127.0.0.1` (the agent port 50000 is not published at all) and gives each web port its address, instead of relying on `firewall-cmd`. On 443 Apache itself lets only Cloudflare in.
 
 ## Public access: editors.eol.org (HTTPS)
 
-From deployment day (network team, 2026-11-05: the front device 160.111.248.42, eol-datastore1, is being retired; HTTPS ends on eol-archive; they move the DNS record once the site runs):
+After the DNS switch (network team, 2026-11-05: the front device 160.111.248.42, eol-datastore1, is being retired; HTTPS ends on eol-archive; order confirmed: deploy → their firewall change → we test 443 → their DNS switch):
 
 ```
 browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ eol-archive 160.111.248.39:443 (web container)
@@ -393,8 +396,8 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ eol-archi
 Before (confirmed on the old eol-archive 2026-10-26/27, and still working until the DNS switch): Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ 10.252.248.39. So both stay published: `WEB_HTTPS_PORTS=160.111.248.39:443:443` and `WEB_PORTS=10.252.248.39:8080:80`.
 
 - **HTTPS in the web container:** `apache-php/editors-https.conf` (`mod_ssl`, TLS 1.2 and 1.3 only). Same webroot, aliases and blocked paths as the plain-HTTP site (they're in `apache2.conf`), and the same `access.log` / `error.log`. PHP sees `HTTPS=on`.
-- **Certificate:** `HTTPS_CERTS_PATH` (`/extra/eol_docker/certs`), mounted at `/etc/apache2/certs`. If the folder is empty, `apache-php/https-cert.sh` makes a self-signed pair for `editors.eol.org` (10 years, key mode 600) at web's start. An existing pair is never touched. If only one of the 2 files is there, web stops with a message. Cloudflare's SSL mode *Full* accepts self-signed; *Full (strict)* needs a trusted one. To use a Cloudflare Origin certificate (or another one), save it as `editors.eol.org.crt` and its key as `editors.eol.org.key`, `chmod 600` the key, then `docker compose -f docker-compose.yml restart web` (no rebuild). `rhel9-verify.sh` shows who issued it and FAILs it 30 days before it ends.
-- **Only Cloudflare on 443:** the public address sits on the server and Docker bypasses firewalld, so Apache checks the connection's address itself (`CONN_REMOTE_ADDR`) against `apache-php/cloudflare-ips.txt`; everyone else gets 403. `HTTPS_ALSO_ALLOW` adds the server's own addresses: a `curl --resolve editors.eol.org:443:160.111.248.39 …` on the server, or an SSH tunnel `ssh -N -L 8443:160.111.248.39:443 archive`, arrives from `160.111.248.39`. (Tested in Docker 29.9 with the network team's `daemon.json`: outside connections keep their own address through Docker, so Cloudflare's addresses are what Apache sees.)
+- **Certificate:** `HTTPS_CERTS_PATH` (`/extra/eol_docker/certs`), mounted at `/etc/apache2/certs`. If the folder is empty, `apache-php/https-cert.sh` makes a self-signed pair for `editors.eol.org` (10 years, key mode 600) at web's start. An existing pair is never touched. If only one of the 2 files is there, web stops with a message. Cloudflare's SSL mode *Full* accepts self-signed; *Full (strict)* needs a trusted one. To use a Cloudflare Origin certificate (or another one), save it as `editors.eol.org.crt` and its key as `editors.eol.org.key` (with `sudo`: the folder belongs to root), `chmod 600` the key, then `docker compose -f docker-compose.yml restart web` (no rebuild). `rhel9-verify.sh` shows who issued it and FAILs it 30 days before it ends.
+- **Only Cloudflare on 443:** the public address sits on the server and Docker bypasses firewalld, so Apache checks the connection's address itself (`CONN_REMOTE_ADDR`) against `apache-php/cloudflare-ips.txt`; everyone else gets 403. `HTTPS_ALSO_ALLOW` adds the server's own addresses: a `curl --resolve editors.eol.org:443:160.111.248.39 …` on the server, or an SSH tunnel `ssh -N -L 8444:160.111.248.39:443 archive`, arrives from `160.111.248.39`. (Tested in Docker 29.9 with the network team's `daemon.json`: outside connections keep their own address through Docker, so Cloudflare's addresses are what Apache sees.)
 - **The DNS switch (network team):** after the go-live checks, Cloudflare's `editors.eol.org` record moves from 160.111.248.42 to 160.111.248.39, still proxied, and their firewall must let Cloudflare reach .39 on 443. Roll back by pointing it back to .42 while it exists. 526 = *Full (strict)* (swap in an Origin certificate); 521/522 = Cloudflare can't reach 443.
 - **Cloudflare** (zone `eol.org`, Business plan, SSL mode *full*): uploads over **200 MB** and requests over **100 s** fail (524) — run long work as Jenkins jobs.
 - **Visitor IPs:** built in (`apache-php/zz-remoteip.conf`, `mod_remoteip`). Apache takes the visitor's IP from `X-Forwarded-For`, but only on requests from Cloudflare's ranges (`apache-php/cloudflare-ips.txt`) or from `REMOTEIP_PROXY` (default `10.252.248.42`, the old path). Logs and PHP's `REMOTE_ADDR` then show the visitor; nothing in the code uses it for access control.
@@ -471,7 +474,7 @@ $pass = '<MYSQL_PASSWORD from .env>';
 $db   = 'eol_production';
 ```
 
-Browser (from inside the network): `http://10.252.248.39:8080/test.php`; from the Mac through `ssh -N -L 8443:160.111.248.39:443 archive`: `https://localhost:8443/test.php`; after the DNS switch: `https://editors.eol.org/test.php`
+Browser (from inside the network): `http://10.252.248.39:8080/test.php`; from the Mac through `ssh -N -L 8444:160.111.248.39:443 archive`: `https://localhost:8444/test.php`; after the DNS switch: `https://editors.eol.org/test.php`
 
 ## eol_php8_code `config/database.yml` (gitignored — copy by hand)
 

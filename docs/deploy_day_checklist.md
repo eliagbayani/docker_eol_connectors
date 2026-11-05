@@ -30,7 +30,7 @@ Before you start:
 
 ### Before deployment: the network path
 
-From deployment day, visitors reach the site like this: Cloudflare (HTTPS, proxied) → eol-archive **160.111.248.39:443** (HTTPS ends in the web container). The network team's answer (2026-11-05): the front device 160.111.248.42 (eol-datastore1) is being retired, so HTTPS has to end on eol-archive, and they move Cloudflare's DNS record from .42 to .39 once the site runs here. Until then the old path (Cloudflare → .42 → `10.252.248.39:8080`) still works, so `WEB_PORTS=10.252.248.39:8080:80` stays.
+After the DNS switch, visitors reach the site like this: Cloudflare (HTTPS, proxied) → eol-archive **160.111.248.39:443** (HTTPS ends in the web container). The network team's answer (2026-11-05): the front device 160.111.248.42 (eol-datastore1) is being retired, so HTTPS has to end on eol-archive, and they move Cloudflare's DNS record from .42 to .39 once the site runs here. Until then the old path (Cloudflare → .42 → `10.252.248.39:8080`) still works, so `WEB_PORTS=10.252.248.39:8080:80` stays.
 
 The `.env` settings this depends on (all in the production sample): `WEB_HTTPS_PORTS=160.111.248.39:443:443`, `HTTPS_CERTS_PATH=/extra/eol_docker/certs` and `HTTPS_ALSO_ALLOW` (the server's own addresses, for the tests below). Visitor IPs come from `X-Forwarded-For`, believed only from Cloudflare's ranges (and from .42).
 
@@ -39,9 +39,9 @@ The `.env` settings this depends on (all in the production sample): `WEB_HTTPS_P
   ip -4 addr show | grep -E 'inet (10\.252\.248\.39|160\.111\.248\.39)'
   ```
   → `10.252.248.39/24` on `eno1` (internal) and `160.111.248.39/24` on `eno2` (public). The public address sits directly on the server, and Docker bypasses firewalld. That's why every published port names its address (`0.0.0.0` would publish on all of them), and why Apache itself turns away anyone on 443 who isn't Cloudflare.
-- [x] **The network team answered** (2026-11-05): .42 goes away, HTTPS ends on .39, and they change the DNS record once things are up and running. Their Varnish and ssl-terminator containers on .42 aren't needed on eol-archive (the web container ends HTTPS itself).
+- [x] **The network team answered** (2026-11-05): .42 goes away, HTTPS ends on .39, and they change the DNS record once things are up and running. Their Varnish and ssl-terminator containers on .42 aren't needed on eol-archive (the web container ends HTTPS itself). They confirmed the order: deploy (the site works through .42 meanwhile) → their firewall change → we test 443 → their DNS switch.
 - [ ] **The network team opens the firewall** so Cloudflare can reach 160.111.248.39 on 443 (their change request). It doesn't hold up deployment: until it's done, .42 keeps forwarding to `10.252.248.39:8080`, which the new setup still answers.
-- Assumed, not yet confirmed (no need to wait): Cloudflare's SSL mode is *Full*, as the guide records, so the self-signed certificate works. If it's *Full (strict)*, Cloudflare shows error **526** after the DNS switch: ask the network team for a Cloudflare Origin certificate and swap it in (*If something goes wrong*, below).
+- [x] **Cloudflare's SSL mode is *Full*** (read from Cloudflare's settings, 2026-10-26), so the self-signed certificate works. If it's *Full (strict)*, Cloudflare shows error **526** after the DNS switch: ask the network team for a Cloudflare Origin certificate and swap it in (*If something goes wrong*, below).
 
 ---
 
@@ -389,8 +389,9 @@ crontab -l
 # On the server: the HTTPS site on the public address, with the real name (-k: the certificate is self-signed)
 curl -sk -o /dev/null -w '%{http_code}\n' --resolve editors.eol.org:443:160.111.248.39 https://editors.eol.org/eol_php8_code/applications/dwc_validator_jenkins/main.php
 
-# On the Mac: a tunnel to the server's port 443 (keep it open), then open https://localhost:8443/eol_php8_code/applications/dwc_validator_jenkins/main.php in Safari
-ssh -N -L 8443:160.111.248.39:443 archive
+# On the Mac: a tunnel to the server's port 443 (keep it open), then open https://localhost:8444/eol_php8_code/applications/dwc_validator_jenkins/main.php in Safari
+# (8444, not 8443: the Mac's own stack may use 8443)
+ssh -N -L 8444:160.111.248.39:443 archive
 ```
 
 - [ ] `curl` prints **200**. In Safari, accept the certificate warning once (it's the self-signed one); the site works.
@@ -414,7 +415,7 @@ ssh -N -L 8443:160.111.248.39:443 archive
 | A Jenkins job can't write | `rhel9-verify.sh`, section "Work folders"; `getfacl /extra/<folder>` |
 | Root disk filling up | `sudo du -xsh /var/lib/docker /var/lib/containerd` (should be tiny); `docker info -f '{{.DockerRootDir}}'` |
 | Web → Jenkins fails | the token in `production.php` (step 6) |
-| Cloudflare error **526** after the DNS switch | Cloudflare's SSL mode is *Full (strict)* and won't take the self-signed certificate. Ask the network team for a Cloudflare Origin certificate for `editors.eol.org`, save it as `/extra/eol_docker/certs/editors.eol.org.crt` and its key as `editors.eol.org.key` (`sudo chmod 600` the key), then `docker compose -f docker-compose.yml restart web`. No rebuild. Or roll back (below) meanwhile |
+| Cloudflare error **526** after the DNS switch | Cloudflare's SSL mode is *Full (strict)* and won't take the self-signed certificate. Ask the network team for a Cloudflare Origin certificate for `editors.eol.org`, save it as `/extra/eol_docker/certs/editors.eol.org.crt` and its key as `editors.eol.org.key` with `sudo` (the folder belongs to root), `sudo chmod 600` the key, then `docker compose -f docker-compose.yml restart web`. No rebuild. Or roll back (below) meanwhile |
 | Cloudflare error **521 / 522** | Cloudflare can't reach 160.111.248.39:443: step 7's `ss` line, and ask the network team whether their firewall lets Cloudflare in on 443 |
 | `403` on `https://` for everyone | the request didn't come from a Cloudflare address: `rhel9-verify.sh`, section HTTPS. If Cloudflare announced new ranges, refresh `apache-php/cloudflare-ips.txt` and rebuild web |
 | Roll back the switch | the network team points the DNS record back to 160.111.248.42 (as long as it exists) |

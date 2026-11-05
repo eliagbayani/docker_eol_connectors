@@ -115,9 +115,9 @@ docker_eol_connectors/
 | PHP               | 8.4.27, mysqli, yaml (pecl yaml-2.2.4)                                | —                           | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
 | Python            | —                                                                     | embedded 3.9                | 3.11                                                                      |
 | gnparser          | v1.15.0 (TARGETARCH)                                                  | —                           | v1.15.0                                                                   |
-| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:8080`→80 (prod, internal IP) | `127.0.0.1:4001`→3306       | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod)                |
+| Default host port | `127.0.0.1:81`→80, `127.0.0.1:8443`→443 (dev) / `10.252.248.39:8080`→80 (internal) + `160.111.248.39:443`→443 (HTTPS, Cloudflare only) (prod) | `127.0.0.1:4001`→3306       | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod)                |
 | Restart           | unless-stopped                                                        | unless-stopped              | unless-stopped                                                            |
-| Platform (web)    | `linux/amd64` in compose                                              | —                           | —                                                                         |
+| Platform (web)    | none in compose: builds for the host (amd64 on the server)            | —                           | —                                                                         |
 
 Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`, `eol_production`).
 
@@ -159,6 +159,8 @@ $db   = 'eol_development'; // matches MY_ENVIRONMENT
 
 ## Quick start — RHEL 9 production
 
+The outline below; on the day, follow **`docs/deploy_day_checklist.md`** (every command, with what you should see).
+
 ```bash
 # As your own login (in the docker group), sudo only where shown; see "Which user runs what" in the RHEL guide.
 # Everything lives on eol-archive's data volume /extra (the root disk is only 10 GB). First, Docker's data-root
@@ -185,7 +187,7 @@ sudo restorecon -R /extra                                      # slow: 3.8 TB
 # In eol_php8_code: config/database.yml → host: db, port: 3306, username: eol_app (quoted MYSQL_PASSWORD);
 #                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
 
-# The web container takes 10.252.248.39:8080 — the host's own Apache must not run
+# The web container takes 160.111.248.39:443 (HTTPS, Cloudflare) and 10.252.248.39:8080 — the host's own Apache must not run
 sudo systemctl disable --now httpd 2>/dev/null
 
 docker compose -f docker-compose.yml build --no-cache --pull
