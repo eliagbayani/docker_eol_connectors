@@ -71,11 +71,20 @@ sudo chown $USER: /extra/eol_docker/jenkins_home
 ```
 - [ ] The output shows `exists:` for `ckan_resources`, `eol_connector_data_files`, `dumps` and `other_files`, and `created:` for `gnfinder`. **STOP** if `dumps` or `ckan_resources` say `created`: `/extra` isn't the data volume (`findmnt /extra`).
 
-**On the Mac**, copy Jenkins (1.8 GB) with Jenkins stopped:
+**On the Mac**, with Jenkins stopped, copy Jenkins' **jobs, settings, users and secrets** (about 20 MB). The build history (1.55 GB) and the plugins aren't copied. Instead, a list of the 94 plugins with their exact versions goes along as `plugins.txt`, and step 6 installs them.
 ```bash
 cd /Volumes/OWC_Express/other_files/My_Docker/docker_eol_connectors && docker compose stop jenkins
-rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/ <you>@eol-archive:/extra/eol_docker/jenkins_home/
+JH=/Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home
+for m in $JH/plugins/*/META-INF/MANIFEST.MF; do
+  awk -F': ' '/^Short-Name:/ { n = $2 } /^Plugin-Version:/ { v = $2 } END { gsub(/\r/, "", n); gsub(/\r/, "", v); print n ":" v }' "$m"
+done > /tmp/jenkins_plugins.txt
+wc -l < /tmp/jenkins_plugins.txt
+rsync -a --exclude='builds/' --exclude='lastStable' --exclude='lastSuccessful' --exclude='/plugins/' --exclude='/war/' \
+  --exclude='/logs/' --exclude='/updates/' --exclude='/workspace/' --exclude='/.cache/' --exclude='/.java/' --exclude='/.local/' \
+  --exclude='.DS_Store' --exclude='.bash_history' "$JH/" archive:/extra/eol_docker/jenkins_home/
+rsync -a /tmp/jenkins_plugins.txt archive:/extra/eol_docker/jenkins_home/plugins.txt
 ```
+- [ ] `wc -l` prints **94** (one line per plugin, e.g. `matrix-auth:3.3`).
 - [ ] **Leave the Mac's Jenkins stopped.** 22 jobs run on a timer (e.g. *Zenodo monthly stats*, the *Dynamic Hierarchy* tasks, some connectors). From step 6 the server runs them, and two machines must not run them both. If you need the Mac's Jenkins later, first disable those timers there: Configure → Build Triggers → untick *Build periodically*.
 
 **Back on the server:**
@@ -90,7 +99,7 @@ sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"
 matchpathcon /extra/eol_php_resources /extra/docker /extra/containerd
 sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &
 ```
-- [ ] `ls /extra/eol_docker/jenkins_home/jobs | wc -l` shows the Mac's job folders (not 0).
+- [ ] `find /extra/eol_docker/jenkins_home/jobs -name config.xml | wc -l` shows **443** (47 folders + 396 jobs), and `/extra/eol_docker/jenkins_home/plugins.txt` exists.
 - [ ] `matchpathcon` prints `container_file_t` for `eol_php_resources` and `container_var_lib_t` for both `docker` and `containerd`. **STOP** if `/extra/docker` shows `container_file_t`.
 - [ ] The relabel runs in the background (an hour or more). Steps 4 and 5 can be done meanwhile. **Wait until `pgrep restorecon` prints nothing before step 6.**
 
@@ -134,8 +143,8 @@ ls -ld /extra/eol_php_resources/ /extra/FreshData_TSV_files/
 **On the Mac**, copy the 3 config files that aren't in git:
 ```bash
 cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
-scp database.yml <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/
-scp environments/production.php environments/jenkins_production.php <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+scp database.yml archive:/extra/eol_docker/webroot/eol_php8_code/config/
+scp environments/production.php environments/jenkins_production.php archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
 ```
 
 **On the server:**
@@ -161,11 +170,16 @@ pgrep restorecon || echo "relabel done"
 docker compose -f docker-compose.yml build --no-cache --pull 2>&1 | tee /tmp/build.log | tail -3
 grep -m1 "PHP 8.4" /tmp/build.log
 df -h /
+# Jenkins' plugins, from the list copied in step 3 (needs HTTPS to updates.jenkins.io; about 3 minutes)
+docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plugin-cli jenkins \
+  --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins 2>&1 | tail -3
+ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l
 docker compose -f docker-compose.yml up -d
 docker compose -f docker-compose.yml ps
 bash scripts/rhel9-verify.sh
 ```
 - [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used.
+- [ ] The plugin tool ends with `Done`, and `ls … | wc -l` prints **94**. **STOP** if it's fewer, or the tool can't reach `updates.jenkins.io`: Jenkins can't read its security settings or folders without them. Run the command again (it retries mirrors), or copy the plugins from the Mac instead: `rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/plugins/ archive:/extra/eol_docker/jenkins_home/plugins/`, then `sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home/plugins`.
 - [ ] `ps`: db `healthy`; web and jenkins `Up`.
 - [ ] **`rhel9-verify.sh` ends with `0 FAIL`.** Every FAIL line says what to fix. Fix it and run the check again. Don't go on with a FAIL.
 
@@ -179,6 +193,7 @@ Then open **http://localhost:8090** in Safari. (Optional: the `~/.ssh/config` en
 - [ ] User `web-trigger` → **revoke the copied API token, create a new one** → put it in `production.php` as `JENKINS_USER_TOKEN`.
 - [ ] Security: matrix authorization `eagbayani` = Administer, `web-trigger` = Read + Build. Agents TCP port: **Disabled**.
 - [ ] Manage Jenkins → no "Failed Loading plugin" messages.
+- [ ] **Update the plugins with known security fixes.** The Mac's versions of 8 plugins have published Jenkins advisories (2026-04 to 2026-09): `credentials-binding`, `email-ext`, `gradle`, `ldap`, `pipeline-build-step`, `pipeline-groovy-lib`, `workflow-cps`, `workflow-multibranch`. Manage Jenkins → Plugins → **Updates** → select them (or all) → Update → tick *Restart Jenkins when installation is complete*. Jenkins offers only versions that work with 2.580.2.
 - [ ] Run `bash scripts/rhel9-verify.sh` again: `web → Jenkins login as 'web-trigger' works`, and **0 FAIL**.
 
 ## 7. Port 8080 belongs to the web container

@@ -274,11 +274,12 @@ cd /extra/eol_docker/docker_eol_connectors
 # 3. Host directories + SELinux (persistent labels — survive a relabel)
 # Creates /extra/eol_docker/... and only the missing data folders in /extra (existing ones are kept)
 sudo bash scripts/rhel9-init-dirs.sh
-# Jenkins jobs, settings, users and build history come from the Mac's jenkins_home (1.8 GB). Stop Jenkins on
-# the Mac first, so the copy is consistent; then hand the folder to Jenkins (uid 1000):
+# Jenkins jobs, settings, users and secrets come from the Mac's jenkins_home (about 20 MB): not the build history
+# (1.55 GB) and not the plugins, which step 6 installs from a list (plugins.txt, the Mac's 94 plugins with versions).
+# Stop Jenkins on the Mac first, so the copy is consistent; then hand the folder to Jenkins (uid 1000):
 sudo chown $USER: /extra/eol_docker/jenkins_home
-#   on the Mac:  docker compose stop jenkins
-#                rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/ <you>@eol-archive:/extra/eol_docker/jenkins_home/
+#   on the Mac:  docker compose stop jenkins; then the plugin list + rsync commands in docs/deploy_day_checklist.md,
+#                step 3 (rsync … --exclude='builds/' --exclude='/plugins/' … archive:/extra/eol_docker/jenkins_home/)
 #   and leave it stopped: 22 jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
 #   To use the Mac's Jenkins again, first untick "Build periodically" in those jobs there.
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
@@ -332,9 +333,9 @@ ls -ld /extra/eol_php_resources/
 
 # Config files with passwords and tokens (gitignored): copy from the Mac, then set the server's values
 #   on the Mac:  cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
-#                scp database.yml <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/
+#                scp database.yml archive:/extra/eol_docker/webroot/eol_php8_code/config/
 #                scp environments/production.php environments/jenkins_production.php \
-#                    <you>@eol-archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
+#                    archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
 cd /extra/eol_docker/webroot/eol_php8_code/config
 chmod 640 database.yml environments/production.php environments/jenkins_production.php
 # database.yml: production + jenkins_production → host: db, port: 3306, username: eol_app,
@@ -345,6 +346,12 @@ chmod 640 database.yml environments/production.php environments/jenkins_producti
 docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
 df -h /     # root disk (10 GB) should still be about as full as before the build; images are under /extra
+# Jenkins' plugins from the list copied in step 3, before Jenkins' first start: without them it can't read its
+# security settings (matrix-auth) or the job folders (cloudbees-folder). Needs HTTPS to updates.jenkins.io;
+# if the server can't reach it, rsync the Mac's jenkins_home/plugins/ instead and chown 1000 again.
+docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plugin-cli jenkins \
+  --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins
+ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l   # → 94
 docker compose -f docker-compose.yml up -d
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
@@ -352,7 +359,9 @@ bash scripts/rhel9-verify.sh
 #   then open http://localhost:8090 → Jenkins URL: http://localhost:8090/ (the copy has the Mac's :8081);
 #   change the admin password (it came from the Mac);
 #   user web-trigger → revoke the copied API token, create a new one → production.php JENKINS_USER_TOKEN;
-#   Security: matrix authorization eagbayani = Administer, web-trigger = Read + Build; agents TCP port Disabled
+#   Security: matrix authorization eagbayani = Administer, web-trigger = Read + Build; agents TCP port Disabled;
+#   Plugins → Updates: update the 8 plugins with published advisories at the Mac's versions (credentials-binding,
+#   email-ext, gradle, ldap, pipeline-build-step, pipeline-groovy-lib, workflow-cps, workflow-multibranch), restart
 bash scripts/rhel9-verify.sh   # again: "web → Jenkins login as 'web-trigger' works" with the new token
 
 # 7. 10.252.248.39:8080 belongs to the web container — the host's own Apache must not run
@@ -371,7 +380,7 @@ cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # f
 | Path | Contents | Back up? |
 |---|---|---|
 | `/extra/eol_docker/backups` | nightly MySQL dumps (`scripts/mysql-backup.sh`, newest 14 kept) | **yes**: this, not `mysql_data`, is the database backup |
-| `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, build history | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
+| `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, secrets, build history (the server's own; the Mac's history isn't copied) | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
 | `/extra/eol_docker/docker_eol_connectors/.env` | passwords | **yes**, kept private |
 | `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php`, `jenkins_production.php` (not in git) | **yes**, kept private |
 | `/extra/eol_docker/mysql_data` | live MySQL files | no: use the dumps |
