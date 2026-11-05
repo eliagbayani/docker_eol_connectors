@@ -29,3 +29,5 @@ README old.md
 README v1.md
 # HTTPS certificate and key (Mac default HTTPS_CERTS_PATH=./certs); never in git
 certs/
+# PDF copy of the checklist, made on the Mac for reading (the .md is the source)
+docs/deploy_day_checklist.pdf
