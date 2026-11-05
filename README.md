@@ -223,7 +223,7 @@ Key variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `MY_ENVIRONMENT` | `development` or `production` — selects the entrypoint script, and the `database.yml` section eol_php8_code uses (`production`; Jenkins jobs `jenkins_production`) |
+| `MY_ENVIRONMENT` | `development` or `production` — selects the entrypoint script, and the settings file and `database.yml` section eol_php8_code uses (`production`, for the website and for Jenkins jobs) |
 | `WEBROOT_PATH` | Host path → `/var/www/html` |
 | `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
 | `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |

@@ -90,7 +90,7 @@ dbcheck() {  # label container expected [argv...]
     else FAIL "$label: expected '$want', got '${r#RESULT }' $(printf '%s\n' "$out" | grep -m1 -iE 'denied|error|exception' | cut -c1-160)"; fi
 }
 dbcheck "web code" "$WEB" "production eol_production eol_app@%"
-dbcheck "Jenkins job code" "$JEN" "jenkins_production eol_production eol_app@%" jenkins
+dbcheck "Jenkins job code" "$JEN" "production eol_production eol_app@%" jenkins
 g=$(docker exec "$DB" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -u root -N -e "SHOW GRANTS FOR eol_app@\"%\""' 2>/dev/null | grep -v 'GRANT USAGE ON \*\.\*')
 # (mysql -N prints the backslash in `eol\_production` doubled)
 if [ "$(printf '%s\n' "$g" | grep -c .)" = 1 ] && printf '%s\n' "$g" | grep -qE '^GRANT ALL PRIVILEGES ON `eol\\*_production`\.\* TO `eol_app`@`%`$'; then OK "eol_app has rights on eol_production only"

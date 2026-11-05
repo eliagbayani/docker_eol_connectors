@@ -182,7 +182,7 @@ Other paths: `sudo EOL_BASE=/srv/eol EXTRA_PATH=/srv/eol/extra bash scripts/rhel
 
 | Variable | Production value | Notes |
 |----------|------------------|-------|
-| `MY_ENVIRONMENT` | `production` | Uses `docker-entrypoint_production.sh`; eol_php8_code then uses the `production` and `jenkins_production` sections of `database.yml` |
+| `MY_ENVIRONMENT` | `production` | Uses `docker-entrypoint_production.sh`; eol_php8_code then uses `production.php` and the `production` section of `database.yml`, for the website and for Jenkins jobs |
 | `EXTRA_PATH` | `/extra` | eol-archive's existing data volume; mounted as `/extra`; symlinks at startup |
 | `WEBROOT_PATH` | `/extra/eol_docker/webroot` | PHP connector codebase |
 | `MYSQL_DATA_DIR` | `/extra/eol_docker/mysql_data` | **Empty** on first DB init |
@@ -321,11 +321,10 @@ ls -ld /extra/eol_php_resources/
 #   on the Mac:  cd /Volumes/OWC_Express/other_files/My_Docker_content/webroot/eol_php8_code/config
 #                scp database.yml archive:/extra/eol_docker/webroot/eol_php8_code/config/
 #                scp environments/production.php archive:/extra/eol_docker/webroot/eol_php8_code/config/environments/
-#   (jenkins_production.php isn't needed: the code loads production.php for the website and for Jenkins jobs;
-#   a Jenkins job only switches to the jenkins_production: section of database.yml)
+#   (the website and every Jenkins job use these two: production.php and the production: section of database.yml)
 cd /extra/eol_docker/webroot/eol_php8_code/config
 chmod 640 database.yml environments/production.php
-# database.yml: production + jenkins_production → host: db, port: 3306, username: eol_app,
+# database.yml: production → host: db, port: 3306, username: eol_app,
 #   password: the MYSQL_PASSWORD from .env (step 4), quoted (see "eol_php8_code config/database.yml" below)
 # production.php: JENKINS_DOMAIN 'jenkins:8080'; JENKINS_USER_TOKEN replaced after step 6 (new web-trigger token)
 
@@ -470,7 +469,7 @@ Browser (from inside the network): `http://10.252.248.39:8080/test.php`, or `htt
 
 ## eol_php8_code `config/database.yml` (gitignored — copy by hand)
 
-The `production` and `jenkins_production` sections must use the Compose service name, not `127.0.0.1` or a container IP:
+The `production` section (used by the website and by Jenkins jobs) must use the Compose service name, not `127.0.0.1` or a container IP:
 
 ```yaml
 production:
@@ -482,7 +481,7 @@ production:
   port: 3306
 ```
 
-Same for `jenkins_production`. Quote the password. Use the app user, not root (N3): root stays for admin work by hand, and its password lives only in `.env`. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
+Quote the password. Use the app user, not root (N3): root stays for admin work by hand, and its password lives only in `.env`. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
 
 `test.php` runs `shell_exec`: put it in `/extra/eol_docker/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
 
