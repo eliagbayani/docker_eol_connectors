@@ -161,16 +161,8 @@ rsync -a /tmp/jenkins_plugins.txt archive:/extra/eol_docker/jenkins_home/plugins
 ```bash
 cd /extra/eol_docker/docker_eol_connectors
 
-# 1. Three GBIF download jobs still cd into the Mac's drive (/Volumes/Crucial_4TB/...):
-#    switch them to eol-archive's folder (their own commented-out line), before Jenkins owns the files
-cd /extra/eol_docker/jenkins_home/jobs
-sed -i -e 's|^cd /Volumes/Crucial_4TB/other_files/GBIF_occurrence/|#&|' \
-  -e 's|<command>#cd /extra/other_files/GBIF_occurrence/|<command>cd /extra/other_files/GBIF_occurrence/|' \
-  "GBIF National Checklists/jobs/03 Initialize and download dumps/config.xml" \
-  "GBIF Countries Download_8/jobs/03 Initialize and download dumps/config.xml" \
-  "GBIF Waterbody Checklists/jobs/03 Initialize and download dumps/config.xml"
-grep -rh --include=config.xml -e '^cd /Volumes' -e '<command>cd /extra/other_files/GBIF_occurrence/' . | sed 's/^ *//'
-cd /extra/eol_docker/docker_eol_connectors
+# 1. Check the GBIF download jobs use eol-archive's folder (/extra/other_files/GBIF_occurrence/, same path as on the Mac)
+grep -rh --include=config.xml -e '^cd /Volumes' -e '<command>cd /extra/other_files/GBIF_occurrence/' /extra/eol_docker/jenkins_home/jobs | sed 's/^ *//'
 
 # 2. Hand Jenkins' folders to Jenkins (uid 1000 in its container), and the code folder to you
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
@@ -193,7 +185,7 @@ sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &
 ```
 
 - [ ] `find /extra/eol_docker/jenkins_home/jobs -name config.xml | wc -l` shows **277** (40 folders + 237 jobs; the Mac's 443 minus the 166 Neo4j ones), `ls /extra/eol_docker/jenkins_home/jobs | grep -c Neo4j` prints **0**, and `/extra/eol_docker/jenkins_home/plugins.txt` exists.
-- [ ] The GBIF `grep` prints exactly **4 lines**, all `<command>cd /extra/other_files/GBIF_occurrence/…` (the 3 switched jobs, plus *GBIF Continent Checklists*, which already used it), and **no** `cd /Volumes` line. **STOP and fix it before proceeding** if a `cd /Volumes` line is left: that job would fail on the server.
+- [ ] The GBIF `grep` prints exactly **4 lines**, all `<command>cd /extra/other_files/GBIF_occurrence/…` (National, Countries, Waterbody and Continent), and **no** `cd /Volumes` line. **STOP and fix it before proceeding** if a `cd /Volumes` line shows up: that job would fail on the server (the Mac's Jenkins needs the same fix, then copy again).
 - [ ] `ls -ld /extra/other_files/GBIF_occurrence` shows a folder (or, if it was missing, the `mkdir` created it; `getfacl /extra/other_files/GBIF_occurrence` then shows `user:33:rwx` and `user:1000:rwx`).
 - [ ] `matchpathcon` prints `container_file_t` for `eol_php_resources` and `container_var_lib_t` for both `docker` and `containerd`. **STOP** if `/extra/docker` shows `container_file_t`.
 - [ ] The relabel runs in the background (an hour or more). Steps 4 and 5 can be done meanwhile. **Wait until `pgrep restorecon` prints nothing before step 6.**

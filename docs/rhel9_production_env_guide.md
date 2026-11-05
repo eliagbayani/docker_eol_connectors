@@ -266,8 +266,8 @@ sudo chown $USER: /extra/eol_docker/jenkins_home
 #                the Neo4j jobs stay on the Mac: eol-archive has no Neo4j)
 #   and leave it stopped: 21 of the copied jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
 #   To use the Mac's Jenkins again, first untick "Build periodically" in those jobs there.
-#   Before the chown below: switch the three GBIF '03 Initialize and download dumps' jobs from /Volumes/Crucial_4TB/... to
-#   /extra/other_files/GBIF_occurrence/ (sed command in the checklist, step 3), and create that folder if it's missing.
+#   The GBIF download jobs use /extra/other_files/GBIF_occurrence/ on both machines (on the Mac, My_Docker_content/extra/
+#   other_files/GBIF_occurrence is a link to /Volumes/Crucial_4TB/...); create that folder here if it's missing (checklist step 3).
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 # /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers
