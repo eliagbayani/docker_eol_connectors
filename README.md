@@ -1,13 +1,13 @@
 # EOL legacy web-based tools (Docker Compose)
 
 **Path (local):** `My_Docker/docker_eol_connectors/`  
-**Updated:** 2026-10-26  
+**Updated:** 2026-11-05  
 **Info:** This is to run on a Docker host environment.
 
 ---
 
 A Docker Compose project that runs eol-archive server stack on a single host. This will be
-installed on a server with RHEL 9. Main purpose is to host the legacy EOL web-based
+installed on a server with RHEL 9.8. Main purpose is to host the legacy EOL web-based
 tools.
 
 | Service | Image / build | Role |

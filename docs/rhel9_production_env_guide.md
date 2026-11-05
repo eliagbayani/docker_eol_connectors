@@ -1,7 +1,8 @@
 # EOL Connectors — RHEL 9 production `.env` layout
 
 **Project:** `docker_eol_connectors`  
-**Updated:** 2026-11-02  
+**Updated:** 2026-11-05  
+**Target OS:** RHEL 9.8 (Plow), x86_64: the deployment server, confirmed 2026-11-05 (`cat /etc/redhat-release`)  
 **Repo path:** `My_Docker/docker_eol_connectors/`  
 **Template file:** `.env.production.sample`  
 **Init script:** `scripts/rhel9-init-dirs.sh`
@@ -10,7 +11,7 @@
 
 ## Summary
 
-The stack **will run on RHEL 9** if you:
+The stack **will run on RHEL 9** (the deployment server runs **9.8**) if you:
 
 1. Use **Linux paths** (e.g. `/opt/eol/...` or `/srv/eol/...`)
 2. Set **`MY_ENVIRONMENT=production`**
@@ -204,13 +205,13 @@ chmod 600 .env
 | `web` base image | `php:8.4.27-apache` | Raise the tag for new 8.4.x security releases |
 | `jenkins` base image | `jenkins/jenkins:2.580.2-jdk21` | PHP from sury; `PHP_MIN_VERSION=8.4.27` guard in `jenkins/Dockerfile` |
 | `db` → `MYSQL_PASSWORD` | `${MYSQL_PASSWORD}` | Official MySQL env var |
-| `web` → `platform` | `linux/amd64` | Explicit amd64 for RHEL x86_64 |
+| All services → `platform` | not set (C7) | Images build for the host: amd64 on the RHEL x86_64 server |
 | `neo4j` | not in `docker-compose.yml` | Mac override only |
 | All services → `restart` | `unless-stopped` | Survives host reboot (with `docker.service` enabled) |
 
 ---
 
-## Deploy steps on RHEL 9
+## Deploy steps on RHEL 9 (9.8)
 
 ```bash
 # 1. Install Docker CE (from Docker's repo; remove the Podman docker shim first)
