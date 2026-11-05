@@ -10,49 +10,49 @@ A Docker Compose project that runs eol-archive server stack on a single host. Th
 installed on a server with RHEL 9.8. Main purpose is to host the legacy EOL web-based
 tools.
 
-| Service | Image / build | Role |
-|---------|---------------|------|
-| **web** | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.4.27 — host web-based tools |
-| **db** | `mysql/Dockerfile` | MySQL 8.4.13 (Oracle Linux 9 base) |
-| **jenkins** | `jenkins/Dockerfile` | Jenkins 2.580.2 LTS + PHP 8.4.27 — maintains jobs for the web-based tools |
+| Service     | Image / build           | Role                                                                      |
+| ----------- | ----------------------- | ------------------------------------------------------------------------- |
+| **web**     | `apache-php/Dockerfile` | Apache 2.4 + PHP 8.4.27 — host web-based tools                            |
+| **db**      | `mysql/Dockerfile`      | MySQL 8.4.13 (Oracle Linux 9 base)                                        |
+| **jenkins** | `jenkins/Dockerfile`    | Jenkins 2.580.2 LTS + PHP 8.4.27 — maintains jobs for the web-based tools |
 
 **Mac development only:** Neo4j (`neo4j/Dockerfile`) is defined in **`docker-compose.override.yml`**, not in production `docker-compose.yml`. See [Neo4j (Mac dev only)](#neo4j-mac-dev-only).
 
 <!-- | **jenkins** | `jenkins/Dockerfile` | Jenkins 2.580.1 + PHP 8.4 + Python 3 + gnparser | -->
 
-| Runtime | Purpose |
-|---------|---------|
-| **Mac (development)** | Local dev with `/Volumes` symlinks and override file |
+| Runtime                 | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **Mac (development)**   | Local dev with `/Volumes` symlinks and override file                      |
 | **RHEL 9 (production)** | Archive/server deployment under `/extra/eol_docker/...`, data in `/extra` |
 
-This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/eliagbayani/dock_eol_conn_wf), which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`).
+This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/eliagbayani/dock_eol_conn_wf), which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`). And which will be the ETL process for the TraitBank project.
 
 ---
 
 ## Recent updates (Oct 2026)
 
-| Area | Change |
-|------|--------|
-| **PHP** | 8.2 → **8.4.27** in both **web** (`php:8.4.27-apache`) and **jenkins** (`php8.4-*` from packages.sury.org). 8.4.27 fixes **PHP2Shell** (CVE-2026-109618 / CVE-2026-109619, Oct 2026). PHP 8.2 security support ends 2026-12-31. |
-| **PHP version guard** | `jenkins/Dockerfile` fails the build if apt installs PHP older than `PHP_MIN_VERSION` (8.4.27). See [PHP version pins](#php-version-pins). |
-| **Jenkins** | 2.538 (weekly) → 2.580.1 LTS → **2.580.2 LTS** — picks up 2026 security advisories (incl. CVE-2026-70426); 2.580.2 (Nov 2026) adds only security and bug fixes. See [Upgrading Jenkins](#upgrading-jenkins). |
-| **php.ini** | `session.sid_length` / `session.sid_bits_per_character` commented out (deprecated in 8.4; PHP defaults 32 / 4 apply). |
-| **`.env.production.sample`** | Jenkins (8080) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes). |
-| **`eol_php8_code`** (webroot, separate repo) | PHP 8.4 deprecations fixed. See [PHP 8.4 migration notes](#php-84-migration-notes). |
-| **MySQL image** | Root password no longer baked into the image: `root-native-password.sh` sets it at first init from the runtime env. `!includedir` fix so the first init on an empty data dir completes. |
-| **Apache hardening** | No directory listings; dotfiles/`.git` → 404; `eol_php8_code` config, vendor, lib, logs and loose files (`*.yml`, `*.sql`, …) → 403; PHP never runs from job-written / data dirs (`temp`, `tmp`, `content_server/resources`, `/extra` links). `ServerTokens Prod`. See [Security notes](#security-notes). |
-| **Production PHP settings** | `zz-production.ini` (production builds only): errors logged, not displayed; `expose_php=Off`; strict, `HttpOnly`, `SameSite=Lax` session cookies. `ini_set('display_errors', true)` still works per page. |
-| **Ports** | Every non-public port on `127.0.0.1`, Mac included (web `127.0.0.1:81`). Jenkins agent port 50000 not published. Prod web bound to the internal IP — see [Public access](#public-access-editorseolorg). |
-| **Container-to-container** | Code reaches MySQL at `db:3306` (`database.yml`) and Jenkins at `jenkins:8080` (`JENKINS_DOMAIN`), with a build-only Jenkins user (`web-trigger`). |
-| **Matching the old editors.eol.org server** | From eol-archive's saved config: `/eol_php_code/...` URLs served from `eol_php8_code` (`Alias` in `apache2.conf`); `max_execution_time`/`max_input_time` 900 and `max_input_vars` 100000 in `php.ini.txt`; PHP `zip`, `gd`, `xsl` added to web and `gd` to jenkins. Prod web port is **8080** on the internal IP (what .42 forwards to). Through Cloudflare a web request still stops at 100 s, so long work belongs in Jenkins jobs. Left out on purpose: mod_security rule exceptions (no mod_security in the container), the stock 443 certificate and the 500 MB `LimitRequestBody` (Cloudflare caps uploads at 200 MB). |
-| **Env templates** | `.env.sample` renamed to **`.env.development.sample`** (pairs with `.env.production.sample`). An existing `.env` is unaffected. |
-| **Stop, health check, logs, memory** | Web entrypoints `exec apache2-foreground` (Apache is PID 1, stops cleanly). MySQL health check is `mysqladmin ping` with the password via `MYSQL_PWD`, not on the command line. Docker logs capped at 3 × 50 MB per service; Apache's `access.log` / `error.log` rotated by `rotatelogs` (5 files each, `.1`–`.4`). Memory limits jenkins 32g, web 6g, db 2g, for the 64 GB production server (override in `.env`). |
-| **Required settings, gnparser check** | Required `.env` values are written `${VAR:?…}` in `docker-compose.yml`: if one is missing or empty, Compose stops with `required variable VAR is missing a value` (M8). The gnparser download in both images must match a pinned SHA-256 (1.15.0, amd64 and arm64), or the build stops; Jenkins now also reads `GNPARSER_*` from `.env` (M3). |
-| **MySQL 8.4.13, sury key, Jenkins footer** | db image `mysql:8.4.13-oraclelinux9` (was 8.4.3); an existing 8.4 data dir upgrades itself on first start (M5). Jenkins image trusts sury's key only for the sury source (`signed-by`, M4). Jenkins footer link from `JENKINS_FOOTER_URL` (M9). Rebuild **db** and **jenkins**. |
-| **Cleanups (C1–C8)** | Web: `EXPOSE 80`; no build-time copy into `/var/www/html` (the webroot mount hides it); one apt layer, `vim`/`ping` only in dev. Jenkins: a few layers with apt lists removed, command-line PHP only (no Apache / PHP-FPM), no `packages.txt`. Compose: no `links:`, Jenkins waits for a healthy db, no `platform:` (images build for the host; amd64 on the server). Removed unused `docker-entrypoint.sh`, `docker-php-ext-mysqli.ini`, root `.dockerignore`; `Dockerfile Aug2` untracked. Rebuild **web** and **jenkins**. |
-| **Webroot from eol-archive** | The production entrypoint no longer just says "already exists": it warns when one of its five links is a real folder, points elsewhere or is broken in the container, checks the folders the code writes to (`eol_php8_code/temp`, `content_server/resources`, `FreshData_min/sh_files`, `TSV_files`) and lists broken links in the first two webroot levels. It changes nothing. `eol-archive-inventory.sh` lists links that won't work in Docker. |
-| **Real visitor IPs** | `mod_remoteip` (`apache-php/zz-remoteip.conf`): logs and PHP show the visitor's IP from `X-Forwarded-For`, believed only from `REMOTEIP_PROXY` (default `10.252.248.42`, the proxy in front of `editors.eol.org`); Cloudflare's ranges (`cloudflare-ips.txt`) are skipped. No effect on the Mac. Rebuild **web**. |
-| **Existing installs** | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). `apache2.conf`, `php.ini.txt` and the PHP modules are built into the images, so pull the repo and rebuild **web** and **jenkins** too: `docker compose build --no-cache --pull web jenkins && docker compose up -d` (add `-f docker-compose.yml` on RHEL). |
+| Area                                         | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PHP**                                      | 8.2 → **8.4.27** in both **web** (`php:8.4.27-apache`) and **jenkins** (`php8.4-*` from packages.sury.org). 8.4.27 fixes **PHP2Shell** (CVE-2026-109618 / CVE-2026-109619, Oct 2026). PHP 8.2 security support ends 2026-12-31.                                                                                                                                                                                                                                                                                                                                                                                              |
+| **PHP version guard**                        | `jenkins/Dockerfile` fails the build if apt installs PHP older than `PHP_MIN_VERSION` (8.4.27). See [PHP version pins](#php-version-pins).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Jenkins**                                  | 2.538 (weekly) → 2.580.1 LTS → **2.580.2 LTS** — picks up 2026 security advisories (incl. CVE-2026-70426); 2.580.2 (Nov 2026) adds only security and bug fixes. See [Upgrading Jenkins](#upgrading-jenkins).                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **php.ini**                                  | `session.sid_length` / `session.sid_bits_per_character` commented out (deprecated in 8.4; PHP defaults 32 / 4 apply).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **`.env.production.sample`**                 | Jenkins (8080) and Neo4j (7474, 7687) ports bound to **127.0.0.1**; `chmod 600 .env`; password generation hint; persistent SELinux labels via `semanage`. See [Security notes](#security-notes).                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **`eol_php8_code`** (webroot, separate repo) | PHP 8.4 deprecations fixed. See [PHP 8.4 migration notes](#php-84-migration-notes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **MySQL image**                              | Root password no longer baked into the image: `root-native-password.sh` sets it at first init from the runtime env. `!includedir` fix so the first init on an empty data dir completes.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Apache hardening**                         | No directory listings; dotfiles/`.git` → 404; `eol_php8_code` config, vendor, lib, logs and loose files (`*.yml`, `*.sql`, …) → 403; PHP never runs from job-written / data dirs (`temp`, `tmp`, `content_server/resources`, `/extra` links). `ServerTokens Prod`. See [Security notes](#security-notes).                                                                                                                                                                                                                                                                                                                    |
+| **Production PHP settings**                  | `zz-production.ini` (production builds only): errors logged, not displayed; `expose_php=Off`; strict, `HttpOnly`, `SameSite=Lax` session cookies. `ini_set('display_errors', true)` still works per page.                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Ports**                                    | Every non-public port on `127.0.0.1`, Mac included (web `127.0.0.1:81`). Jenkins agent port 50000 not published. Prod web bound to the internal IP — see [Public access](#public-access-editorseolorg).                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Container-to-container**                   | Code reaches MySQL at `db:3306` (`database.yml`) and Jenkins at `jenkins:8080` (`JENKINS_DOMAIN`), with a build-only Jenkins user (`web-trigger`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Matching the old editors.eol.org server**  | From eol-archive's saved config: `/eol_php_code/...` URLs served from `eol_php8_code` (`Alias` in `apache2.conf`); `max_execution_time`/`max_input_time` 900 and `max_input_vars` 100000 in `php.ini.txt`; PHP `zip`, `gd`, `xsl` added to web and `gd` to jenkins. Prod web port is **8080** on the internal IP (what .42 forwards to). Through Cloudflare a web request still stops at 100 s, so long work belongs in Jenkins jobs. Left out on purpose: mod_security rule exceptions (no mod_security in the container), the stock 443 certificate and the 500 MB `LimitRequestBody` (Cloudflare caps uploads at 200 MB). |
+| **Env templates**                            | `.env.sample` renamed to **`.env.development.sample`** (pairs with `.env.production.sample`). An existing `.env` is unaffected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Stop, health check, logs, memory**         | Web entrypoints `exec apache2-foreground` (Apache is PID 1, stops cleanly). MySQL health check is `mysqladmin ping` with the password via `MYSQL_PWD`, not on the command line. Docker logs capped at 3 × 50 MB per service; Apache's `access.log` / `error.log` rotated by `rotatelogs` (5 files each, `.1`–`.4`). Memory limits jenkins 32g, web 6g, db 2g, for the 64 GB production server (override in `.env`).                                                                                                                                                                                                          |
+| **Required settings, gnparser check**        | Required `.env` values are written `${VAR:?…}` in `docker-compose.yml`: if one is missing or empty, Compose stops with `required variable VAR is missing a value` (M8). The gnparser download in both images must match a pinned SHA-256 (1.15.0, amd64 and arm64), or the build stops; Jenkins now also reads `GNPARSER_*` from `.env` (M3).                                                                                                                                                                                                                                                                                |
+| **MySQL 8.4.13, sury key, Jenkins footer**   | db image `mysql:8.4.13-oraclelinux9` (was 8.4.3); an existing 8.4 data dir upgrades itself on first start (M5). Jenkins image trusts sury's key only for the sury source (`signed-by`, M4). Jenkins footer link from `JENKINS_FOOTER_URL` (M9). Rebuild **db** and **jenkins**.                                                                                                                                                                                                                                                                                                                                              |
+| **Cleanups (C1–C8)**                         | Web: `EXPOSE 80`; no build-time copy into `/var/www/html` (the webroot mount hides it); one apt layer, `vim`/`ping` only in dev. Jenkins: a few layers with apt lists removed, command-line PHP only (no Apache / PHP-FPM), no `packages.txt`. Compose: no `links:`, Jenkins waits for a healthy db, no `platform:` (images build for the host; amd64 on the server). Removed unused `docker-entrypoint.sh`, `docker-php-ext-mysqli.ini`, root `.dockerignore`; `Dockerfile Aug2` untracked. Rebuild **web** and **jenkins**.                                                                                                |
+| **Webroot from eol-archive**                 | The production entrypoint no longer just says "already exists": it warns when one of its five links is a real folder, points elsewhere or is broken in the container, checks the folders the code writes to (`eol_php8_code/temp`, `content_server/resources`, `FreshData_min/sh_files`, `TSV_files`) and lists broken links in the first two webroot levels. It changes nothing. `eol-archive-inventory.sh` lists links that won't work in Docker.                                                                                                                                                                          |
+| **Real visitor IPs**                         | `mod_remoteip` (`apache-php/zz-remoteip.conf`): logs and PHP show the visitor's IP from `X-Forwarded-For`, believed only from `REMOTEIP_PROXY` (default `10.252.248.42`, the proxy in front of `editors.eol.org`); Cloudflare's ranges (`cloudflare-ips.txt`) are skipped. No effect on the Mac. Rebuild **web**.                                                                                                                                                                                                                                                                                                            |
+| **Existing installs**                        | A db image built before the MySQL image change still contains an old root password (`/docker-entrypoint-initdb.d/eli.sql`). Rebuild it and remove the old image — see [Changing the MySQL root password](#changing-the-mysql-root-password). `apache2.conf`, `php.ini.txt` and the PHP modules are built into the images, so pull the repo and rebuild **web** and **jenkins** too: `docker compose build --no-cache --pull web jenkins && docker compose up -d` (add `-f docker-compose.yml` on RHEL).                                                                                                                      |
 
 ---
 
@@ -106,15 +106,15 @@ docker_eol_connectors/
 
 ## Service specification
 
-| Item | web | db | jenkins |
-|------|-----|-----|---------|
-| Base | `php:8.4.27-apache` | `mysql:8.4.13-oraclelinux9` | `jenkins/jenkins:2.580.2-jdk21` |
-| PHP | 8.4.27, mysqli, yaml (pecl yaml-2.2.4) | — | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
-| Python | — | embedded 3.9 | 3.11 |
-| gnparser | v1.15.0 (TARGETARCH) | — | v1.15.0 |
-| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:8080`→80 (prod, internal IP) | `127.0.0.1:4001`→3306 | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod) |
-| Restart | unless-stopped | unless-stopped | unless-stopped |
-| Platform (web) | `linux/amd64` in compose | — | — |
+| Item              | web                                                                   | db                          | jenkins                                                                   |
+| ----------------- | --------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------- |
+| Base              | `php:8.4.27-apache`                                                   | `mysql:8.4.13-oraclelinux9` | `jenkins/jenkins:2.580.2-jdk21`                                           |
+| PHP               | 8.4.27, mysqli, yaml (pecl yaml-2.2.4)                                | —                           | 8.4.27 (apt, packages.sury.org), yaml 2.3.0, guarded by `PHP_MIN_VERSION` |
+| Python            | —                                                                     | embedded 3.9                | 3.11                                                                      |
+| gnparser          | v1.15.0 (TARGETARCH)                                                  | —                           | v1.15.0                                                                   |
+| Default host port | `127.0.0.1:81`→80 (dev) / `10.252.248.39:8080`→80 (prod, internal IP) | `127.0.0.1:4001`→3306       | `127.0.0.1:8081`→8080 (dev) / `127.0.0.1:8080`→8080 (prod)                |
+| Restart           | unless-stopped                                                        | unless-stopped              | unless-stopped                                                            |
+| Platform (web)    | `linux/amd64` in compose                                              | —                           | —                                                                         |
 
 Database name on first init: **`eol_${MY_ENVIRONMENT}`** (e.g. `eol_development`, `eol_production`).
 
@@ -137,12 +137,12 @@ docker compose up -d
 
 **Test URLs** (match ports in your `.env`; example Mac dev values):
 
-| Check | URL |
-|-------|-----|
-| PHP + MySQL | http://localhost:81/test.php |
-| Jenkins | http://localhost:8081 |
-| Neo4j Browser | http://localhost:7494/browser/ |
-| MySQL from host | `localhost:4001` (user: root) |
+| Check           | URL                            |
+| --------------- | ------------------------------ |
+| PHP + MySQL     | http://localhost:81/test.php   |
+| Jenkins         | http://localhost:8081          |
+| Neo4j Browser   | http://localhost:7494/browser/ |
+| MySQL from host | `localhost:4001` (user: root)  |
 
 **test.php MySQL settings (inside container):**
 
@@ -197,9 +197,9 @@ Check the build log for `PHP 8.4.27` (Jenkins PHP version guard).
 browser ──HTTPS──▶ Cloudflare ──HTTPS──▶ 160.111.248.42 ──HTTP:8080──▶ server 10.252.248.39
 ```
 
-HTTPS ends at 160.111.248.42, which forwards plain HTTP to port 8080 over the internal network (as the old eol-archive Apache listened) — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:8080:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → *Public access*.
+HTTPS ends at 160.111.248.42, which forwards plain HTTP to port 8080 over the internal network (as the old eol-archive Apache listened) — **no certificate on the server**. Set `WEB_PORTS=10.252.248.39:8080:80` so the site is not reachable on the public IP. Cloudflare limits: uploads ≤ 200 MB, requests ≤ 100 s. Details: `docs/rhel9_production_env_guide.md` → _Public access_.
 
-**Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to `archive` (the Mac's `~/.ssh/config` name for eol-archive, reached through `si`; details, `~/.ssh/config` entry and the Jenkins URL setting: RHEL guide → *Jenkins from your Mac*):
+**Jenkins on the server** is bound to `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to `archive` (the Mac's `~/.ssh/config` name for eol-archive, reached through `si`; details, `~/.ssh/config` entry and the Jenkins URL setting: RHEL guide → _Jenkins from your Mac_):
 
 ```bash
 ssh -N -L 8090:127.0.0.1:8080 archive   # then browse http://localhost:8090
@@ -213,35 +213,35 @@ Full guide: **`docs/rhel9_production_env_guide.md`**. On the day: **`docs/deploy
 
 ## Environment files
 
-| File | Use |
-|------|-----|
-| `.env.development.sample` | Mac / local dev — copy to `.env` |
-| `.env.production.sample` | RHEL 9 — copy to `.env` on server, then `chmod 600 .env` |
-| `.env` | Active config (gitignored) |
+| File                      | Use                                                      |
+| ------------------------- | -------------------------------------------------------- |
+| `.env.development.sample` | Mac / local dev — copy to `.env`                         |
+| `.env.production.sample`  | RHEL 9 — copy to `.env` on server, then `chmod 600 .env` |
+| `.env`                    | Active config (gitignored)                               |
 
 Key variables:
 
-| Variable | Purpose |
-|----------|---------|
-| `MY_ENVIRONMENT` | `development` or `production` — selects the entrypoint script, and the settings file and `database.yml` section eol_php8_code uses (`production`, for the website and for Jenkins jobs) |
-| `WEBROOT_PATH` | Host path → `/var/www/html` |
-| `EXTRA_PATH` | Host path → `/extra` (prod symlinks; mounted on web + jenkins) |
-| `MYSQL_DATA_DIR` | MySQL data volume (empty on first init) |
-| `MYSQL_USER` | App DB user, created on first init with rights on `eol_${MY_ENVIRONMENT}` only. Prod: `eol_app` — the PHP code logs in as it (`database.yml`) |
-| `MYSQL_PASSWORD` | App DB user password (official MySQL env var) |
-| `WEB_PORTS` | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:8080:80` (internal IP; reached via 160.111.248.42; no clash with Jenkins on `127.0.0.1:8080`) |
-| `MYSQL_PORTS` | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`) |
-| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | Optional. Container memory limits; defaults `32g` / `6g` / `2g` (in `docker-compose.yml`) suit the 64 GB production server with light use. The Mac (32 GB) sets `1g` web / `1g` db in `.env` and Jenkins `12g` in the override; Neo4j `10g` (M6) |
-| `JENKINS_PORTS` | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces |
-| `JENKINS_PORTS_COMMUNICATION` | Inbound-agent port. Not published (no agents); commented out in both samples |
-| `PATH_JENKINS_HOME` | Host Jenkins data, mounted at `/var/jenkins_home`. The in-container `JENKINS_HOME=/var/jenkins_home` is set in `docker-compose.yml` (`environment:`), not in `.env` |
-| `PATH_JENKINS_TMP` | Host temp dir → `/jenkins_tmp` |
-| `JENKINS_FOOTER_URL` | Optional. Link in the Jenkins page footer (default `http://dev_connectors.eol.org`) (M9) |
-| `GNPARSER_VERSION` | gnparser release (default 1.15.0) |
-| `GNPARSER_SHA256` | Optional. SHA-256 of the gnparser `.tar.gz`; needed only with another version or `GNPARSER_URL` (1.15.0 checksums are built into both Dockerfiles). It must match the platform being built: production images are amd64 (`linux-x86`), Jenkins on the Mac is arm64 (`linux-arm`) |
-| `PYTHON_APP` | Host path → `/usr/src/app` (Jenkins Python jobs) |
-| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474`, `PORT_7687` | Neo4j vars. Mac only (`.env.development.sample`, used by the override). Not in `.env.production.sample`: eol-archive has no Neo4j |
-| `REGISTRY_*` | GHCR image names when using pre-built images (optional) |
+| Variable                                               | Purpose                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MY_ENVIRONMENT`                                       | `development` or `production` — selects the entrypoint script, and the settings file and `database.yml` section eol_php8_code uses (`production`, for the website and for Jenkins jobs)                                                                                          |
+| `WEBROOT_PATH`                                         | Host path → `/var/www/html`                                                                                                                                                                                                                                                      |
+| `EXTRA_PATH`                                           | Host path → `/extra` (prod symlinks; mounted on web + jenkins)                                                                                                                                                                                                                   |
+| `MYSQL_DATA_DIR`                                       | MySQL data volume (empty on first init)                                                                                                                                                                                                                                          |
+| `MYSQL_USER`                                           | App DB user, created on first init with rights on `eol_${MY_ENVIRONMENT}` only. Prod: `eol_app` — the PHP code logs in as it (`database.yml`)                                                                                                                                    |
+| `MYSQL_PASSWORD`                                       | App DB user password (official MySQL env var)                                                                                                                                                                                                                                    |
+| `WEB_PORTS`                                            | Mac: `127.0.0.1:81:80`. Prod: `10.252.248.39:8080:80` (internal IP; reached via 160.111.248.42; no clash with Jenkins on `127.0.0.1:8080`)                                                                                                                                       |
+| `MYSQL_PORTS`                                          | `127.0.0.1:4001:3306` on both Mac and prod (localhost only; containers use `db:3306`)                                                                                                                                                                                            |
+| `JENKINS_MEM_LIMIT` / `WEB_MEM_LIMIT` / `DB_MEM_LIMIT` | Optional. Container memory limits; defaults `32g` / `6g` / `2g` (in `docker-compose.yml`) suit the 64 GB production server with light use. The Mac (32 GB) sets `1g` web / `1g` db in `.env` and Jenkins `12g` in the override; Neo4j `10g` (M6)                                 |
+| `JENKINS_PORTS`                                        | Prod: `127.0.0.1:8080:8080` (SSH tunnel); Option B in the sample exposes it on all interfaces                                                                                                                                                                                    |
+| `JENKINS_PORTS_COMMUNICATION`                          | Inbound-agent port. Not published (no agents); commented out in both samples                                                                                                                                                                                                     |
+| `PATH_JENKINS_HOME`                                    | Host Jenkins data, mounted at `/var/jenkins_home`. The in-container `JENKINS_HOME=/var/jenkins_home` is set in `docker-compose.yml` (`environment:`), not in `.env`                                                                                                              |
+| `PATH_JENKINS_TMP`                                     | Host temp dir → `/jenkins_tmp`                                                                                                                                                                                                                                                   |
+| `JENKINS_FOOTER_URL`                                   | Optional. Link in the Jenkins page footer (default `http://dev_connectors.eol.org`) (M9)                                                                                                                                                                                         |
+| `GNPARSER_VERSION`                                     | gnparser release (default 1.15.0)                                                                                                                                                                                                                                                |
+| `GNPARSER_SHA256`                                      | Optional. SHA-256 of the gnparser `.tar.gz`; needed only with another version or `GNPARSER_URL` (1.15.0 checksums are built into both Dockerfiles). It must match the platform being built: production images are amd64 (`linux-x86`), Jenkins on the Mac is arm64 (`linux-arm`) |
+| `PYTHON_APP`                                           | Host path → `/usr/src/app` (Jenkins Python jobs)                                                                                                                                                                                                                                 |
+| `NEO_*`, `PATH_NEO4J_*`, `PORT_7474`, `PORT_7687`      | Neo4j vars. Mac only (`.env.development.sample`, used by the override). Not in `.env.production.sample`: eol-archive has no Neo4j                                                                                                                                                |
+| `REGISTRY_*`                                           | GHCR image names when using pre-built images (optional)                                                                                                                                                                                                                          |
 
 ---
 
@@ -290,10 +290,10 @@ docker run --rm --entrypoint ls docker_eol_connectors-db /docker-entrypoint-init
 
 ## PHP version pins
 
-| Image | How PHP is pinned | To raise it |
-|-------|-------------------|-------------|
-| **web** | Base image tag `FROM php:8.4.27-apache` | Change the tag to the new 8.4.x release |
-| **jenkins** | Latest `php8.4-*` from packages.sury.org + build-time guard `ARG PHP_MIN_VERSION=8.4.27` | Change `PHP_MIN_VERSION` |
+| Image       | How PHP is pinned                                                                        | To raise it                             |
+| ----------- | ---------------------------------------------------------------------------------------- | --------------------------------------- |
+| **web**     | Base image tag `FROM php:8.4.27-apache`                                                  | Change the tag to the new 8.4.x release |
+| **jenkins** | Latest `php8.4-*` from packages.sury.org + build-time guard `ARG PHP_MIN_VERSION=8.4.27` | Change `PHP_MIN_VERSION`                |
 
 The Jenkins guard prints the installed version and stops the build if it is older than `PHP_MIN_VERSION`:
 
@@ -311,11 +311,11 @@ ERROR: PHP is older than 8.4.27. Rebuild with --no-cache.
 
 Changes made in **`eol_php8_code`** (webroot, its own git repo) so it runs on 8.4 without deprecation output. Note that `ActiveRecordError::handleError` **echoes every error, including deprecations**, regardless of `display_errors`.
 
-| Change | Where | Fix |
-|--------|-------|-----|
-| `fgetcsv` / `fputcsv` / `str_getcsv` without `$escape` (deprecated 8.4) | 89 calls in app code + 6 in `vendor/` | Added `escape: '\\'` (the old default — behaviour unchanged) |
-| `trigger_error(…, E_USER_ERROR)` (deprecated 8.4) | 4 in app code + 128 in `vendor/` | `E_USER_WARNING` followed by `exit(1)` (same halt + exit code as before) |
-| `E_STRICT` constant (deprecated 8.4) | `vendor/php_active_record/classes/active_record_error.php` | Removed from the handler's error-type map (never raised since PHP 8.0) |
+| Change                                                                  | Where                                                      | Fix                                                                      |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `fgetcsv` / `fputcsv` / `str_getcsv` without `$escape` (deprecated 8.4) | 89 calls in app code + 6 in `vendor/`                      | Added `escape: '\\'` (the old default — behaviour unchanged)             |
+| `trigger_error(…, E_USER_ERROR)` (deprecated 8.4)                       | 4 in app code + 128 in `vendor/`                           | `E_USER_WARNING` followed by `exit(1)` (same halt + exit code as before) |
+| `E_STRICT` constant (deprecated 8.4)                                    | `vendor/php_active_record/classes/active_record_error.php` | Removed from the handler's error-type map (never raised since PHP 8.0)   |
 
 Also fixed: `vendor/google_client_lib_2023` (Google Sheets) — explicit nullable types in 61 files, 0 deprecations on PHP 8.4 (`d60049ad`). It's a hand-copied folder, not managed by Composer, so the fix stays; it won't be replaced with a newer google/apiclient. `lib/connectors/SummaryDataResourcesAllAPI.php` parses again (`5c15f310`).
 
@@ -358,7 +358,7 @@ Notes:
 
 ## Entrypoint behaviour
 
-`MY_ENVIRONMENT` selects the web container startup script. It is also passed to web and jenkins as `MY_ENV`, and eol_php8_code uses it to pick its `database.yml` section (`development`/`production`; Jenkins jobs add `jenkins_`). No need to edit `config/environment.php` on the server.
+`MY_ENVIRONMENT` selects the web container startup script. It is also passed to web and jenkins as `MY_ENV`, and eol*php8_code uses it to pick its `database.yml` section (`development`/`production`; Jenkins jobs add `jenkins*`). No need to edit `config/environment.php` on the server.
 
 - **development:** copies `test.php` (if missing) and `info.php` into **`${PWD}`** (`/var/www/html`) — not `${TARGET_PATH}` (host path is not visible inside the container)
 - **production:** copies neither. `info.php` (phpinfo) is also left out of the production image, and the script logs a warning if one is found in the webroot
@@ -367,47 +367,47 @@ Both scripts:
 
 - Use shared **`ensure_symlink`** helper: `ln -sfn` into `${PWD}`; skip if link/path already exists
 
-| Value | Script | Symlink targets |
-|-------|--------|-----------------|
+| Value         | Script                             | Symlink targets                                        |
+| ------------- | ---------------------------------- | ------------------------------------------------------ |
 | `development` | `docker-entrypoint_development.sh` | `/Volumes/...` (requires override mount of `/Volumes`) |
-| `production` | `docker-entrypoint_production.sh` | `/extra/...` (from `EXTRA_PATH`) |
+| `production`  | `docker-entrypoint_production.sh`  | `/extra/...` (from `EXTRA_PATH`)                       |
 
 ### Development symlinks (`docker-entrypoint_development.sh`)
 
 Requires `docker-compose.override.yml` mounting **`/Volumes:/Volumes`**.
 
-| Link name in webroot | Target |
-|----------------------|--------|
-| `opendata` | `/var/www/html/eol_php8_code/applications/opendata` |
-| `eoearth_images` | `/Volumes/AKiTiO4/web/eoearth_images` |
-| `eoearth` | `/Volumes/AKiTiO4/webroot/eoearth` |
-| `maps_test` | `/Volumes/AKiTiO4/webroot/maps_test` |
-| `eol_maps` | `/Volumes/AKiTiO4/webroot/eol_maps` |
-| `opendata_uploads` | `/Volumes/AKiTiO4/other_files/opendata_uploads` |
-| `other_files` | `/Volumes/AKiTiO4/other_files` |
-| `d_w_h` | `/Volumes/AKiTiO4/d_w_h/dynamic_working_hierarchy-master` |
-| `cp` | `/Volumes/AKiTiO4/web/cp` |
-| `cp_new` | `/Volumes/AKiTiO4/web/cp_new` |
-| `effechecka` | `/Volumes/AKiTiO4/webroot/effechecka` |
-| `Leaflet_Cluster_map` | `/Volumes/AKiTiO4/webroot/Leaflet_Cluster_map` |
-| `ckan_api_results` | `/Volumes/AKiTiO4/CKAN_info/api_results` |
-| `wikimedia_cache` | `/Volumes/AKiTiO4/wikimedia_cache` |
-| `other_files2` | `/Volumes/Crucial_2TB/other_files2` |
-| `cache_LiteratureEditor` | `/Volumes/Crucial_2TB/cache_LiteratureEditor` |
-| `Pensoft_annotator` | `/Volumes/Crucial_4TB/Pensoft_annotator` |
-| `gnfinder` | `/Volumes/Crucial_4TB/gnfinder` |
+| Link name in webroot     | Target                                                    |
+| ------------------------ | --------------------------------------------------------- |
+| `opendata`               | `/var/www/html/eol_php8_code/applications/opendata`       |
+| `eoearth_images`         | `/Volumes/AKiTiO4/web/eoearth_images`                     |
+| `eoearth`                | `/Volumes/AKiTiO4/webroot/eoearth`                        |
+| `maps_test`              | `/Volumes/AKiTiO4/webroot/maps_test`                      |
+| `eol_maps`               | `/Volumes/AKiTiO4/webroot/eol_maps`                       |
+| `opendata_uploads`       | `/Volumes/AKiTiO4/other_files/opendata_uploads`           |
+| `other_files`            | `/Volumes/AKiTiO4/other_files`                            |
+| `d_w_h`                  | `/Volumes/AKiTiO4/d_w_h/dynamic_working_hierarchy-master` |
+| `cp`                     | `/Volumes/AKiTiO4/web/cp`                                 |
+| `cp_new`                 | `/Volumes/AKiTiO4/web/cp_new`                             |
+| `effechecka`             | `/Volumes/AKiTiO4/webroot/effechecka`                     |
+| `Leaflet_Cluster_map`    | `/Volumes/AKiTiO4/webroot/Leaflet_Cluster_map`            |
+| `ckan_api_results`       | `/Volumes/AKiTiO4/CKAN_info/api_results`                  |
+| `wikimedia_cache`        | `/Volumes/AKiTiO4/wikimedia_cache`                        |
+| `other_files2`           | `/Volumes/Crucial_2TB/other_files2`                       |
+| `cache_LiteratureEditor` | `/Volumes/Crucial_2TB/cache_LiteratureEditor`             |
+| `Pensoft_annotator`      | `/Volumes/Crucial_4TB/Pensoft_annotator`                  |
+| `gnfinder`               | `/Volumes/Crucial_4TB/gnfinder`                           |
 
 On startup, removes accidental nested symlink `eol_php8_code/applications/opendata/opendata` if present (legacy `ln` behaviour).
 
 ### Production symlinks (`docker-entrypoint_production.sh`)
 
-| Link name in webroot | Target (`/extra/...`) |
-|----------------------|-------------------------|
-| `uploaded_resources` | `ckan_resources` |
+| Link name in webroot       | Target (`/extra/...`)      |
+| -------------------------- | -------------------------- |
+| `uploaded_resources`       | `ckan_resources`           |
 | `eol_connector_data_files` | `eol_connector_data_files` |
-| `dumps` | `dumps` |
-| `other_files` | `other_files` |
-| `gnfinder` | `gnfinder` |
+| `dumps`                    | `dumps`                    |
+| `other_files`              | `other_files`              |
+| `gnfinder`                 | `gnfinder`                 |
 
 Then runs `apache2-foreground`.
 
@@ -417,12 +417,12 @@ Then runs `apache2-foreground`.
 
 Neo4j is **not** part of the RHEL production stack. It lives only in **`docker-compose.override.yml`**, which Docker Compose merges automatically on Mac but which must **not** exist on production servers.
 
-| | Mac dev | RHEL prod |
-|--|---------|-----------|
-| Neo4j in compose | `docker-compose.override.yml` | **not defined** |
-| Start command | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
-| Env vars | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.development.sample`) | none (not in `.env.production.sample`) |
-| Browser | `http://localhost:7494/browser/` (when `PORT_7474=7494:7474`) | — |
+|                  | Mac dev                                                            | RHEL prod                                    |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------------- |
+| Neo4j in compose | `docker-compose.override.yml`                                      | **not defined**                              |
+| Start command    | `docker compose up -d`                                             | `docker compose -f docker-compose.yml up -d` |
+| Env vars         | `NEO_*`, `PATH_NEO4J_*` in `.env` (from `.env.development.sample`) | none (not in `.env.production.sample`)       |
+| Browser          | `http://localhost:7494/browser/` (when `PORT_7474=7494:7474`)      | —                                            |
 
 **First-time Mac setup:**
 
@@ -469,42 +469,42 @@ docker image prune -f
 
 ## Mac dev vs RHEL prod
 
-| | Mac dev | RHEL prod |
-|--|---------|-----------|
-| Env template | `.env.development.sample` | `.env.production.sample` |
-| `MY_ENVIRONMENT` | `development` | `production` |
-| Override file | `docker-compose.override.yml` (from `.sample`) | **must not exist** |
-| Services | web, db, jenkins, **neo4j** | web, db, jenkins only |
-| Base paths | `/Volumes/OWC_Express/...` | `/extra/eol_docker/...` |
-| Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
-| Extra data | `/Volumes` mount + dev symlinks | eol-archive's own `/extra` volume (`EXTRA_PATH=/extra`) |
-| Non-public ports | `127.0.0.1` | `127.0.0.1` (SSH tunnel) |
-| Web port | `127.0.0.1:81` | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
-| PHP errors | displayed | logged only (`docker compose logs web`) |
+|                  | Mac dev                                        | RHEL prod                                                     |
+| ---------------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| Env template     | `.env.development.sample`                      | `.env.production.sample`                                      |
+| `MY_ENVIRONMENT` | `development`                                  | `production`                                                  |
+| Override file    | `docker-compose.override.yml` (from `.sample`) | **must not exist**                                            |
+| Services         | web, db, jenkins, **neo4j**                    | web, db, jenkins only                                         |
+| Base paths       | `/Volumes/OWC_Express/...`                     | `/extra/eol_docker/...`                                       |
+| Compose          | `docker compose up -d`                         | `docker compose -f docker-compose.yml up -d`                  |
+| Extra data       | `/Volumes` mount + dev symlinks                | eol-archive's own `/extra` volume (`EXTRA_PATH=/extra`)       |
+| Non-public ports | `127.0.0.1`                                    | `127.0.0.1` (SSH tunnel)                                      |
+| Web port         | `127.0.0.1:81`                                 | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
+| PHP errors       | displayed                                      | logged only (`docker compose logs web`)                       |
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---------|--------------|
-| MySQL `Connection refused` from test.php | Using port 4001 inside container — use **3306** and host **`db`** |
-| Empty `employees_tbl` | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR` |
-| Port 80 / 8080 in use | Mac: often Docker (`com.docke`) — `docker ps --filter "publish=80"`. RHEL: the host's own `httpd` — `sudo systemctl disable --now httpd` |
-| 403 on `eol_php8_code/config/…`, `*.yml`, `vendor/` | Expected — denied in `apache2.conf` (secrets/code not downloadable) |
-| Blank page / no PHP error in production | Errors are logged, not shown — `docker compose logs web`, or `ini_set('display_errors', true)` on that page |
-| Web tool can't start a Jenkins job | `JENKINS_DOMAIN` must be `jenkins:8080`; `web-trigger` token valid and has Build on the job |
-| Permission denied on RHEL | SELinux — `semanage fcontext -a -t container_file_t "/extra/eol_docker(/.*)?"` then `restorecon -Rv /extra/eol_docker` |
-| Override on production | Should not exist — gitignored; use `-f docker-compose.yml` only |
-| Neo4j missing on Mac | Copy `docker-compose.override.sample.yml` → `docker-compose.override.yml` |
-| Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
-| Nested `opendata/opendata` symlink | Dev entrypoint removes it; recreate web container if links look wrong |
-| Jenkins empty after `.env` change | Use **`PATH_JENKINS_HOME`** / **`PATH_JENKINS_TMP`** for host paths — not `JENKINS_HOME` in `.env` |
-| Jenkins build: `ERROR: PHP is older than 8.4.27` | Stale apt cache → `--no-cache --pull`; on Apple Silicon, sury arm64 may lag amd64 — see [PHP version pins](#php-version-pins) |
-| `requested image's platform (linux/amd64) does not match the detected host platform` | Image built for amd64 on an arm64 Mac — runs emulated. Rebuild without `DOCKER_DEFAULT_PLATFORM` for a native image |
-| Jenkins log: `Failed Loading plugin … Update required` | Dependency plugin too old — update the named plugin(s) (e.g. `ssh-credentials`, `cloudbees-folder`), restart |
-| Jenkins on server not reachable from browser | Bound to `127.0.0.1` by design — `ssh -N -L 8090:127.0.0.1:8080 archive`, then http://localhost:8090 (no SOCKS proxy) |
-| `Deprecated:` lines in PHP output | PHP 8.4 deprecations echoed by `ActiveRecordError::handleError` — see [PHP 8.4 migration notes](#php-84-migration-notes) |
+| Symptom                                                                              | Likely cause                                                                                                                             |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| MySQL `Connection refused` from test.php                                             | Using port 4001 inside container — use **3306** and host **`db`**                                                                        |
+| Empty `employees_tbl`                                                                | Init SQL ran once; wrong INSERT column order; re-init empty `MYSQL_DATA_DIR`                                                             |
+| Port 80 / 8080 in use                                                                | Mac: often Docker (`com.docke`) — `docker ps --filter "publish=80"`. RHEL: the host's own `httpd` — `sudo systemctl disable --now httpd` |
+| 403 on `eol_php8_code/config/…`, `*.yml`, `vendor/`                                  | Expected — denied in `apache2.conf` (secrets/code not downloadable)                                                                      |
+| Blank page / no PHP error in production                                              | Errors are logged, not shown — `docker compose logs web`, or `ini_set('display_errors', true)` on that page                              |
+| Web tool can't start a Jenkins job                                                   | `JENKINS_DOMAIN` must be `jenkins:8080`; `web-trigger` token valid and has Build on the job                                              |
+| Permission denied on RHEL                                                            | SELinux — `semanage fcontext -a -t container_file_t "/extra/eol_docker(/.*)?"` then `restorecon -Rv /extra/eol_docker`                   |
+| Override on production                                                               | Should not exist — gitignored; use `-f docker-compose.yml` only                                                                          |
+| Neo4j missing on Mac                                                                 | Copy `docker-compose.override.sample.yml` → `docker-compose.override.yml`                                                                |
+| Neo4j mount error on Mac                                                             | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.)                                                                 |
+| Nested `opendata/opendata` symlink                                                   | Dev entrypoint removes it; recreate web container if links look wrong                                                                    |
+| Jenkins empty after `.env` change                                                    | Use **`PATH_JENKINS_HOME`** / **`PATH_JENKINS_TMP`** for host paths — not `JENKINS_HOME` in `.env`                                       |
+| Jenkins build: `ERROR: PHP is older than 8.4.27`                                     | Stale apt cache → `--no-cache --pull`; on Apple Silicon, sury arm64 may lag amd64 — see [PHP version pins](#php-version-pins)            |
+| `requested image's platform (linux/amd64) does not match the detected host platform` | Image built for amd64 on an arm64 Mac — runs emulated. Rebuild without `DOCKER_DEFAULT_PLATFORM` for a native image                      |
+| Jenkins log: `Failed Loading plugin … Update required`                               | Dependency plugin too old — update the named plugin(s) (e.g. `ssh-credentials`, `cloudbees-folder`), restart                             |
+| Jenkins on server not reachable from browser                                         | Bound to `127.0.0.1` by design — `ssh -N -L 8090:127.0.0.1:8080 archive`, then http://localhost:8090 (no SOCKS proxy)                    |
+| `Deprecated:` lines in PHP output                                                    | PHP 8.4 deprecations echoed by `ActiveRecordError::handleError` — see [PHP 8.4 migration notes](#php-84-migration-notes)                 |
 
 ---
 
