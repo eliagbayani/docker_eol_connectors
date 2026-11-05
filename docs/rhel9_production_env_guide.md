@@ -262,9 +262,12 @@ sudo bash scripts/rhel9-init-dirs.sh
 # Stop Jenkins on the Mac first, so the copy is consistent; then hand the folder to Jenkins (uid 1000):
 sudo chown $USER: /extra/eol_docker/jenkins_home
 #   on the Mac:  docker compose stop jenkins; then the plugin list + rsync commands in docs/deploy_day_checklist.md,
-#                step 3 (rsync … --exclude='builds/' --exclude='/plugins/' … archive:/extra/eol_docker/jenkins_home/)
-#   and leave it stopped: 22 jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
+#                step 3 (rsync … --exclude='builds/' --exclude='/plugins/' … --exclude='/jobs/*Neo4j_P*/' archive:/extra/eol_docker/jenkins_home/;
+#                the Neo4j jobs stay on the Mac: eol-archive has no Neo4j)
+#   and leave it stopped: 21 of the copied jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
 #   To use the Mac's Jenkins again, first untick "Build periodically" in those jobs there.
+#   Before the chown below: switch the three GBIF '03 Initialize and download dumps' jobs from /Volumes/Crucial_4TB/... to
+#   /extra/other_files/GBIF_occurrence/ (sed command in the checklist, step 3), and create that folder if it's missing.
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 # /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers

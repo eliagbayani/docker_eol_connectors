@@ -131,7 +131,7 @@ sudo chown $USER: /extra/eol_docker/jenkins_home
 
 - [ ] The output shows `exists:` for `ckan_resources`, `eol_connector_data_files`, `dumps` and `other_files`, and `created:` for `gnfinder`. **STOP** if `dumps` or `ckan_resources` say `created`: `/extra` isn't the data volume (`findmnt /extra`).
 
-**On the Mac**, with Jenkins stopped, copy Jenkins' **jobs, settings, users and secrets** (about 20 MB). The build history (1.55 GB) and the plugins aren't copied. Instead, a list of the 94 plugins with their exact versions goes along as `plugins.txt`, and step 6 installs them.
+**On the Mac**, with Jenkins stopped, copy Jenkins' **jobs, settings, users and secrets** (about 20 MB). The build history (1.55 GB) and the plugins aren't copied. **The Neo4j jobs aren't copied either** (the folders `00 Neo4j_PHP_connectors`, `00 Neo4j_Python_connectors` and `01 Neo4j_PHP_connectors`): eol-archive has no Neo4j, so they stay on the Mac. Instead, a list of the 94 plugins with their exact versions goes along as `plugins.txt`, and step 6 installs them.
 
 ```bash
 # 1. Stop the Mac's Jenkins, so nothing changes during the copy (and its timed jobs stop running)
@@ -144,41 +144,57 @@ for m in $JH/plugins/*/META-INF/MANIFEST.MF; do
 done > /tmp/jenkins_plugins.txt
 wc -l < /tmp/jenkins_plugins.txt
 
-# 3. Copy jobs, settings, users and secrets to the server (no build history, plugins, logs or caches)
+# 3. Copy jobs, settings, users and secrets to the server (no build history, plugins, logs, caches or Neo4j jobs)
 rsync -a --exclude='builds/' --exclude='lastStable' --exclude='lastSuccessful' --exclude='/plugins/' --exclude='/war/' \
   --exclude='/logs/' --exclude='/updates/' --exclude='/workspace/' --exclude='/.cache/' --exclude='/.java/' --exclude='/.local/' \
-  --exclude='.DS_Store' --exclude='.bash_history' "$JH/" archive:/extra/eol_docker/jenkins_home/
+  --exclude='.DS_Store' --exclude='.bash_history' --exclude='/jobs/*Neo4j_P*/' "$JH/" archive:/extra/eol_docker/jenkins_home/
 
 # 4. Copy the plugin list next to it
 rsync -a /tmp/jenkins_plugins.txt archive:/extra/eol_docker/jenkins_home/plugins.txt
 ```
 
 - [ ] `wc -l` prints **94** (one line per plugin, e.g. `matrix-auth:3.3`).
-- [ ] **Leave the Mac's Jenkins stopped.** 22 jobs run on a timer (e.g. *Zenodo monthly stats*, the *Dynamic Hierarchy* tasks, some connectors). From step 6 the server runs them, and two machines must not run them both. If you need the Mac's Jenkins later, first disable those timers there: Configure → Build Triggers → untick *Build periodically*.
+- [ ] **Leave the Mac's Jenkins stopped.** 21 of the copied jobs run on a timer (e.g. *Zenodo monthly stats*, the *Dynamic Hierarchy* tasks, some connectors). From step 6 the server runs them, and two machines must not run them both. If you need the Mac's Jenkins later, first disable those timers there: Configure → Build Triggers → untick *Build periodically*.
 
 **Back on the server:**
 
 ```bash
 cd /extra/eol_docker/docker_eol_connectors
 
-# 1. Hand Jenkins' folders to Jenkins (uid 1000 in its container), and the code folder to you
+# 1. Three GBIF download jobs still cd into the Mac's drive (/Volumes/Crucial_4TB/...):
+#    switch them to eol-archive's folder (their own commented-out line), before Jenkins owns the files
+cd /extra/eol_docker/jenkins_home/jobs
+sed -i -e 's|^cd /Volumes/Crucial_4TB/other_files/GBIF_occurrence/|#&|' \
+  -e 's|<command>#cd /extra/other_files/GBIF_occurrence/|<command>cd /extra/other_files/GBIF_occurrence/|' \
+  "GBIF National Checklists/jobs/03 Initialize and download dumps/config.xml" \
+  "GBIF Countries Download_8/jobs/03 Initialize and download dumps/config.xml" \
+  "GBIF Waterbody Checklists/jobs/03 Initialize and download dumps/config.xml"
+grep -rh --include=config.xml -e '^cd /Volumes' -e '<command>cd /extra/other_files/GBIF_occurrence/' . | sed 's/^ *//'
+cd /extra/eol_docker/docker_eol_connectors
+
+# 2. Hand Jenkins' folders to Jenkins (uid 1000 in its container), and the code folder to you
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot
 
-# 2. Give the website (33) and Jenkins (1000) write access to the data folders, now and for new files (owners unchanged)
+# 3. Give the website (33) and Jenkins (1000) write access to the data folders, now and for new files (owners unchanged)
 cd /extra && sudo setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX \
   dumps eol_connector_data_files ckan_resources other_files gnfinder
 cd /extra/eol_docker/docker_eol_connectors
 
-# 3. SELinux: a rule that labels all of /extra for container use, then check the rule
+# 4. The GBIF jobs' download folder: create it if eol-archive doesn't have it (it inherits the write access from step 3)
+ls -ld /extra/other_files/GBIF_occurrence || sudo mkdir /extra/other_files/GBIF_occurrence
+
+# 5. SELinux: a rule that labels all of /extra for container use, then check the rule
 sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"
 matchpathcon /extra/eol_php_resources /extra/docker /extra/containerd
 
-# 4. Apply the labels to the existing 3.8 TB, in the background (an hour or more)
+# 6. Apply the labels to the existing 3.8 TB, in the background (an hour or more)
 sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &
 ```
 
-- [ ] `find /extra/eol_docker/jenkins_home/jobs -name config.xml | wc -l` shows **443** (47 folders + 396 jobs), and `/extra/eol_docker/jenkins_home/plugins.txt` exists.
+- [ ] `find /extra/eol_docker/jenkins_home/jobs -name config.xml | wc -l` shows **277** (40 folders + 237 jobs; the Mac's 443 minus the 166 Neo4j ones), `ls /extra/eol_docker/jenkins_home/jobs | grep -c Neo4j` prints **0**, and `/extra/eol_docker/jenkins_home/plugins.txt` exists.
+- [ ] The GBIF `grep` prints exactly **4 lines**, all `<command>cd /extra/other_files/GBIF_occurrence/…` (the 3 switched jobs, plus *GBIF Continent Checklists*, which already used it), and **no** `cd /Volumes` line. **STOP and fix it before proceeding** if a `cd /Volumes` line is left: that job would fail on the server.
+- [ ] `ls -ld /extra/other_files/GBIF_occurrence` shows a folder (or, if it was missing, the `mkdir` created it; `getfacl /extra/other_files/GBIF_occurrence` then shows `user:33:rwx` and `user:1000:rwx`).
 - [ ] `matchpathcon` prints `container_file_t` for `eol_php_resources` and `container_var_lib_t` for both `docker` and `containerd`. **STOP** if `/extra/docker` shows `container_file_t`.
 - [ ] The relabel runs in the background (an hour or more). Steps 4 and 5 can be done meanwhile. **Wait until `pgrep restorecon` prints nothing before step 6.**
 
@@ -326,6 +342,7 @@ These settings came over from the Mac, so they're changed once here:
 - [ ] User `web-trigger` → **revoke the copied API token, create a new one** → put it in `production.php` as `JENKINS_USER_TOKEN`.
 - [ ] Security: matrix authorization `eagbayani` = Administer, `web-trigger` = Read + Build. Agents TCP port: **Disabled**.
 - [ ] Manage Jenkins → no "Failed Loading plugin" messages.
+- [ ] **`01 EOL Connectors` → `(0026) WoRMS` → Configure → Post-build Actions:** remove *Build other projects* (`/00 Neo4j_PHP_connectors/01 Prepare DwCAs/005_WoRMS_x`, a Neo4j job that isn't on the server), then Save.
 - [ ] **Update the plugins with known security fixes.** The Mac's versions of 8 plugins have published Jenkins advisories (2026-04 to 2026-09): `credentials-binding`, `email-ext`, `gradle`, `ldap`, `pipeline-build-step`, `pipeline-groovy-lib`, `workflow-cps`, `workflow-multibranch`. Manage Jenkins → Plugins → **Updates** → select them (or all) → Update → tick *Restart Jenkins when installation is complete*. Jenkins offers only versions that work with 2.580.2.
 - [ ] Run `bash scripts/rhel9-verify.sh` again: `web → Jenkins login as 'web-trigger' works`, and **0 FAIL**.
 
