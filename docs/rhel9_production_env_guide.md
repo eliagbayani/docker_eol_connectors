@@ -13,10 +13,10 @@
 
 The stack **will run on RHEL 9** (the deployment server runs **9.8**) if you:
 
-1. Use **Linux paths** (e.g. `/opt/eol/...` or `/srv/eol/...`)
+1. Use **Linux paths** (`/extra/eol_docker/...`)
 2. Set **`MY_ENVIRONMENT=production`**
 3. Use **`.env.production.sample`** as the basis for server `.env` (`chmod 600 .env`)
-4. Populate **`/opt/eol/extra`** subdirs expected by `docker-entrypoint_production.sh`
+4. Keep the data in eol-archive's own **`/extra`** volume (`EXTRA_PATH=/extra`) and everything else in **`/extra/eol_docker`**: the root disk is only 10 GB
 5. Handle **SELinux** labels on bind mounts (`semanage fcontext` + `restorecon`)
 6. Keep non-public ports on **`127.0.0.1`** — Docker-published ports bypass firewalld
 7. Bind web to the server's **internal IP** (`WEB_PORTS=10.252.248.39:8080:80`) — HTTPS ends upstream at 160.111.248.42, no certificate on the server (see *Public access: editors.eol.org*)
@@ -30,10 +30,10 @@ Do the setup as **your own login, added to the `docker` group** (deploy step 1),
 | As root (`sudo …`) | As your own login |
 |---|---|
 | `dnf install` (Docker, `policycoreutils-python-utils`), `systemctl`, `usermod -aG docker` | `git clone` / `git pull` of this repo and of `eol_php8_code`, `FreshData_min`, `LiteratureEditor_min` |
-| creating `/opt/eol` and handing it to you; `scripts/rhel9-init-dirs.sh` | `.env`: copy, `chmod 600`, edit |
+| creating `/extra/eol_docker` and handing it to you; `scripts/rhel9-init-dirs.sh` | `.env`: copy, `chmod 600`, edit |
 | `chown 1000:1000` on `jenkins_home` / `jenkins_tmp`; `chown` of `webroot` to you | the work folders: `mkdir`, `ln -s`, `chmod 777` (step 5) |
-| SELinux (`semanage fcontext`, `restorecon`), firewalld | `docker compose build / up -d / logs / restart` |
-| rsync of `/extra` (keeps owners and reads every file); the inventory scripts | `bash scripts/rhel9-verify.sh` |
+| Docker's `daemon.json` and the mount drop-in; SELinux (`semanage fcontext`, `restorecon`); `setfacl` on `/extra`; firewalld | `docker compose build / up -d / logs / restart` |
+| the inventory scripts | `bash scripts/rhel9-verify.sh` |
 
 Why not everything as root:
 - **Files get the wrong owner.** Clones, `.env` and work folders made as root belong to root: a later `git pull` as yourself fails ("dubious ownership" / permission denied), and Jenkins (uid 1000) can't write where it should.
@@ -61,8 +61,8 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 
 | File | Purpose |
 |------|---------|
-| `.env.production.sample` | RHEL 9 production `.env` template (`/opt/eol/...` paths, localhost-bound admin ports) |
-| `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/opt/eol` |
+| `.env.production.sample` | RHEL 9 production `.env` template (`/extra/eol_docker/...` paths, localhost-bound admin ports) |
+| `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/extra/eol_docker` |
 | `scripts/rhel9-verify.sh` | Read-only check of the running stack after `up -d`: containers, ports, headers, blocked files, `info.php`/`test.php`, environment and `eol_app`, `production.php` settings, web → Jenkins login, Jenkins security, PHP/gnparser, memory and log limits, webroot link warnings. One OK/WARN/FAIL line each; exit 1 on any FAIL; never prints secrets |
 | `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
 | `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
@@ -105,11 +105,11 @@ NEO_USERNAME=neo4j
 NEO_PASSWORD=CHANGE_ME_neo4j_password
 NEO_DATABASE=neo4j          # was db.eol on Enterprise — must be neo4j on Community
 
-PATH_NEO4J_DATA=/opt/eol/neo4j/data
-PATH_NEO4J_LOGS=/opt/eol/neo4j/logs
-PATH_NEO4J_IMPORT=/opt/eol/neo4j/import
-PATH_NEO4J_IMPORT2=/opt/eol/neo4j/import2   # TraitBank CSV imports
-PATH_NEO4J_PLUGINS=/opt/eol/neo4j/plugins
+PATH_NEO4J_DATA=/extra/eol_docker/neo4j/data
+PATH_NEO4J_LOGS=/extra/eol_docker/neo4j/logs
+PATH_NEO4J_IMPORT=/extra/eol_docker/neo4j/import
+PATH_NEO4J_IMPORT2=/extra/eol_docker/neo4j/import2   # TraitBank CSV imports
+PATH_NEO4J_PLUGINS=/extra/eol_docker/neo4j/plugins
 
 PORT_7474=127.0.0.1:7474:7474   # localhost only — SSH tunnel
 PORT_7687=127.0.0.1:7687:7687
@@ -154,28 +154,34 @@ MATCH (n) RETURN count(n) AS nodes;
 
 ## Recommended directory layout on RHEL 9
 
+eol-archive's root disk is only 10 GB, so everything lives on its 9.1 TB data volume, `/extra`:
+
 ```text
-/opt/eol/
-├── mysql_data/              ← MYSQL_DATA_DIR (empty on first init)
-├── webroot/                 ← WEBROOT_PATH → /var/www/html
-│   └── eol_php8_code/       ← required for opendata symlink
-├── apache2_logs/            ← APACHE_LOGS
-├── jenkins_home/            ← PATH_JENKINS_HOME → /var/jenkins_home
-├── jenkins_tmp/             ← PATH_JENKINS_TMP → /jenkins_tmp
-├── python_projects/         ← PYTHON_APP → /usr/src/app
-├── neo4j/                   ← created by the init script; used only if a neo4j service is added
-│   ├── data/                ← PATH_NEO4J_DATA (persisted graph store)
-│   ├── logs/
-│   ├── import/
-│   ├── import2/             ← TraitBank CSV trees for neo4j-admin import
-│   └── plugins/
-└── extra/                   ← EXTRA_PATH → /extra
-    ├── ckan_resources/
-    ├── eol_connector_data_files/
-    ├── dumps/
-    ├── other_files/
-    └── gnfinder/
+/extra/                      ← EXTRA_PATH → /extra in the containers (eol-archive's data, kept in place)
+├── ckan_resources/          ← entrypoint links: uploaded_resources
+├── eol_connector_data_files/
+├── dumps/
+├── other_files/             ← created by the init script if missing
+├── gnfinder/                ← created by the init script if missing
+├── eol_php_resources/       ← target of eol_php8_code/applications/content_server/resources
+├── … (other eol-archive data, unchanged)
+├── docker/                  ← Docker's data-root (/etc/docker/daemon.json): images, build cache, container logs
+├── containerd/              ← containerd's root (/etc/containerd/config.toml): image layers on Docker 29+
+└── eol_docker/              ← EOL_BASE
+    ├── docker_eol_connectors/   ← this repo (git clone)
+    ├── mysql_data/              ← MYSQL_DATA_DIR (empty on first init)
+    ├── webroot/                 ← WEBROOT_PATH → /var/www/html
+    │   ├── eol_php8_code/       ← git clone + work folders (deploy step 5)
+    │   ├── FreshData_min/
+    │   └── LiteratureEditor_min/
+    ├── apache2_logs/            ← APACHE_LOGS
+    ├── jenkins_home/            ← PATH_JENKINS_HOME → /var/jenkins_home
+    ├── jenkins_tmp/             ← PATH_JENKINS_TMP → /jenkins_tmp
+    ├── python_projects/         ← PYTHON_APP → /usr/src/app
+    └── neo4j/                   ← created by the init script; used only if a neo4j service is added
 ```
+
+The PHP code doesn't change: it only sees the container paths `/var/www/html/...` and `/extra/...`.
 
 Create all dirs:
 
@@ -183,7 +189,7 @@ Create all dirs:
 sudo bash scripts/rhel9-init-dirs.sh
 ```
 
-Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
+Other paths: `sudo EOL_BASE=/srv/eol EXTRA_PATH=/srv/eol/extra bash scripts/rhel9-init-dirs.sh` (and the same paths in `.env`)
 
 ---
 
@@ -192,9 +198,9 @@ Custom base path: `sudo EOL_BASE=/srv/eol bash scripts/rhel9-init-dirs.sh`
 | Variable | Production value | Notes |
 |----------|------------------|-------|
 | `MY_ENVIRONMENT` | `production` | Uses `docker-entrypoint_production.sh`; eol_php8_code then uses the `production` and `jenkins_production` sections of `database.yml` |
-| `EXTRA_PATH` | `/opt/eol/extra` | Mounted as `/extra`; symlinks at startup |
-| `WEBROOT_PATH` | `/opt/eol/webroot` | PHP connector codebase |
-| `MYSQL_DATA_DIR` | `/opt/eol/mysql_data` | **Empty** on first DB init |
+| `EXTRA_PATH` | `/extra` | eol-archive's existing data volume; mounted as `/extra`; symlinks at startup |
+| `WEBROOT_PATH` | `/extra/eol_docker/webroot` | PHP connector codebase |
+| `MYSQL_DATA_DIR` | `/extra/eol_docker/mysql_data` | **Empty** on first DB init |
 | `MYSQL_USER` | `eol_app` (sample default) | Created by the MySQL image on first init with rights on `eol_production` only; the PHP code logs in as it (`database.yml`, `test.php`) |
 | `MYSQL_PASSWORD` | *(set in .env)* | Official MySQL env var |
 | `MYSQL_PORTS` | `127.0.0.1:4001:3306` | Localhost only |
@@ -236,38 +242,64 @@ chmod 600 .env
 # 1. Install Docker CE (from Docker's repo; remove the Podman docker shim first)
 sudo dnf remove -y podman-docker buildah 2>/dev/null || true
 sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin policycoreutils-python-utils
+# The root disk is only 10 GB: keep Docker's images, build cache and container logs on /extra (xfs, ftype=1).
+# Do this BEFORE Docker's first start, or move /var/lib/docker yourself afterwards.
+sudo mkdir -p /etc/docker /extra/docker /extra/containerd
+echo '{ "data-root": "/extra/docker" }' | sudo tee /etc/docker/daemon.json
+# Docker 29+ keeps images in containerd's own folder (/var/lib/containerd), not in data-root: move it too
+sudo sed -i '1i root = "/extra/containerd"' /etc/containerd/config.toml   # top-level key, before any [section]
+sudo semanage fcontext -a -e /var/lib/docker /extra/docker           # SELinux: label them like the defaults
+sudo semanage fcontext -a -e /var/lib/containerd /extra/containerd
+sudo restorecon -R /extra/docker /extra/containerd
+sudo systemctl restart containerd
+# Start Docker only once /extra is mounted (it comes from /etc/fstab):
+sudo mkdir -p /etc/systemd/system/docker.service.d
+printf '[Unit]\nRequiresMountsFor=/extra\n' | sudo tee /etc/systemd/system/docker.service.d/extra.conf
+sudo mkdir -p /etc/systemd/system/containerd.service.d
+sudo cp /etc/systemd/system/docker.service.d/extra.conf /etc/systemd/system/containerd.service.d/
+sudo systemctl daemon-reload
 sudo systemctl enable --now docker
+docker info -f '{{.DockerRootDir}}' 2>/dev/null || sudo docker info -f '{{.DockerRootDir}}'   # → /extra/docker
 sudo usermod -aG docker $USER   # re-login after. Note: docker group = root-equivalent access
 
 # 2. Clone repo as your own login (override file not included — gitignored)
-sudo mkdir -p /opt/eol && sudo chown $USER: /opt/eol   # /opt belongs to root
-git clone <repo-url> /opt/eol/docker_eol_connectors
-cd /opt/eol/docker_eol_connectors
+sudo mkdir -p /extra/eol_docker && sudo chown $USER: /extra/eol_docker   # /extra belongs to root
+chmod 700 /extra/eol_docker   # /extra is mounted in the containers: keep them out of here (each has its own mount)
+git clone <repo-url> /extra/eol_docker/docker_eol_connectors
+cd /extra/eol_docker/docker_eol_connectors
 
 # 3. Host directories + SELinux (persistent labels — survive a relabel)
+# Creates /extra/eol_docker/... and only the missing data folders in /extra (existing ones are kept)
 sudo bash scripts/rhel9-init-dirs.sh
-sudo chown -R 1000:1000 /opt/eol/jenkins_home /opt/eol/jenkins_tmp
-sudo chown $USER: /opt/eol/webroot   # init-dirs runs as root; step 5 clones into webroot as you
-sudo dnf install -y policycoreutils-python-utils   # provides semanage
-sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
-sudo restorecon -Rv /opt/eol
+sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
+sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
+# /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers
+# web is uid 33 and Jenkins uid 1000: give both write access where the code writes (existing + future files).
+cd /extra && sudo setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX \
+  dumps eol_connector_data_files ckan_resources other_files gnfinder
+cd /extra/eol_docker/docker_eol_connectors
+# SELinux: all of /extra (data + /extra/eol_docker). The rules from step 1 still win for /extra/docker and /extra/containerd.
+sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"
+matchpathcon /extra/eol_php_resources /extra/docker /extra/containerd   # → container_file_t, then the Docker/containerd labels
+sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &   # walks all 3.8 TB: can take an hour or more
+# wait for it (pgrep restorecon prints nothing) before step 6
 
 # 4. Configure env
 cp .env.production.sample .env
 chmod 600 .env
 # replace CHANGE_ME_* (openssl rand -hex 24); check ports; NEO_DATABASE=neo4j
 
-# 5. Application code (fresh git clones) + datasets (rsync from eol-archive)
+# 5. Application code (fresh git clones); the data is already in /extra
 # The code does NOT come from eol-archive: its webroot has the PHP 5.6 tree eol_php_code (plus FreshData,
 # LiteratureEditor), which eol_php8_code replaces. Clone the PHP 8 repos, as the user who will own the checkouts:
-cd /opt/eol/webroot
+cd /extra/eol_docker/webroot
 git clone https://github.com/eliagbayani/eol_php8_code.git
 git clone https://github.com/eliagbayani/FreshData_min.git
 git clone https://github.com/eliagbayani/LiteratureEditor_min.git
 # Work folders git doesn't track (on the Mac most are links to other drives or untracked folders).
 # temp_dev is a Mac-only development area: leave it out.
-cd /opt/eol/webroot/eol_php8_code
+cd /extra/eol_docker/webroot/eol_php8_code
 mkdir -p temp tmp/cache applications/content_server/tmp \
   applications/{BOLD2iNAT,BOLD2iNAT_csv,branch_graft,specimen_image_export,taxonomic_validation,trait_data_import,xls2dwca_jenkins}/temp \
   applications/{dwc_validator_jenkins,DwC_branch_extractor,genHigherClass,genHigherClass_jenkins,CheckListBank_tool}/temp \
@@ -278,21 +310,19 @@ chmod 777 temp tmp/cache applications/content_server/tmp applications/*/temp ../
 # rhel9-verify.sh (step 6) checks all 18 work folders: present, not a broken link, writable by web and Jenkins
 # (without dwc_validator_jenkins/temp every DwC validator upload fails, while Jenkins still shows SUCCESS: rehearsal 2026-11-05)
 
-# Datasets: rsync /extra from eol-archive into /opt/eol/extra — rsync -a, so file dates are kept.
-# It must include eol_php_resources/ (the resources link above points there).
-# From eol-archive's /var/www/html copy only folders still served from here (eoearth, eoearth_redirect_sys,
-# Leaflet_Cluster_map, github-php-client: decide per folder). Not eol_php_code, FreshData, LiteratureEditor.
-# Check the copy against the old server's inventory (made on eol-archive before the wipe):
-#   on eol-archive:  sudo env OUT=/home/<you>/eol_inventory_$(date +%Y%m%d) bash /home/<you>/eol-archive-inventory.sh /var/www/html=webroot /extra=extra
-#                    (/html is the same folder as /var/www/html there; full paths: in a root shell ~ is /root)
-#   here:            sudo bash scripts/eol-archive-inventory.sh /opt/eol/webroot=webroot /opt/eol/extra=extra
-#                    bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
-# Expected differences in webroot: eol_php_code, FreshData, LiteratureEditor (and any folder left behind) only
-# on the old side; eol_php8_code, FreshData_min, LiteratureEditor_min only on the new side.
+# Data: eol-archive was rebuilt in place (2026-11-04) and kept its /extra volume (9.1 TB, 3.8 TB used),
+# so nothing is copied. Check that the resources link above points at a real folder:
+ls -ld /extra/eol_php_resources/
+# Old webroot folders (eoearth, eoearth_redirect_sys, Leaflet_Cluster_map, github-php-client) were on the old
+# root disk: copy any that should still be served into /extra/eol_docker/webroot from a backup.
+# Optional check against the inventory made before the rebuild (if its report folder was saved):
+#   sudo bash scripts/eol-archive-inventory.sh /extra=extra    then
+#   bash scripts/eol-inventory-compare.sh <old report folder> <new report folder>
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
+df -h /     # root disk (10 GB) should still be about as full as before the build; images are under /extra
 docker compose -f docker-compose.yml up -d
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
@@ -319,7 +349,7 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.2
 - **Network team:** if the rebuilt server keeps internal IP `10.252.248.39`, nothing changes on .42 (still port 8080); otherwise .42 must be re-pointed.
 - **Cloudflare** (zone `eol.org`, Business plan, SSL mode *full*): uploads over **200 MB** and requests over **100 s** fail (524) — run long work as Jenkins jobs.
 - **Visitor IPs:** built in (`apache-php/zz-remoteip.conf`, `mod_remoteip`). Apache takes the visitor's IP from `X-Forwarded-For`, but only on requests from `REMOTEIP_PROXY` (default `10.252.248.42`; set it in `.env` if .42 changes). Cloudflare's own addresses (`apache-php/cloudflare-ips.txt`) are skipped. Logs and PHP's `REMOTE_ADDR` then show the visitor; nothing in the code uses it for access control.
-  - **Check after go-live:** open the site through `editors.eol.org`, then `tail /opt/eol/apache2_logs/access.log`. Your own public IP (e.g. from `curl ifconfig.me` on your laptop) should appear, not `10.252.248.42`.
+  - **Check after go-live:** open the site through `editors.eol.org`, then `tail /extra/eol_docker/apache2_logs/access.log`. Your own public IP (e.g. from `curl ifconfig.me` on your laptop) should appear, not `10.252.248.42`.
   - If it still shows `10.252.248.42`, .42 doesn't send `X-Forwarded-For`. Ask the network team which header it sends; if it only passes Cloudflare's `CF-Connecting-IP`, change `RemoteIPHeader` to that and rebuild web.
   - If it shows a `104.x`/`162.158.x`/`172.64.x` address, Cloudflare's IP list has changed: refresh `cloudflare-ips.txt` from https://www.cloudflare.com/ips-v4 and `/ips-v6`, rebuild web.
 - **Secure cookies:** PHP sees plain HTTP. If .42 sends `X-Forwarded-Proto`, add `SetEnvIf X-Forwarded-Proto https HTTPS=on`. Set `session.cookie_secure = 1` in `zz-production.ini` only if nobody uses the site over internal plain HTTP.
@@ -332,7 +362,7 @@ browser ──HTTPS──▶ Cloudflare (proxied) ──HTTPS──▶ 160.111.2
 ssh -L 8080:127.0.0.1:8080 <user>@<server>   # then browse http://localhost:8080
 ```
 
-**Jenkins first start:** 2.580.1 no longer bundles nine plugins (bouncycastle-api, command-launcher, jdk-tool, jaxb, trilead-api, sshd, javax-activation-api, javax-mail-api, instance-identity). Jenkins downloads them when needed — if the server cannot reach `updates.jenkins.io`, copy the `.jpi` files into `/opt/eol/jenkins_home/plugins/` before the first start. If you bring an existing `jenkins_home` over from an older Jenkins, follow README → *Upgrading Jenkins* (back up, update plugins before and after, check **Manage Old Data**).
+**Jenkins first start:** 2.580.1 no longer bundles nine plugins (bouncycastle-api, command-launcher, jdk-tool, jaxb, trilead-api, sshd, javax-activation-api, javax-mail-api, instance-identity). Jenkins downloads them when needed — if the server cannot reach `updates.jenkins.io`, copy the `.jpi` files into `/extra/eol_docker/jenkins_home/plugins/` before the first start. If you bring an existing `jenkins_home` over from an older Jenkins, follow README → *Upgrading Jenkins* (back up, update plugins before and after, check **Manage Old Data**).
 
 ### Verify
 
@@ -349,7 +379,7 @@ docker compose -f docker-compose.yml exec web php -v
 docker compose -f docker-compose.yml exec jenkins php -v
 
 # Jenkins version + startup
-cat /opt/eol/jenkins_home/jenkins.install.InstallUtil.lastExecVersion   # 2.580.2
+cat /extra/eol_docker/jenkins_home/jenkins.install.InstallUtil.lastExecVersion   # 2.580.2
 docker compose -f docker-compose.yml logs jenkins | grep -E "fully up and running|Failed Loading plugin"
 ```
 
@@ -385,7 +415,7 @@ production:
 
 Same for `jenkins_production`. Quote the password. Use the app user, not root (N3): root stays for admin work by hand, and its password lives only in `.env`. Use **new** passwords on the server: everything in this repo's git history, and eol-archive's old `database.yml`, counts as exposed.
 
-`test.php` runs `shell_exec`: put it in `/opt/eol/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
+`test.php` runs `shell_exec`: put it in `/extra/eol_docker/webroot` by hand for the smoke test, then remove it. The production image and entrypoint never copy `info.php` (phpinfo); if the webroot was copied from the Mac, delete any `info.php` in it (the web container logs a warning when it finds one).
 
 ---
 
@@ -413,7 +443,7 @@ The three base images (`php:8.4.27-apache`, `mysql:8.4.13-oraclelinux9`, `jenkin
 
 Routine:
 
-1. **Rebuild with `--pull` now and then** (e.g. monthly). The projects republish the same tags with fixed OS packages, so a rebuild picks them up with no file changes. Back up `/opt/eol/jenkins_home` first.
+1. **Rebuild with `--pull` now and then** (e.g. monthly). The projects republish the same tags with fixed OS packages, so a rebuild picks them up with no file changes. Back up `/extra/eol_docker/jenkins_home` first.
    ```bash
    docker compose -f docker-compose.yml build --no-cache --pull
    docker compose -f docker-compose.yml up -d
@@ -431,10 +461,10 @@ Routine:
 
 | Issue | Detail |
 |-------|--------|
-| Apache log looks cut off | `rotatelogs -n 5` cycles `access.log` → `access.log.1` … `.4` → back to `access.log` (50 MB each; `error.log` 20 MB). The newest lines may be in any of them: `ls -lt /opt/eol/apache2_logs` |
+| Apache log looks cut off | `rotatelogs -n 5` cycles `access.log` → `access.log.1` … `.4` → back to `access.log` (50 MB each; `error.log` 20 MB). The newest lines may be in any of them: `ls -lt /extra/eol_docker/apache2_logs` |
 | A container is killed with exit code 137 | It hit its memory limit (`docker inspect <container> --format '{{.State.OOMKilled}}'`). Raise `*_MEM_LIMIT` in `.env`, then `docker compose -f docker-compose.yml up -d` |
 | `required variable X is missing a value` | `X` is missing or empty in `.env` (M8). Add it (see `.env.production.sample`); Compose checks this before starting anything |
-| `docker compose logs web` shows `WARNING: … broken in the container` or `… is missing or a broken link` | The webroot (copied from eol-archive) has a link the containers can't follow: they see only `/var/www/html` and `/extra`. Re-point it, e.g. `ln -sfn /extra/other_files /opt/eol/webroot/other_files` (target as seen **inside** the container), or replace it with a real folder. The inventory's `webroot.links_not_in_docker.txt` lists these before the copy |
+| `docker compose logs web` shows `WARNING: … broken in the container` or `… is missing or a broken link` | The webroot (copied from eol-archive) has a link the containers can't follow: they see only `/var/www/html` and `/extra`. Re-point it, e.g. `ln -sfn /extra/other_files /extra/eol_docker/webroot/other_files` (target as seen **inside** the container), or replace it with a real folder. The inventory's `webroot.links_not_in_docker.txt` lists these before the copy |
 | Build stops: `gnparser download does not match SHA-256` | The download changed or `GNPARSER_VERSION`/`GNPARSER_URL` was changed (M3). For a new version, take the SHA-256 from the GitHub release page, check it, and set `GNPARSER_SHA256` in `.env` |
 | `UnsupportedAdministrationCommand: STOP DATABASE` | Enterprise-only — use `docker compose stop neo4j` |
 | `db.eol` not found | Community uses **`neo4j`** — update `NEO_DATABASE` and app configs |
@@ -442,7 +472,7 @@ Routine:
 | Enterprise dump → Community | Block dumps may fail — re-import CSV instead |
 | `no such service: neo4j` with `-f docker-compose.yml` | Expected — Neo4j is defined only in the Mac override |
 | First MySQL init | `MYSQL_DATA_DIR` must be empty; init SQL runs once only |
-| SELinux permission denied | `semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"` + `restorecon -Rv /opt/eol`. If you add mount suffixes, use `:z` (webroot / extra are shared by web + jenkins), not `:Z` |
+| SELinux permission denied | `semanage fcontext -a -t container_file_t "/extra(/.*)?"` + `restorecon -R /extra` (keep the `-e /var/lib/docker /extra/docker` rule from step 1). If you add mount suffixes, use `:z` (webroot / extra are shared by web + jenkins), not `:Z` |
 | Port open although firewalld blocks it | Docker bypasses firewalld — bind to `127.0.0.1` in `.env` |
 | Jenkins build: `ERROR: PHP is older than 8.4.27` | Stale apt layer → `build --no-cache --pull jenkins` |
 | Jenkins: `Failed Loading plugin … Update required` | Update the named dependency plugin(s), restart |
@@ -461,7 +491,7 @@ Routine:
 | Override file | local only (`docker-compose.override.yml`, gitignored) | not in repo |
 | `MY_ENVIRONMENT` | `development` | `production` |
 | Symlinks | `/Volumes/AKiTiO4/...` (dev entrypoint) | `/extra/...` (prod entrypoint) |
-| Base path | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
+| Base path | `/Volumes/OWC_Express/...` | `/extra/eol_docker/...` |
 | Env template | `.env.development.sample` | `.env.production.sample` |
 | Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
 | `NEO_DATABASE` | **`neo4j`** | **`neo4j`** (passed to jenkins) |
@@ -481,13 +511,13 @@ Routine:
 docker compose -f docker-compose.yml build --no-cache --pull web
 docker compose -f docker-compose.yml up -d --force-recreate web
 
-# Rebuild jenkins (back up /opt/eol/jenkins_home first when the Jenkins version changes)
+# Rebuild jenkins (back up /extra/eol_docker/jenkins_home first when the Jenkins version changes)
 docker compose -f docker-compose.yml build --no-cache --pull jenkins
 docker compose -f docker-compose.yml up -d jenkins
 
 # Re-init MySQL (destroys data — backup first)
 docker compose -f docker-compose.yml down
-sudo rm -rf /opt/eol/mysql_data/*
+sudo rm -rf /extra/eol_docker/mysql_data/*
 docker compose -f docker-compose.yml build --no-cache db
 docker compose -f docker-compose.yml up -d db
 

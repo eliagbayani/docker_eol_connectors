@@ -23,7 +23,7 @@ tools.
 | Runtime | Purpose |
 |---------|---------|
 | **Mac (development)** | Local dev with `/Volumes` symlinks and override file |
-| **RHEL 9 (production)** | Archive/server deployment under `/opt/eol/...` |
+| **RHEL 9 (production)** | Archive/server deployment under `/extra/eol_docker/...`, data in `/extra` |
 
 This repo is **separate from** `dock_eol_conn_wf` [GitHub](https://github.com/eliagbayani/dock_eol_conn_wf), which builds only the slim **web** image for Kubernetes (`ghcr.io/eliagbayani/web_k8s-service`).
 
@@ -69,7 +69,7 @@ docker_eol_connectors/
 ├── docs/
 │   └── rhel9_production_env_guide.md
 ├── scripts/
-│   ├── rhel9-init-dirs.sh              ← create /opt/eol host dirs on RHEL
+│   ├── rhel9-init-dirs.sh              ← create /extra/eol_docker host dirs on RHEL
 │   ├── rhel9-verify.sh                 ← read-only OK/WARN/FAIL check of the running production stack
 │   ├── eol-archive-inventory.sh        ← read-only list of the old server's data (sizes, counts, not-in-git, crontabs)
 │   └── eol-inventory-compare.sh        ← check a copy against that list
@@ -155,25 +155,28 @@ $db   = 'eol_development'; // matches MY_ENVIRONMENT
 ## Quick start — RHEL 9 production
 
 ```bash
-# As your own login (in the docker group), sudo only where shown; see "Which user runs what" in the RHEL guide
-sudo mkdir -p /opt/eol && sudo chown $USER: /opt/eol
-git clone <repo> /opt/eol/docker_eol_connectors
-cd /opt/eol/docker_eol_connectors
+# As your own login (in the docker group), sudo only where shown; see "Which user runs what" in the RHEL guide.
+# Everything lives on eol-archive's data volume /extra (the root disk is only 10 GB). First, Docker's data-root
+# /extra/docker and the mount drop-in: RHEL guide step 1.
+sudo mkdir -p /extra/eol_docker && sudo chown $USER: /extra/eol_docker && chmod 700 /extra/eol_docker
+git clone <repo> /extra/eol_docker/docker_eol_connectors
+cd /extra/eol_docker/docker_eol_connectors
 
 sudo bash scripts/rhel9-init-dirs.sh
-sudo chown $USER: /opt/eol/webroot
+sudo chown $USER: /extra/eol_docker/webroot
 cp .env.production.sample .env
 chmod 600 .env
 # Replace every CHANGE_ME_* value — generate each password with:  openssl rand -hex 24
 # Do not reuse old dev passwords from git history.
 
-sudo chown -R 1000:1000 /opt/eol/jenkins_home /opt/eol/jenkins_tmp
+sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 
 # SELinux (if enforcing) — persistent labels, survive a relabel:
-sudo semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"
-sudo restorecon -Rv /opt/eol
+sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"   # after the /extra/docker rule (guide step 1)
+sudo restorecon -R /extra                                      # slow: 3.8 TB
+# web (33) and Jenkins (1000) write into eol-archive's /extra folders: setfacl, RHEL guide step 3
 
-# Populate /opt/eol/webroot (git clone the PHP 8 repos + work folders) and /opt/eol/extra (rsync): RHEL guide step 5
+# Populate /extra/eol_docker/webroot (git clone the PHP 8 repos + work folders): RHEL guide step 5. The data is already in /extra
 # In eol_php8_code: config/database.yml → host: db, port: 3306, username: eol_app (quoted MYSQL_PASSWORD);
 #                   config/environments/production.php → JENKINS_DOMAIN 'jenkins:8080' + web-trigger token
 
@@ -470,9 +473,9 @@ docker image prune -f
 | `MY_ENVIRONMENT` | `development` | `production` |
 | Override file | `docker-compose.override.yml` (from `.sample`) | **must not exist** |
 | Services | web, db, jenkins, **neo4j** | web, db, jenkins only |
-| Base paths | `/Volumes/OWC_Express/...` | `/opt/eol/...` |
+| Base paths | `/Volumes/OWC_Express/...` | `/extra/eol_docker/...` |
 | Compose | `docker compose up -d` | `docker compose -f docker-compose.yml up -d` |
-| Extra data | `/Volumes` mount + dev symlinks | `/opt/eol/extra` → `/extra` |
+| Extra data | `/Volumes` mount + dev symlinks | eol-archive's own `/extra` volume (`EXTRA_PATH=/extra`) |
 | Non-public ports | `127.0.0.1` | `127.0.0.1` (SSH tunnel) |
 | Web port | `127.0.0.1:81` | `10.252.248.39:8080` — public via Cloudflare → 160.111.248.42 |
 | PHP errors | displayed | logged only (`docker compose logs web`) |
@@ -489,7 +492,7 @@ docker image prune -f
 | 403 on `eol_php8_code/config/…`, `*.yml`, `vendor/` | Expected — denied in `apache2.conf` (secrets/code not downloadable) |
 | Blank page / no PHP error in production | Errors are logged, not shown — `docker compose logs web`, or `ini_set('display_errors', true)` on that page |
 | Web tool can't start a Jenkins job | `JENKINS_DOMAIN` must be `jenkins:8080`; `web-trigger` token valid and has Build on the job |
-| Permission denied on RHEL | SELinux — `semanage fcontext -a -t container_file_t "/opt/eol(/.*)?"` then `restorecon -Rv /opt/eol` |
+| Permission denied on RHEL | SELinux — `semanage fcontext -a -t container_file_t "/extra/eol_docker(/.*)?"` then `restorecon -Rv /extra/eol_docker` |
 | Override on production | Should not exist — gitignored; use `-f docker-compose.yml` only |
 | Neo4j missing on Mac | Copy `docker-compose.override.sample.yml` → `docker-compose.override.yml` |
 | Neo4j mount error on Mac | External drive not in Docker File Sharing (`/Volumes/Crucial_2TB`, etc.) |
