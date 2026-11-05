@@ -9,7 +9,7 @@ The short version of `docs/rhel9_production_env_guide.md` (deploy steps 1–8). 
 
 Before you start:
 - [ ] The Mac's repo, `eol_php8_code`, `FreshData_min` and `LiteratureEditor_min` are pushed to GitHub.
-- [ ] Passwords are ready, made on the server with `openssl rand -hex 24`: MySQL root, MySQL `eol_app`, Neo4j. Never reuse old ones.
+- [ ] Nothing to prepare for passwords: step 4 makes new ones on the server with `openssl rand -hex 24`. Never reuse old ones.
 
 ---
 
@@ -80,12 +80,19 @@ sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &
 
 ## 4. Settings (`.env`)
 
+Each `openssl rand -hex 24` gives a new random 48-character password, written straight into `.env`. Nothing is shown on screen.
 ```bash
+cd /extra/eol_docker/docker_eol_connectors
 cp .env.production.sample .env && chmod 600 .env
-vi .env     # each CHANGE_ME_* → its new password
-grep -c CHANGE_ME .env
+sed -i "s/^MYSQL_ROOT_PASSWORD=CHANGE_ME.*/MYSQL_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env
+sed -i "s/^MYSQL_PASSWORD=CHANGE_ME.*/MYSQL_PASSWORD=$(openssl rand -hex 24)/" .env
+sed -i "s/^NEO_PASSWORD=CHANGE_ME.*/NEO_PASSWORD=$(openssl rand -hex 24)/" .env
+grep -v '^\s*#' .env | grep -c CHANGE_ME
+grep -E '^(MYSQL_ROOT_PASSWORD|MYSQL_PASSWORD|NEO_PASSWORD)=' .env | awk -F= '{ print $1, length($2), "chars" }'
 ```
-- [ ] `grep -c` shows only commented-out lines, or 0. Leave the ports and paths as they are in the sample.
+- [ ] `grep -c` prints **0**, and the last command prints the three names with **48 chars** each (the passwords themselves aren't shown).
+- [ ] Leave the ports and paths as they are in the sample.
+- To see a password later (e.g. to log in to MySQL by hand): `grep '^MYSQL_ROOT_PASSWORD=' .env`. Don't paste it anywhere.
 
 ## 5. Code, work folders, config files
 
@@ -118,9 +125,16 @@ scp environments/production.php environments/jenkins_production.php <you>@eol-ar
 **On the server:**
 ```bash
 cd /extra/eol_docker/webroot/eol_php8_code/config
+# production + jenkins_production get the MYSQL_PASSWORD from .env; the other sections (the Mac's) get an empty password
+P=$(grep '^MYSQL_PASSWORD=' /extra/eol_docker/docker_eol_connectors/.env | cut -d= -f2)
+awk -v p="$P" '/^[a-z_]+:[[:space:]]*$/ { s = $1 }
+  /^[[:space:]]+password:/ { if (s == "production:" || s == "jenkins_production:") sub(/password:.*/, "password: \"" p "\""); else sub(/password:.*/, "password: \"\"") }
+  { print }' database.yml > database.yml.new && mv database.yml.new database.yml
+grep -cF "\"$P\"" database.yml; unset P
 chmod 640 database.yml environments/production.php environments/jenkins_production.php
-vi database.yml   # production + jenkins_production: host: db, port: 3306, username: eol_app, password: "<MYSQL_PASSWORD from .env>"
+grep -A4 -E '^(production|jenkins_production):' database.yml | grep -E '^\s+(host|username):'
 ```
+- [ ] `grep -cF` prints **2** (both production sections have the password), and the last command shows `host: db` and `username: eol_app` twice.
 - [ ] `production.php` has `JENKINS_DOMAIN` set to `jenkins:8080`. The token is replaced after step 6.
 
 ## 6. Build, start, check
