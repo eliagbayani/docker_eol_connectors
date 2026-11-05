@@ -230,7 +230,8 @@ sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 
 # The root disk is only 10 GB: keep Docker's images, build cache and container logs on /extra (xfs, ftype=1).
 # Do this BEFORE Docker's first start, or move /var/lib/docker yourself afterwards.
 sudo mkdir -p /etc/docker /extra/docker /extra/containerd
-echo '{ "data-root": "/extra/docker" }' | sudo tee /etc/docker/daemon.json
+# Also Docker's internal networks on 10.10.x.x, as the network team recommends (not the default 172.17-172.31):
+echo '{ "data-root": "/extra/docker", "bip": "10.10.1.1/24", "default-address-pools": [ { "base": "10.10.2.0/16", "size": 24 } ] }' | sudo tee /etc/docker/daemon.json
 # Docker 29+ keeps images in containerd's own folder (/var/lib/containerd), not in data-root: move it too
 sudo sed -i '1i root = "/extra/containerd"' /etc/containerd/config.toml   # top-level key, before any [section]
 sudo semanage fcontext -a -e /var/lib/docker /extra/docker           # SELinux: label them like the defaults

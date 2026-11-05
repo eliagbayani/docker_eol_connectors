@@ -15,7 +15,7 @@ The EOL tools (website, MySQL and Jenkins) run as three Docker containers. Chang
 |---|---|---|
 | **Packages** | Docker's repository (`download.docker.com/linux/rhel`) added; `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-compose-plugin` and `policycoreutils-python-utils` installed; `podman-docker` / `buildah` removed if present | 1 |
 | **Services** | `docker` (and `containerd`) enabled at boot, and wait for the `/extra` mount (drop-ins in `/etc/systemd/system/{docker,containerd}.service.d/extra.conf`). The host's own `httpd` is disabled if present | 1, 7 |
-| **System files** | `/etc/docker/daemon.json` (`data-root` = `/extra/docker`); one line at the top of `/etc/containerd/config.toml` (`root = "/extra/containerd"`), both checked in step 1. The 10 GB root disk stays essentially unchanged | 1, 6 |
+| **System files** | `/etc/docker/daemon.json` (`data-root` = `/extra/docker`; Docker's internal networks on `10.10.1.1/24` and `10.10.0.0/16`, as the network team recommended); one line at the top of `/etc/containerd/config.toml` (`root = "/extra/containerd"`), both checked in step 1. The 10 GB root disk stays essentially unchanged | 1, 6 |
 | **SELinux** (stays Enforcing) | persistent rules: `/extra(/.*)?` → `container_file_t`; `/extra/docker` and `/extra/containerd` labelled like `/var/lib/docker` and `/var/lib/containerd`. A one-time `restorecon -R /extra` (3.8 TB) relabels the existing data from `default_t` | 1, 3 |
 | **`/extra`** | new folders `docker/`, `containerd/`, `eol_docker/` (mode 700, owned by the deploying login) and `gnfinder/`. ACLs on `dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files` and `gnfinder` give uid 33 (website) and uid 1000 (Jenkins) write access. **Existing data, owners and modes are not changed** | 1, 3 |
 | **Network: listening** | **`10.252.248.39:8080`**: the website, plain HTTP, for the front device 160.111.248.42. `127.0.0.1:8080` (Jenkins) and `127.0.0.1:4001` (MySQL): local only, reached through SSH. **Nothing listens on the public 160.111.248.39.** Docker adds its own nftables rules for the published port; firewalld isn't changed | 6 |
@@ -69,9 +69,11 @@ sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker
 #    policycoreutils-python-utils isn't Docker: it gives `semanage`, used below for SELinux.
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin policycoreutils-python-utils
 
-# 4. Put Docker's and containerd's storage on /extra (the 10 GB system disk is too small)
+# 4. Docker's settings: its storage on /extra (the 10 GB system disk is too small), and its internal networks
+#    on 10.10.x.x, as the network team recommends (instead of Docker's default 172.17-172.31 ranges);
+#    then containerd's storage on /extra too
 sudo mkdir -p /etc/docker /extra/docker /extra/containerd
-echo '{ "data-root": "/extra/docker" }' | sudo tee /etc/docker/daemon.json
+echo '{ "data-root": "/extra/docker", "bip": "10.10.1.1/24", "default-address-pools": [ { "base": "10.10.2.0/16", "size": 24 } ] }' | sudo tee /etc/docker/daemon.json
 sudo sed -i '1i root = "/extra/containerd"' /etc/containerd/config.toml
 
 # 5. SELinux: label the new storage folders like Docker's default ones
@@ -89,9 +91,10 @@ sudo systemctl daemon-reload
 # 7. Start Docker now and at every boot
 sudo systemctl enable --now docker
 
-# 8. Check where the storage went (see the two checks below)
+# 8. Check where the storage went, and Docker's network (see the checks below)
 sudo docker info -f '{{.DockerRootDir}}'
 sudo containerd config dump | grep -m1 '^root'
+ip -4 addr show docker0 | grep inet
 
 # 9. Let your login run docker without sudo (takes effect after you log in again)
 sudo usermod -aG docker $USER
@@ -99,6 +102,7 @@ sudo usermod -aG docker $USER
 
 - [ ] **Check that Docker uses `/extra`:** `docker info` prints **`/extra/docker`**. If it prints `/var/lib/docker` (Docker's default), the `daemon.json` setting didn't take effect. **STOP and fix it before proceeding.**
 - [ ] **Check that containerd uses `/extra`:** the `grep` prints **`root = '/extra/containerd'`** (a warning line before it, "Configuration migrated from version 0", is normal). If it prints `/var/lib/containerd` (containerd's default), the `config.toml` line didn't take effect. **STOP and fix it before proceeding.**
+- [ ] **Check Docker's network:** `ip … docker0` shows **`inet 10.10.1.1/24`**. If it shows `172.17.0.1/16` (Docker's default), the network part of `daemon.json` didn't take effect. **STOP and fix it before proceeding.**
 - [ ] **Log out and back in** (for the `docker` group), then `docker ps` works without `sudo`.
 
 ## 2. The Docker package
@@ -312,6 +316,7 @@ ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l
 # 5. Start web, db and jenkins (they also start again at every boot), and show their state
 docker compose -f docker-compose.yml up -d
 docker compose -f docker-compose.yml ps
+docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' docker_eol_connectors_default
 
 # 6. The server check
 bash scripts/rhel9-verify.sh
@@ -319,7 +324,7 @@ bash scripts/rhel9-verify.sh
 
 - [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used, and `du` shows `/var/lib/docker` and `/var/lib/containerd` as absent or tiny (the images are under `/extra`).
 - [ ] The plugin tool ends with `Done`, and `ls … | wc -l` prints **94**. **STOP** if it's fewer, or the tool can't reach `updates.jenkins.io`: Jenkins can't read its security settings or folders without them. Run the command again (it retries mirrors), or copy the plugins from the Mac instead: `rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/plugins/ archive:/extra/eol_docker/jenkins_home/plugins/`, then `sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home/plugins`.
-- [ ] `ps`: db `healthy`; web and jenkins `Up`.
+- [ ] `ps`: db `healthy`; web and jenkins `Up`. The stack's network is a **`10.10.x.0/24`** (e.g. `10.10.0.0/24`), from the network team's range.
 - [ ] **`rhel9-verify.sh` ends with `0 FAIL`.** Every FAIL line says what to fix. Fix it and run the check again. Don't go on with a FAIL.
 
 **Jenkins** listens only on the server's `127.0.0.1:8080`. Open it from the Mac through an SSH tunnel to your `archive` host (eol-archive, reached through `si`; see the guide, *Jenkins from your Mac*). No Safari proxy setting is needed (the old SOCKS + `http://160.111.248.39:8090` way no longer works):
