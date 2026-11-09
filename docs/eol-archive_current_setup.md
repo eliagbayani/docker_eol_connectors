@@ -26,9 +26,9 @@ Three containers, from the Docker package in `/extra/eol_docker/docker_eol_conne
 
 | Container | Software | Listens on | Memory cap |
 |---|---|---|---|
-| `docker_eol_connectors-web-1` | Apache + PHP **8.4.27** (sury), gnparser 1.15.0 | **160.111.248.39:443** (HTTPS, Cloudflare only) and **10.252.248.39:8080** (plain HTTP, internal) | 6g (planned **8g**) |
+| `docker_eol_connectors-web-1` | Apache + PHP **8.4.27** (sury), gnparser 1.15.0 | **160.111.248.39:443** (HTTPS, Cloudflare only) and **10.252.248.39:8080** (plain HTTP, internal) | 6g |
 | `docker_eol_connectors-db-1` | MySQL **8.4.13** | 127.0.0.1:4001 | 2g |
-| `docker_eol_connectors-jenkins-1` | Jenkins **2.580.2** (JDK 21), PHP 8.4, gnparser | 127.0.0.1:8080 | 32g (planned **40g**) |
+| `docker_eol_connectors-jenkins-1` | Jenkins **2.580.2** (JDK 21), PHP 8.4, gnparser | 127.0.0.1:8080 | 32g |
 
 - Docker 29.9.3 with Docker Compose, storage on `/extra/docker` and `/extra/containerd`, internal networks in **10.10.0.0/16** (the stack's network is `10.10.0.0/24`, the default bridge `10.10.1.0/24`).
 - All three start at boot (`restart: unless-stopped`; Docker waits for `/extra`).
@@ -61,7 +61,7 @@ Everything here was set or changed on the running server, and the snapshot captu
 **`.env`** (from `.env.production.sample`, then):
 - two new random passwords (`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, 48 characters)
 - `SELF_FETCH_HOST=editors.eol.org`, `SELF_FETCH_IP=160.111.248.39` (added 2026-11-09): inside web and jenkins, the code's requests to its own site go straight to the server, because through Cloudflare they get 403 from its bot check
-- planned: `JENKINS_MEM_LIMIT=40g`, `WEB_MEM_LIMIT=8g` (database stays at 2g)
+- memory caps: the defaults (jenkins 32g, web 6g, db 2g). Raising them to `JENKINS_MEM_LIMIT=40g` and `WEB_MEM_LIMIT=8g` was considered and postponed (2026-11-10); the server has room for it.
 
 **`production.php`** (copied from the Mac, then):
 - `WEB_ROOT` = `https://editors.eol.org/eol_php8_code/` (the Mac's `host.docker.internal:81` breaks the web tools' download links on the server)
