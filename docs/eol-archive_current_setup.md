@@ -1,6 +1,6 @@
 # eol-archive: the current setup, and how to rebuild it
 
-**As of 2026-11-10.** editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **81 OK, 0 WARN, 0 FAIL**.
+**As of 2026-11-10** (after the server restart of 2026-11-09). editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **81 OK, 0 WARN, 0 FAIL**.
 
 This document records everything that makes up the running setup: what is in git, what is not, and every setting changed after the deployment checklist (`docs/deploy_day_checklist.md`). With the checklist, this document and a snapshot archive (section 6), the stack can be rebuilt on another machine.
 
@@ -104,6 +104,32 @@ Everything here was set or changed on the running server, and the snapshot captu
 | Change a setting in `.env` | edit `.env`, then `docker compose -f docker-compose.yml up -d` (recreates the containers that use it) |
 | Snapshot of all settings | `sudo bash scripts/rhel9-snapshot.sh`, then copy it off the server (section 6) |
 
+### After a server restart
+
+The admins restart eol-archive now and then for system updates (2026-11-04, and 2026-11-09 at 14:16 New York time for a new kernel). **The stack needs nothing:** Docker starts after `/extra` is mounted, and the three containers come back by themselves (`restart: unless-stopped`). The nightly backup (crontab) and Jenkins' settings are unaffected.
+
+1. **Did it restart, and cleanly?**
+   ```bash
+   uptime -s
+   last -x reboot shutdown | head -4
+   ```
+2. **Check the stack:** wait 2 minutes after boot (Jenkins starts slowly), then:
+   ```bash
+   cd /extra/eol_docker/docker_eol_connectors
+   docker compose -f docker-compose.yml ps --format '{{.Name}}  {{.Status}}'
+   bash scripts/rhel9-verify.sh 2>&1 | grep -E 'FAIL|WARN|Summary'
+   ```
+   → all three `Up`, db `(healthy)`, `0 FAIL`.
+3. **Long background jobs started by hand stop at a restart.** That means `setfacl`, `restorecon`, `find -delete` and `rm -rf` runs, even when detached with `setsid nohup`. A job whose log has no `ALL FINISHED`, and has no process in `pgrep -a -x 'find|rm|restorecon|setfacl' | cut -c1-80`, was stopped. Restart it the same way, with `sudo -v` first. Each continues with what's left:
+   - **Deleting** (`find … -mindepth 1 -delete`, `rm -rf` of a list): the same command finds only what's still there. Rebuild a list from the current state, not the old list.
+   - **Relabelling:** don't run `restorecon -R /extra` again from the start. Rebuild the list from the current labels: folders the run hadn't reached still carry an old label, **`unlabeled_t` or `default_t`** (check for both), at each level the run was inside:
+     ```bash
+     for d in /extra/*/ /extra/other_files/*/ /extra/other_files/GBIF_occurrence/*/; do ls -Zd "$d"; done 2>/dev/null \
+       | grep -E 'unlabeled_t|default_t' | awk '{print $2}' | sed 's#/$##' > /tmp/relabel_list.txt
+     ```
+     Add the folder it was working in when it stopped: that folder's own label is new, but not all of its contents. Then run `restorecon -R` on each path in the list, detached, with a log.
+   - **`setfacl`:** redo the folders whose log has no `done:` line; redoing a folder is harmless.
+
 ## 6. Saving everything: the snapshot
 
 `scripts/rhel9-snapshot.sh` packs everything that is not in git into one archive:
@@ -152,3 +178,6 @@ Make a new snapshot after any change to the settings, Jenkins' jobs or the host.
 - MySQL's first start takes minutes: the health check uses TCP and allows 10 minutes.
 - Through Cloudflare, the server's own requests get 403: hence `SELF_FETCH_HOST` / `SELF_FETCH_IP`.
 - Right after a restart, Jenkins needs 1–2 minutes before the check passes.
+- SELinux's old labels come in two kinds on this volume: `default_t` and `unlabeled_t`. A check for unlabelled folders must look for both (on 2026-11-08 only `default_t` was checked, and 31 folders in `other_files` were missed).
+- A server restart stops long background jobs, but not the stack: restart the jobs from the current state (section 5, *After a server restart*).
+- Long pastes through the two SSH hops can arrive garbled. Paste long commands in short pieces, and run `sudo -v` on its own first.
