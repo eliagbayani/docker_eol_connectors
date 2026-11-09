@@ -115,7 +115,8 @@ else FAIL "no certificate at HTTPS_CERTS_PATH/editors.eol.org.crt (docker logs w
 # Self-fetches (SELF_FETCH_HOST/IP in .env): the code's own requests to WEB_ROOT must not go through Cloudflare (403)
 SFH=$(envval SELF_FETCH_HOST); SFI=$(envval SELF_FETCH_IP)
 if [ -n "$SFH" ] && [ -n "$SFI" ]; then
-    got=$(docker exec "$JEN" getent hosts "$SFH" | awk '{print $1}' | head -1)
+    # ahosts = the lookup programs use (getaddrinfo); "hosts" would try IPv6 first and find Cloudflare's public AAAA
+    got=$(docker exec "$JEN" getent ahosts "$SFH" | awk 'NR==1{print $1}')
     [ "$got" = "$SFI" ] && OK "in Jenkins, $SFH → $SFI (self-fetches skip Cloudflare)" || FAIL "in Jenkins, $SFH → '$got' (expected $SFI: docker compose up -d to apply extra_hosts)"
     c=$(docker exec "$JEN" curl -sk -m 10 -o /dev/null -w '%{http_code}' "https://$SFH${PG:=/eol_php8_code/applications/dwc_validator_jenkins/main.php}")
     [ "$c" = 200 ] && OK "Jenkins → https://$SFH$PG → 200" || FAIL "Jenkins → https://$SFH$PG → $c (expected 200; is 10.10.0.0/16 in HTTPS_ALSO_ALLOW?)"
