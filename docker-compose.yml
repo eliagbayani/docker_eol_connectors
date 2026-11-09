@@ -27,10 +27,16 @@ services:
     restart: unless-stopped
     healthcheck:
       # M2: password via MYSQL_PWD, not the command line (host `ps` would show it)
-      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h localhost -u root --silent"]
+      # -h 127.0.0.1 (TCP), not localhost (socket): during the first start MySQL's entrypoint runs a temporary
+      # server without networking to load the init files; over the socket it already answers ping, so the
+      # db looked healthy (and web/jenkins started) before the real server was up.
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
       interval: 5s
       timeout: 5s
       retries: 5
+      # First start on a new, empty mysql_data: the init takes minutes on eol-archive's disk.
+      # Failures during this time don't count; the first success marks it healthy.
+      start_period: 600s
     volumes:
       - ${MYSQL_DATA_DIR:?set it in .env}:/var/lib/mysql
     # M6: sized for the 64 GB production server, low use; override in .env
@@ -92,6 +98,11 @@ services:
     # https://medium.com/@gladevise/accessing-the-hosts-localhost-from-inside-a-docker-container-c5935e275953
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      # Self-fetches: the code reads some of its own files through WEB_ROOT (https://editors.eol.org/...). Through
+      # Cloudflare the server's own requests get 403 (bot check), so on eol-archive .env maps the name straight to
+      # the server (SELF_FETCH_HOST=editors.eol.org, SELF_FETCH_IP=160.111.248.39); 443 lets in the containers'
+      # 10.10.x.x (HTTPS_ALSO_ALLOW). Unset (Mac): a harmless dummy name, so editors.eol.org stays the public site.
+      - "${SELF_FETCH_HOST:-self-fetch.invalid}:${SELF_FETCH_IP:-127.0.0.1}"
 
   # =================== Jenkins service ===================
   jenkins:
@@ -136,6 +147,9 @@ services:
     # M6: connector runs (PHP has no memory_limit here) + the JVM (default heap = 25% of this)
     mem_limit: ${JENKINS_MEM_LIMIT:-32g}
     logging: *default-logging
+    # Self-fetches by connectors: same as web (see there)
+    extra_hosts:
+      - "${SELF_FETCH_HOST:-self-fetch.invalid}:${SELF_FETCH_IP:-127.0.0.1}"
 
     environment:
       - JENKINS_HOME=/var/jenkins_home

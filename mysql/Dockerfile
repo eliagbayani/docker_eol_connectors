@@ -21,7 +21,9 @@ ARG ENVIRONMENT_FROM_COMPOSE
 RUN echo "My environment is: "${ENVIRONMENT_FROM_COMPOSE}
 # COPY eol_${ENVIRONMENT_FROM_COMPOSE}.sql /docker-entrypoint-initdb.d/eol_${ENVIRONMENT_FROM_COMPOSE}.sql
 # -> working but was changed to below:
-COPY test_MySQL_db.sql /docker-entrypoint-initdb.d/test_MySQL_db.sql
+# --chmod: the mysql user must read it. Without it the file keeps the build folder's mode, which on a server
+# with umask 0027 (eol-archive) is 640, and MySQL's first start fails with "Permission denied".
+COPY --chmod=644 test_MySQL_db.sql /docker-entrypoint-initdb.d/test_MySQL_db.sql
 
 # Root auth plugin is set at first container init (password read from env, not baked into the image).
 COPY --chmod=755 root-native-password.sh /docker-entrypoint-initdb.d/zz-root-native-password.sh

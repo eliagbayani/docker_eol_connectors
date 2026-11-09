@@ -37,6 +37,12 @@ ensure_dir "${EOL_BASE}/jenkins_tmp"
 ensure_dir "${EOL_BASE}/python_projects"
 ensure_dir "${EOL_BASE}/certs"            # HTTPS certificate + key (self-signed one made at first start)
 chmod 700 "${EOL_BASE}/certs"
+# Apache's logs are written as root with mode 750: let the deploying login (sudo's caller) read them
+# (tail access.log / error.log), now and for new log files.
+if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]] && command -v setfacl >/dev/null; then
+  setfacl -R -m "u:${SUDO_USER}:rX,d:u:${SUDO_USER}:rX" "${EOL_BASE}/apache2_logs"
+  echo "  acl:     ${EOL_BASE}/apache2_logs readable by ${SUDO_USER}"
+fi
 
 # EXTRA_PATH — subdirs expected by docker-entrypoint_production.sh
 EXTRA="${EXTRA_PATH}"
@@ -45,6 +51,8 @@ ensure_dir "${EXTRA}/eol_connector_data_files"
 ensure_dir "${EXTRA}/dumps"
 ensure_dir "${EXTRA}/other_files"
 ensure_dir "${EXTRA}/gnfinder"
+ensure_dir "${EXTRA}/eol_php_resources"     # connectors' output; linked as content_server/resources (step 5)
+ensure_dir "${EXTRA}/FreshData_TSV_files"   # linked as FreshData_min/TSV_files (step 5)
 
 echo ""
 echo "Done."

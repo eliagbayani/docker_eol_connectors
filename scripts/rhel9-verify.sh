@@ -112,6 +112,14 @@ if docker exec "$WEB" test -s "$CERT"; then
     k=$(docker exec "$WEB" stat -c %a /etc/apache2/certs/editors.eol.org.key 2>/dev/null)
     [ "$k" = 600 ] && OK "certificate key readable by root only (600)" || FAIL "certificate key mode is '$k' (chmod 600 it in HTTPS_CERTS_PATH)"
 else FAIL "no certificate at HTTPS_CERTS_PATH/editors.eol.org.crt (docker logs web | grep -i certificate)"; fi
+# Self-fetches (SELF_FETCH_HOST/IP in .env): the code's own requests to WEB_ROOT must not go through Cloudflare (403)
+SFH=$(envval SELF_FETCH_HOST); SFI=$(envval SELF_FETCH_IP)
+if [ -n "$SFH" ] && [ -n "$SFI" ]; then
+    got=$(docker exec "$JEN" getent hosts "$SFH" | awk '{print $1}' | head -1)
+    [ "$got" = "$SFI" ] && OK "in Jenkins, $SFH → $SFI (self-fetches skip Cloudflare)" || FAIL "in Jenkins, $SFH → '$got' (expected $SFI: docker compose up -d to apply extra_hosts)"
+    c=$(docker exec "$JEN" curl -sk -m 10 -o /dev/null -w '%{http_code}' "https://$SFH${PG:=/eol_php8_code/applications/dwc_validator_jenkins/main.php}")
+    [ "$c" = 200 ] && OK "Jenkins → https://$SFH$PG → 200" || FAIL "Jenkins → https://$SFH$PG → $c (expected 200; is 10.10.0.0/16 in HTTPS_ALSO_ALLOW?)"
+else WARN "SELF_FETCH_HOST/SELF_FETCH_IP not set in .env: the code's requests to its own WEB_ROOT go through Cloudflare and get 403"; fi
 nr=$(docker exec "$WEB" grep -cE '^[0-9a-f]' /etc/apache2/conf-available/cloudflare-ips.txt)
 na=$(docker exec "$WEB" grep -c -- '-ipmatch' /etc/apache2/https-allow.inc)
 [ "$na" -gt 0 ] && [ "$na" = "$nr" ] && OK "port 443 allows only Cloudflare's $na ranges + HTTPS_ALSO_ALLOW='$(docker exec "$WEB" printenv HTTPS_ALSO_ALLOW)'" \
@@ -155,9 +163,10 @@ IFS='|' read -r _ jd gp gx dp dx <<< "$(docker exec -w /var/www/html/eol_php8_co
 [ "$jd" = jenkins:8080 ] && OK "JENKINS_DOMAIN=jenkins:8080 (N12)" || FAIL "JENKINS_DOMAIN='$jd' (expected jenkins:8080)"
 [ "$gx" = 1 ] && OK "GNPARSER_PATH=$gp exists" || FAIL "GNPARSER_PATH='$gp' is not an executable in the container"
 [ "$dx" = 1 ] && OK "DUMPS_LOCAL_PATH=$dp exists" || WARN "DUMPS_LOCAL_PATH='$dp' does not exist (TreatmentBank jobs; copy /extra/dumps)"
-PHPTOK='include "config/environment.php"; $c=curl_init("http://".JENKINS_USER_TOKEN."@".JENKINS_DOMAIN."/api/json"); curl_setopt_array($c,[CURLOPT_RETURNTRANSFER=>1,CURLOPT_TIMEOUT=>10]); curl_exec($c); echo "\nRESULT ",curl_getinfo($c,CURLINFO_HTTP_CODE)," ",explode(":",JENKINS_USER_TOKEN)[0],"\n";'
+# Prints only the user name before the colon, never the token (with no colon it prints a placeholder, not the value).
+PHPTOK='include "config/environment.php"; $c=curl_init("http://".JENKINS_USER_TOKEN."@".JENKINS_DOMAIN."/api/json"); curl_setopt_array($c,[CURLOPT_RETURNTRANSFER=>1,CURLOPT_TIMEOUT=>10]); curl_exec($c); $t=JENKINS_USER_TOKEN; echo "\nRESULT ",curl_getinfo($c,CURLINFO_HTTP_CODE)," ",(strpos($t,":")>0?strstr($t,":",true):"(no-user-prefix)"),"\n";'
 read -r _ hc tu <<< "$(docker exec -w /var/www/html/eol_php8_code "$WEB" php -r "$PHPTOK" 2>&1 | grep '^RESULT')"
-[ "$hc" = 200 ] && OK "web → Jenkins login as '$tu' works (H3, N12)" || FAIL "web → Jenkins as '$tu' → HTTP $hc: create the web-trigger token in Jenkins and put it in production.php"
+[ "$hc" = 200 ] && OK "web → Jenkins login as '$tu' works (H3, N12)" || FAIL "web → Jenkins as '$tu' → HTTP $hc: JENKINS_USER_TOKEN in production.php must be 'web-trigger:<token>' (user name, colon, token)"
 
 echo "== Work folders the code writes to (not in git: a fresh clone lacks them)"
 # A missing or broken folder doesn't stop the code: writes fail with a PHP warning and the Jenkins build still shows SUCCESS.

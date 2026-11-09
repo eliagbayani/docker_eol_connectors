@@ -8,14 +8,14 @@
 # Settings (environment):
 #   COMPOSE="docker compose -f docker-compose.yml"   how to reach the stack
 #   BACKUP_DIR=/extra/eol_docker/backups              where the dumps go (created with mode 700)
-#   KEEP=14                                           how many dumps to keep
+#   KEEP=10                                           how many dumps to keep (the 11th run deletes the oldest)
 # Restore (replaces the databases in the dump):
 #   gunzip -c <file>.sql.gz | docker compose -f docker-compose.yml exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot'
 
 set -euo pipefail
 COMPOSE=${COMPOSE:-docker compose -f docker-compose.yml}
 BACKUP_DIR=${BACKUP_DIR:-/extra/eol_docker/backups}
-KEEP=${KEEP:-14}
+KEEP=${KEEP:-10}
 
 umask 077
 mkdir -p "$BACKUP_DIR"
@@ -28,5 +28,5 @@ gzip -t "$tmp"
 mv "$tmp" "$out"
 echo "$(date '+%Y-%m-%d %H:%M') OK $out ($(du -h "$out" | cut -f1))"
 
-# Keep the newest KEEP dumps
+# Keep the newest KEEP dumps: after a new one is written, any beyond KEEP (the oldest) are deleted
 ls -1t "$BACKUP_DIR"/mysql_*.sql.gz | tail -n +$((KEEP + 1)) | while IFS= read -r old; do rm -f "$old"; done

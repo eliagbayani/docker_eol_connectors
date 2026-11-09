@@ -16,36 +16,37 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # We need these 2 files bec. we might have entered specific values to apache2.conf and 000-default.conf
-COPY apache2.conf /etc/apache2/
-COPY 000-default.conf  /etc/apache2/sites-available/
+# --chmod on every COPY: the files keep the build folder's modes otherwise (640 on eol-archive, umask 0027).
+COPY --chmod=644 apache2.conf /etc/apache2/
+COPY --chmod=644 000-default.conf  /etc/apache2/sites-available/
 
 # test.php / info.php are copied into the webroot by the development entrypoint only.
 # info.php (phpinfo) is removed from production builds below.
 ARG ENVIRONMENT_FROM_COMPOSE
-COPY /src/test.php /tmp/test.php
-COPY /src/info.php /tmp/info.php
-COPY /src/list.php /tmp/list.php
+COPY --chmod=644 /src/test.php /tmp/test.php
+COPY --chmod=644 /src/info.php /tmp/info.php
+COPY --chmod=644 /src/list.php /tmp/list.php
 
-COPY docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
+COPY --chmod=755 docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh /usr/local/bin/docker-entrypoint_${ENVIRONMENT_FROM_COMPOSE}.sh
 
 # This one works OK but we need to enter our own values to php.ini so we used the one below this.
 ### RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
 
 # We need to do this bec. we needed to update php.ini with our own values e.g. upload_max_filesize
-COPY php.ini.txt /usr/local/etc/php/php.ini
+COPY --chmod=644 php.ini.txt /usr/local/etc/php/php.ini
 
 # H1: production error/session settings on top of php.ini.txt (dev builds keep showing errors).
-COPY zz-production.ini /tmp/zz-production.ini
+COPY --chmod=644 zz-production.ini /tmp/zz-production.ini
 RUN if [ "${ENVIRONMENT_FROM_COMPOSE}" = "production" ]; then cp /tmp/zz-production.ini /usr/local/etc/php/conf.d/; fi
 
 # H2: hide Apache version/OS in headers and error pages.
-COPY zz-security.conf /etc/apache2/conf-available/
+COPY --chmod=644 zz-security.conf /etc/apache2/conf-available/
 RUN a2enconf zz-security
 
 # H6: real visitor IPs in the logs (behind Cloudflare, or the old proxy 10.252.248.42). The default keeps Apache startable
 # if compose doesn't set REMOTEIP_PROXY.
 ENV REMOTEIP_PROXY=10.252.248.42
-COPY zz-remoteip.conf cloudflare-ips.txt /etc/apache2/conf-available/
+COPY --chmod=644 zz-remoteip.conf cloudflare-ips.txt /etc/apache2/conf-available/
 RUN a2enmod remoteip && a2enconf zz-remoteip
 
 # HTTPS: Cloudflare connects straight to eol-archive (160.111.248.39:443); the old front device .42 is being retired.
@@ -53,8 +54,8 @@ RUN a2enmod remoteip && a2enconf zz-remoteip
 # when the mounted certs folder is empty. https-allow.inc is built from cloudflare-ips.txt: only Cloudflare
 # (plus HTTPS_ALSO_ALLOW, set in compose) may connect on 443.
 ENV HTTPS_ALSO_ALLOW=127.0.0.1
-COPY editors-https.conf /etc/apache2/sites-available/
-COPY https-cert.sh /usr/local/bin/
+COPY --chmod=644 editors-https.conf /etc/apache2/sites-available/
+COPY --chmod=755 https-cert.sh /usr/local/bin/
 RUN set -eu; chmod 755 /usr/local/bin/https-cert.sh; \
     { echo '<RequireAny>'; \
       grep -E '^[0-9a-f]' /etc/apache2/conf-available/cloudflare-ips.txt | while read -r r; do \

@@ -65,7 +65,7 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 | `.env.production.sample` | RHEL 9 production `.env` template (`/extra/eol_docker/...` paths, localhost-bound admin ports) |
 | `scripts/rhel9-init-dirs.sh` | Creates host directory tree under `/extra/eol_docker` |
 | `scripts/rhel9-verify.sh` | Read-only check of the running stack after `up -d`: containers, ports, headers, blocked files, `info.php`/`test.php`, environment and `eol_app`, `production.php` settings, web → Jenkins login, Jenkins security, PHP/gnparser, memory and log limits, webroot link warnings. One OK/WARN/FAIL line each; exit 1 on any FAIL; never prints secrets |
-| `scripts/mysql-backup.sh` | Nightly dump of all databases from the db container (`--single-transaction`), gzip'd into `/extra/eol_docker/backups`, newest 14 kept; the root password stays in the container. Deploy step 8 |
+| `scripts/mysql-backup.sh` | Nightly dump of all databases from the db container (`--single-transaction`), gzip'd into `/extra/eol_docker/backups`, newest 10 kept; the root password stays in the container. Deploy step 8 |
 | `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
 | `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
 | `docker-compose.yml` | Main compose file — **three services: web, db, jenkins** |
@@ -268,22 +268,28 @@ sudo chown $USER: /extra/eol_docker/jenkins_home
 #   on the Mac:  docker compose stop jenkins; then the plugin list + rsync commands in docs/deploy_day_checklist.md,
 #                step 3 (rsync … --exclude='builds/' --exclude='/plugins/' … --exclude='/jobs/*Neo4j_P*/' archive:/extra/eol_docker/jenkins_home/;
 #                the Neo4j jobs stay on the Mac: eol-archive has no Neo4j)
-#   and leave it stopped: 21 of the copied jobs run on a timer (e.g. Zenodo monthly stats); from step 6 the server runs them.
-#   To use the Mac's Jenkins again, first untick "Build periodically" in those jobs there.
+#   and leave it stopped until step 6: 21 of the copied jobs run on a timer (e.g. Zenodo monthly stats). The timed jobs
+#   run on the Mac (decided 2026-11-08): after step 6, remove their timers on the server (checklist step 6, Script Console).
 #   The GBIF download jobs use /extra/other_files/GBIF_occurrence/ on both machines (on the Mac, My_Docker_content/extra/
 #   other_files/GBIF_occurrence is a link to /Volumes/Crucial_4TB/...); create that folder here if it's missing (checklist step 3).
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot   # init-dirs runs as root; step 5 clones into webroot as you
 # /extra is eol-archive's data volume, owned by the old native Apache (group 48, apache). In the containers
 # web is uid 33 and Jenkins uid 1000: give both write access where the code writes (existing + future files).
-cd /extra && sudo setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX \
-  dumps eol_connector_data_files ckan_resources other_files gnfinder
-cd /extra/eol_docker/docker_eol_connectors
+# Millions of small files (about 60 a second on eol-archive's disk): run it detached from the window (setsid nohup),
+# one folder at a time, with a log; sudo -v first so the background sudo doesn't ask for the password.
+# The full command is in the checklist, step 3 part 3: folders: dumps eol_connector_data_files ckan_resources
+# eol_php_resources FreshData_TSV_files gnfinder other_files (last). The 3 hashed caches (GBIF_occurrence/multimedia_gbifID,
+# GBIF_occurrence/GBIF_taxa_csv_dwca, iNat_image_DwCA/cache_image_score: over 100 million files) get the ACL on their
+# folders only (find -maxdepth 2 -type d): new files inherit it; file by file they would take weeks (2026-11-07).
+# eol_php_resources was missing from the first list: its cache/ folder, made by root, broke the Jenkins web tools.
 # SELinux: all of /extra (data + /extra/eol_docker). The rules from step 1 still win for /extra/docker and /extra/containerd.
 sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"
 matchpathcon /extra/eol_php_resources /extra/docker /extra/containerd   # → container_file_t, then the Docker/containerd labels
-sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &   # walks all 3.8 TB: can take an hour or more
-# wait for it (pgrep restorecon prints nothing) before step 6
+# Relabel in the background (checklist step 3 part 6): first the folders the stack uses (/extra/eol_docker and the data
+# folders above, and other_files without the 3 hashed caches (restorecon -e); log /tmp/restorecon-stack.log), then all of
+# /extra (3.8 TB: weeks, for the caches; doesn't block; jobs can't read the caches' old files until it reaches them).
+# Before step 6: restorecon-stack.log ends with ALL FINISHED, and setfacl.log has done: for every folder before other_files.
 
 # 4. Configure env
 cp .env.production.sample .env
@@ -297,6 +303,9 @@ cd /extra/eol_docker/webroot
 git clone https://github.com/eliagbayani/eol_php8_code.git
 git clone https://github.com/eliagbayani/FreshData_min.git
 git clone https://github.com/eliagbayani/LiteratureEditor_min.git
+# eol-archive's umask is 0027 (files 640, folders 750): web (33) and Jenkins (1000) couldn't read the code (25 FAILs in
+# rhel9-verify.sh on 2026-11-07). Read access for both, now and for new files; chmod 640 on the config files below keeps it.
+setfacl -R -m u:33:rX,u:1000:rX,d:u:33:rX,d:u:1000:rX /extra/eol_docker/webroot
 # Work folders git doesn't track (on the Mac most are links to other drives or untracked folders).
 # temp_dev is a Mac-only development area: leave it out.
 cd /extra/eol_docker/webroot/eol_php8_code
@@ -330,27 +339,34 @@ cd /extra/eol_docker/webroot/eol_php8_code/config
 chmod 640 database.yml environments/production.php
 # database.yml: production → host: db, port: 3306, username: eol_app,
 #   password: the MYSQL_PASSWORD from .env (step 4), quoted (see "eol_php8_code config/database.yml" below)
-# production.php: JENKINS_DOMAIN 'jenkins:8080'; JENKINS_USER_TOKEN replaced after step 6 (new web-trigger token)
+# production.php: JENKINS_DOMAIN 'jenkins:8080'; WEB_ROOT 'https://editors.eol.org/eol_php8_code/' (the Mac's
+#   host.docker.internal:81 breaks the web tools' download links here); JENKINS_USER_TOKEN replaced after step 6.
+#   Self-fetches through WEB_ROOT skip Cloudflare (its bot check answers 403): SELF_FETCH_HOST/SELF_FETCH_IP in .env
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
 docker compose -f docker-compose.yml build --no-cache --pull
 #   → jenkins build log must show "PHP 8.4.27"
-df -h /     # root disk (10 GB) should still be about as full as before the build; images are under /extra
+df -h /     # root disk (10 GB) should still be about as full as before the build (on eol-archive ~8.6 GB, the admins'
+            # NetBackup/SentinelOne/Splunk agents); images are under /extra
+# (umask 0027 also reaches the build: every Dockerfile COPY sets --chmod, or MySQL's first start fails with
+#  "test_MySQL_db.sql: Permission denied")
 # Jenkins' plugins from the list copied in step 3, before Jenkins' first start: without them it can't read its
 # security settings (matrix-auth) or the job folders (cloudbees-folder). Needs HTTPS to updates.jenkins.io;
 # if the server can't reach it, rsync the Mac's jenkins_home/plugins/ instead and chown 1000 again.
 docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plugin-cli jenkins \
   --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins
 ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l   # → 94
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.yml up -d   # first start: waits a few minutes for MySQL's init (db health: starting)
 # web makes a self-signed HTTPS certificate in /extra/eol_docker/certs at its first start:
 docker compose -f docker-compose.yml logs web | grep 'HTTPS certificate'
 # then, from the repo folder (read-only; OK/WARN/FAIL per check, exit 1 on any FAIL):
 bash scripts/rhel9-verify.sh
 # Jenkins (port 8080 is on 127.0.0.1 only): from the Mac, ssh -N -L 8090:127.0.0.1:8080 archive
 #   then open http://localhost:8090 → Jenkins URL: http://localhost:8090/ (the copy has the Mac's :8081);
-#   change the admin password (it came from the Mac);
-#   user web-trigger → revoke the copied API token, create a new one → production.php JENKINS_USER_TOKEN;
+#   changing the admin password (it came from the Mac) is optional;
+#   user web-trigger: new API token through Manage Jenkins → Script Console (an admin can't make one for another user
+#   in the UI; the script in the checklist, step 6, revokes the copied tokens) → production.php as
+#   JENKINS_USER_TOKEN 'web-trigger:<token>' (user name, colon, token; without the user name: 401);
 #   Security: matrix authorization eagbayani = Administer, web-trigger = Read + Build; agents TCP port Disabled;
 #   Plugins → Updates: update the 8 plugins with published advisories at the Mac's versions (credentials-binding,
 #   email-ext, gradle, ldap, pipeline-build-step, pipeline-groovy-lib, workflow-cps, workflow-multibranch), restart
@@ -365,13 +381,14 @@ sudo systemctl disable --now httpd 2>/dev/null; sudo ss -ltnp | grep -E ':(443|8
 # 8. Nightly MySQL dump (as your own login): copying mysql_data while MySQL runs can give a broken copy
 cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh   # first run by hand → "OK …sql.gz"
 ( crontab -l 2>/dev/null; echo '30 2 * * * cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh >> /extra/eol_docker/backups/mysql-backup.log 2>&1' ) | crontab -
+# eol-archive limits crontab to listed users (/etc/cron.allow): if crontab says you're not allowed, ask the admins.
 ```
 
 ### What to back up on /extra
 
 | Path | Contents | Back up? |
 |---|---|---|
-| `/extra/eol_docker/backups` | nightly MySQL dumps (`scripts/mysql-backup.sh`, newest 14 kept) | **yes**: this, not `mysql_data`, is the database backup |
+| `/extra/eol_docker/backups` | nightly MySQL dumps (`scripts/mysql-backup.sh`, newest 10 kept) | **yes**: this, not `mysql_data`, is the database backup |
 | `/extra/eol_docker/jenkins_home` | Jenkins jobs, settings, users, secrets, build history (the server's own; the Mac's history isn't copied) | **yes** (stop Jenkins or accept a slightly inconsistent copy of running builds) |
 | `/extra/eol_docker/docker_eol_connectors/.env` | passwords | **yes**, kept private |
 | `/extra/eol_docker/webroot/eol_php8_code/config` | `database.yml`, `production.php` (not in git) | **yes**, kept private |

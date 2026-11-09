@@ -2,10 +2,10 @@
 
 The short version of `docs/rhel9_production_env_guide.md` (deploy steps 1–8). Each step lists the commands, what you should see, and where to **STOP** if it doesn't match.
 
-- **Server:** eol-archive, RHEL 9.8, SELinux Enforcing. Root disk 10 GB; data volume `/extra` 9.1 TB (kept from the old server).
+- **Server:** eol-archive, RHEL 9.8, SELinux Enforcing. Root disk 10 GB, about 8.6 GB of it used by the admins' own tools (NetBackup, SentinelOne, Splunk); data volume `/extra` 9.1 TB (kept from the old server). The default umask is **0027** (new files 640, folders 750), so the containers' users can't read what you create unless a step gives them access.
 - **Layout:** everything under `/extra`: Docker in `/extra/docker` and `/extra/containerd`, the stack in `/extra/eol_docker`, data in `/extra` as before.
 - **Who:** your own login. Use `sudo` only where shown. No root shell (`sudo su`): in a root shell `~` is `/root`, and files get the wrong owner.
-- **Time:** about 2–3 hours. The longest part is the SELinux relabel of `/extra` (step 3), which runs in the background.
+- **Time:** a full day. On 2026-11-07 most of it went to step 3 (permissions and SELinux labels on millions of small files, at about 60 files a second). The parts the stack needs first are done in minutes; the rest runs in the background, detached, and doesn't block steps 4–8.
 
 ## For the admins: what this deployment changes on the server
 
@@ -17,12 +17,12 @@ The EOL tools (website, MySQL and Jenkins) run as three Docker containers. Chang
 | **Services** | `docker` (and `containerd`) enabled at boot, and wait for the `/extra` mount (drop-ins in `/etc/systemd/system/{docker,containerd}.service.d/extra.conf`). The host's own `httpd` is disabled if present | 1, 7 |
 | **System files** | `/etc/docker/daemon.json` (`data-root` = `/extra/docker`; Docker's internal networks: `bip` `10.10.1.1/24` and the address pool `10.10.2.0/16`, as the network team recommended; Docker reads a /16 from its start, so the pool is `10.10.0.0/16` and the stack's network comes out as e.g. `10.10.0.0/24`); one line at the top of `/etc/containerd/config.toml` (`root = "/extra/containerd"`), both checked in step 1. The 10 GB root disk stays essentially unchanged | 1, 6 |
 | **SELinux** (stays Enforcing) | persistent rules: `/extra(/.*)?` → `container_file_t`; `/extra/docker` and `/extra/containerd` labelled like `/var/lib/docker` and `/var/lib/containerd`. A one-time `restorecon -R /extra` (3.8 TB) relabels the existing data from `default_t` | 1, 3 |
-| **`/extra`** | new folders `docker/`, `containerd/`, `eol_docker/` (mode 700, owned by the deploying login; it holds `certs/`, the website's HTTPS certificate) and `gnfinder/`. ACLs on `dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files` and `gnfinder` give uid 33 (website) and uid 1000 (Jenkins) write access. **Existing data, owners and modes are not changed** | 1, 3 |
+| **`/extra`** | new folders `docker/`, `containerd/`, `eol_docker/` (mode 700, owned by the deploying login; it holds `certs/`, the website's HTTPS certificate) and `gnfinder/`. ACLs on `dumps`, `eol_connector_data_files`, `ckan_resources`, `eol_php_resources`, `FreshData_TSV_files`, `other_files` and `gnfinder` give uid 33 (website) and uid 1000 (Jenkins) write access. **Existing data, owners and modes are not changed** | 1, 3 |
 | **Network: listening** | **`160.111.248.39:443`**: the website over HTTPS, for Cloudflare. HTTPS ends in the web container (the front device 160.111.248.42 is being retired). Port 443 accepts only Cloudflare's published ranges, plus the server itself for tests; others get 403. The certificate is self-signed (`/extra/eol_docker/certs`), which Cloudflare's SSL mode *Full* accepts; for *Full (strict)* a Cloudflare Origin certificate replaces the 2 files, no rebuild. **`10.252.248.39:8080`**: plain HTTP on the internal address, as the old Apache listened (for .42 while it still forwards, and internal tests). `127.0.0.1:8080` (Jenkins) and `127.0.0.1:4001` (MySQL): local only, reached through SSH. Docker adds its own nftables rules for the published ports; firewalld isn't changed | 6 |
 | **Firewall and DNS (network team)** | Cloudflare reaches 160.111.248.39 on 443 (the network team's firewall change, done 2026-11-06; open to all for now, maybe Cloudflare only after the switch), then Cloudflare's record for `editors.eol.org` moves from 160.111.248.42 to **160.111.248.39**. Until then, the site works through .42 as today (→ `10.252.248.39:8080`). To roll back: point the record back to .42 | Go-live |
 | **Network: outgoing** (HTTPS, during the build and plugin install) | Docker Hub (base images `php`, `jenkins/jenkins`, `mysql`), `deb.debian.org` and `packages.sury.org` (PHP), `github.com` (code, gnparser), `updates.jenkins.io` and its download mirrors (`get.jenkins.io`, `mirrors.jenkins-ci.org` and others; Jenkins plugins) | 2, 5, 6 |
 | **Users and groups** | the deploying login joins the `docker` group (**equivalent to root**, as for any Docker host). No new system users. Inside the containers, the website runs as uid 33 and Jenkins as uid 1000 | 1 |
-| **Cron** | one line in the deploying login's crontab: a nightly MySQL dump at 2:30 into `/extra/eol_docker/backups` (14 kept) | 8 |
+| **Cron** | one line in the deploying login's crontab: a nightly MySQL dump at 2:30 into `/extra/eol_docker/backups` (10 kept). On eol-archive, crontab is limited to listed users (`/etc/cron.allow`): the admins add the deploying login | 8 |
 
 Before you start:
 - [ ] The Mac's repo, `eol_php8_code`, `FreshData_min` and `LiteratureEditor_min` are pushed to GitHub.
@@ -41,6 +41,7 @@ The `.env` settings this depends on (all in the production sample): `WEB_HTTPS_P
   → `10.252.248.39/24` on `eno1` (internal) and `160.111.248.39/24` on `eno2` (public). The public address sits directly on the server, and Docker bypasses firewalld. That's why every published port names its address (`0.0.0.0` would publish on all of them), and why Apache itself turns away anyone on 443 who isn't Cloudflare.
 - [x] **The network team answered** (2026-11-05): .42 goes away, HTTPS ends on .39, and they change the DNS record once things are up and running. Their Varnish and ssl-terminator containers on .42 aren't needed on eol-archive (the web container ends HTTPS itself). They confirmed the order: deploy (the site works through .42 meanwhile) → their firewall change → we test 443 → their DNS switch.
 - [x] **The network team opened the firewall** (2026-11-06): Cloudflare can reach 160.111.248.39 on 443. For now it allows all traffic; they may tighten it to Cloudflare only after the switch. Either way the site is safe: Apache itself lets only Cloudflare (and the server) in on 443, and everyone else gets 403.
+- [x] **The DNS switch** (2026-11-09): the network team pointed `editors.eol.org` to 160.111.248.39. The log shows real visitor IPs (IPv4 and IPv6) on 443 right after, and no new lines from the old route through .42.
 - [x] **Cloudflare's SSL mode is *Full*** (read from Cloudflare's settings, 2026-10-26), so the self-signed certificate works. If it's *Full (strict)*, Cloudflare shows error **526** after the DNS switch: ask the network team for a Cloudflare Origin certificate and swap it in (*If something goes wrong*, below).
 
 ---
@@ -133,7 +134,7 @@ sudo bash scripts/rhel9-init-dirs.sh
 sudo chown $USER: /extra/eol_docker/jenkins_home
 ```
 
-- [ ] The output shows `exists:` for `ckan_resources`, `eol_connector_data_files`, `dumps` and `other_files`, and `created:` for `gnfinder` and `certs`. **STOP** if `dumps` or `ckan_resources` say `created`: `/extra` isn't the data volume (`findmnt /extra`).
+- [ ] The output shows `exists:` for `ckan_resources`, `eol_connector_data_files`, `dumps`, `other_files`, `eol_php_resources` and `FreshData_TSV_files`, `created:` for `gnfinder` and `certs`, and `acl: …/apache2_logs readable by` your login (so you can `tail` the web logs). **STOP** if `dumps` or `ckan_resources` say `created`: `/extra` isn't the data volume (`findmnt /extra`).
 
 **On the Mac**, with Jenkins stopped, copy Jenkins' **jobs, settings, users and secrets** (about 20 MB). The build history (1.55 GB) and the plugins aren't copied. **The Neo4j jobs aren't copied either** (the folders `00 Neo4j_PHP_connectors`, `00 Neo4j_Python_connectors` and `01 Neo4j_PHP_connectors`): eol-archive has no Neo4j, so they stay on the Mac. Instead, a list of the 94 plugins with their exact versions goes along as `plugins.txt`, and step 6 installs them.
 
@@ -158,7 +159,7 @@ rsync -a /tmp/jenkins_plugins.txt archive:/extra/eol_docker/jenkins_home/plugins
 ```
 
 - [ ] `wc -l` prints **94** (one line per plugin, e.g. `matrix-auth:3.3`).
-- [ ] **Leave the Mac's Jenkins stopped.** 21 of the copied jobs run on a timer (e.g. *Zenodo monthly stats*, the *Dynamic Hierarchy* tasks, some connectors). From step 6 the server runs them, and two machines must not run them both. If you need the Mac's Jenkins later, first disable those timers there: Configure → Build Triggers → untick *Build periodically*.
+- [ ] **The timed jobs stay on the Mac** (decided 2026-11-08). 21 of the copied jobs run on a timer (e.g. *Zenodo monthly stats*, the GBIF download requests, the *Routine Utilities*). Two machines must not run them both, so after step 6 remove their timers on the server (Script Console, step 6). Until then, keep the Mac's Jenkins stopped.
 
 **Back on the server:**
 
@@ -172,10 +173,24 @@ grep -rh --include=config.xml -e '^cd /Volumes' -e '<command>cd /extra/other_fil
 sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home /extra/eol_docker/jenkins_tmp
 sudo chown $USER: /extra/eol_docker/webroot
 
-# 3. Give the website (33) and Jenkins (1000) write access to the data folders, now and for new files (owners unchanged)
-cd /extra && sudo setfacl -R -m u:33:rwX,u:1000:rwX,d:u:33:rwX,d:u:1000:rwX \
-  dumps eol_connector_data_files ckan_resources other_files gnfinder
+# 3. Give the website (33) and Jenkins (1000) write access to the data folders, now and for new files (owners unchanged).
+#    Runs in the background, detached from the window (setsid nohup), one folder at a time, with a log. sudo -v first,
+#    so the background sudo doesn't need to ask for the password. The 3 hashed caches (over 100 million small files
+#    in 2 levels of folders) get it on their folders only: new files inherit it, and deleting old ones needs only
+#    the folder. Done file by file, they would take weeks. other_files goes last: it still takes hours.
+sudo -v
+cd /extra && sudo setsid nohup bash -c 'A="u:33:rwX,u:1000:rwX"; D="d:u:33:rwX,d:u:1000:rwX"
+C="other_files/GBIF_occurrence/multimedia_gbifID other_files/GBIF_occurrence/GBIF_taxa_csv_dwca other_files/iNat_image_DwCA/cache_image_score"
+echo "start: caches (folders only) $(date +%T)"
+for c in $C; do if [ -d "$c" ]; then find "$c" -maxdepth 2 -type d -exec setfacl -m "$A,$D" {} + || echo "ERROR: $c"; fi; done; echo "done:  caches $(date +%T)"
+for d in dumps eol_connector_data_files ckan_resources eol_php_resources FreshData_TSV_files gnfinder other_files; do
+  echo "start: $d $(date +%T)"
+  find "$d" \( -path other_files/GBIF_occurrence/multimedia_gbifID -o -path other_files/GBIF_occurrence/GBIF_taxa_csv_dwca \
+    -o -path other_files/iNat_image_DwCA/cache_image_score \) -prune -o -type d -exec setfacl -m "$A,$D" {} + -o -type f -exec setfacl -m "$A" {} + \
+    && echo "done:  $d $(date +%T)" || echo "ERROR: $d $(date +%T)"
+done; echo ALL FINISHED' > /tmp/setfacl.log 2>&1 < /dev/null &
 cd /extra/eol_docker/docker_eol_connectors
+sleep 3; cat /tmp/setfacl.log; pgrep -x setfacl
 
 # 4. The GBIF jobs' download folder: create it if eol-archive doesn't have it (it inherits the write access from step 3)
 ls -ld /extra/other_files/GBIF_occurrence || sudo mkdir /extra/other_files/GBIF_occurrence
@@ -184,15 +199,29 @@ ls -ld /extra/other_files/GBIF_occurrence || sudo mkdir /extra/other_files/GBIF_
 sudo semanage fcontext -a -t container_file_t "/extra(/.*)?"
 matchpathcon /extra/eol_php_resources /extra/docker /extra/containerd
 
-# 6. Apply the labels to the existing 3.8 TB, in the background (an hour or more)
-sudo nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 &
+# 6. Apply the labels, in the background, detached from the window. First the folders the stack uses (minutes),
+#    and other_files without the 3 hashed caches (on 2026-11-08, 13 of its folders were still unlabelled while the full run
+#    sat in the GBIF image cache); then all of /extra (3.8 TB: weeks on this disk, for the caches; it doesn't block anything).
+#    Both can run alongside part 3. Until the full run reaches them, jobs can't read the caches' old files (new ones are fine).
+sudo -v
+sudo setsid nohup bash -c 'for d in /extra/eol_docker /extra/dumps /extra/ckan_resources /extra/eol_connector_data_files \
+    /extra/eol_php_resources /extra/FreshData_TSV_files /extra/gnfinder; do
+  echo "start: $d $(date +%T)"
+  restorecon -R "$d" && echo "done:  $d $(date +%T)" || echo "ERROR: $d $(date +%T)"
+done
+echo "start: other_files without the 3 hashed caches $(date +%T)"
+restorecon -R -e /extra/other_files/GBIF_occurrence/multimedia_gbifID -e /extra/other_files/GBIF_occurrence/GBIF_taxa_csv_dwca \
+  -e /extra/other_files/iNat_image_DwCA/cache_image_score /extra/other_files \
+  && echo "done:  other_files $(date +%T)" || echo "ERROR: other_files $(date +%T)"
+echo ALL FINISHED' > /tmp/restorecon-stack.log 2>&1 < /dev/null &
+sudo setsid nohup restorecon -R /extra > /tmp/restorecon.log 2>&1 < /dev/null &
 ```
 
 - [ ] `find /extra/eol_docker/jenkins_home/jobs -name config.xml | wc -l` shows **277** (40 folders + 237 jobs; the Mac's 443 minus the 166 Neo4j ones), `ls /extra/eol_docker/jenkins_home/jobs | grep -c Neo4j` prints **0**, and `/extra/eol_docker/jenkins_home/plugins.txt` exists.
 - [ ] The GBIF `grep` prints exactly **4 lines**, all `<command>cd /extra/other_files/GBIF_occurrence/…` (National, Countries, Waterbody and Continent), and **no** `cd /Volumes` line. **STOP and fix it before proceeding** if a `cd /Volumes` line shows up: that job would fail on the server (the Mac's Jenkins needs the same fix, then copy again).
 - [ ] `ls -ld /extra/other_files/GBIF_occurrence` shows a folder (or, if it was missing, the `mkdir` created it; `getfacl /extra/other_files/GBIF_occurrence` then shows `user:33:rwx` and `user:1000:rwx`).
 - [ ] `matchpathcon` prints `container_file_t` for `eol_php_resources` and `container_var_lib_t` for both `docker` and `containerd`. **STOP** if `/extra/docker` shows `container_file_t`.
-- [ ] The relabel runs in the background (an hour or more). Steps 4 and 5 can be done meanwhile. **Wait until `pgrep restorecon` prints nothing before step 6.**
+- [ ] `setfacl` and the relabels run in the background, detached: closing the window or a dropped connection doesn't stop them. Steps 4 and 5 can be done meanwhile. **Before step 6, wait until `/tmp/restorecon-stack.log` ends with `ALL FINISHED`, and `/tmp/setfacl.log` has a `done:` line for every folder before `other_files` (no `ERROR` line).** `other_files` and the full `restorecon -R /extra` may still be running: the stack starts without them, and Jenkins jobs that write into a part of `other_files` not reached yet fail with *Permission denied* until it's done. Check them with `tail -n 2 /tmp/setfacl.log; pgrep -x setfacl; pgrep -x restorecon` (not `pgrep -a`: it prints thousands of file names). If `setfacl` stopped early, run part 3 again with only the folders not done; redoing a folder is harmless. If the log was lost, `getfacl -p /extra/gnfinder | grep user:33` shows whether a folder was reached.
 
 ## 4. Settings (`.env`)
 
@@ -215,12 +244,12 @@ grep -v '^\s*#' .env | grep -c CHANGE_ME
 grep -E '^(MYSQL_ROOT_PASSWORD|MYSQL_PASSWORD)=' .env | awk -F= '{ print $1, length($2), "chars" }'
 
 # 4. Check the addresses and ports the containers listen on, and the HTTPS settings
-grep -E '^(WEB_HTTPS_PORTS|WEB_PORTS|JENKINS_PORTS|MYSQL_PORTS|HTTPS_CERTS_PATH|HTTPS_ALSO_ALLOW)=' .env
+grep -E '^(WEB_HTTPS_PORTS|WEB_PORTS|JENKINS_PORTS|MYSQL_PORTS|HTTPS_CERTS_PATH|HTTPS_ALSO_ALLOW|SELF_FETCH_HOST|SELF_FETCH_IP)=' .env
 ```
 
 - [ ] `grep -c` prints **0**, and the last command prints the two names with **48 chars** each (the passwords themselves aren't shown).
 - [ ] The ports are **`WEB_HTTPS_PORTS=160.111.248.39:443:443`**, **`WEB_PORTS=10.252.248.39:8080:80`**, `JENKINS_PORTS=127.0.0.1:8080:8080` and `MYSQL_PORTS=127.0.0.1:4001:3306`. **STOP** if a port has no address in front (e.g. `443:443` or `80:80`): it would be published on every address of the server.
-- [ ] `HTTPS_CERTS_PATH=/extra/eol_docker/certs` and `HTTPS_ALSO_ALLOW=127.0.0.1 10.10.0.0/16 160.111.248.39 10.252.248.39`. Leave the paths as they are in the sample.
+- [ ] `HTTPS_CERTS_PATH=/extra/eol_docker/certs` and `HTTPS_ALSO_ALLOW=127.0.0.1 10.10.0.0/16 160.111.248.39 10.252.248.39`. `SELF_FETCH_HOST=editors.eol.org` and `SELF_FETCH_IP=160.111.248.39`: inside the containers, the code's requests to its own site go straight to this server, because through Cloudflare they get 403 (its bot check). Leave the paths as they are in the sample.
 - To see a password later (e.g. to log in to MySQL by hand): `grep '^MYSQL_ROOT_PASSWORD=' .env`. Don't paste it anywhere.
 
 ## 5. Code, work folders, config files
@@ -233,6 +262,8 @@ cd /extra/eol_docker/webroot
 git clone https://github.com/eliagbayani/eol_php8_code.git
 git clone https://github.com/eliagbayani/FreshData_min.git
 git clone https://github.com/eliagbayani/LiteratureEditor_min.git
+# The server's umask 0027 makes the code 640/750: let the website (33) and Jenkins (1000) read it, now and for new files
+setfacl -R -m u:33:rX,u:1000:rX,d:u:33:rX,d:u:1000:rX /extra/eol_docker/webroot
 cd /extra/eol_docker/webroot/eol_php8_code
 
 # 2. Create the work folders git doesn't save (temp and cache folders, the web tools' upload folders)
@@ -289,7 +320,12 @@ grep -A4 '^production:' database.yml | grep -E '^\s+(host|username):'
 
 - [ ] `ls environments/` shows `production.php` next to the three files from git (`development_sample.php`, `production_sample.php`, `test_sample.php`), and nothing else.
 - [ ] `grep -cF` prints **1** (the production section has the password), and the last command shows `host: db` and `username: eol_app`.
-- [ ] `production.php` has `JENKINS_DOMAIN` set to `jenkins:8080`. The token is replaced after step 6.
+- [ ] `production.php` has `JENKINS_DOMAIN` set to `jenkins:8080`, and **`WEB_ROOT` set to `https://editors.eol.org/eol_php8_code/`** (the Mac's copy has `http://host.docker.internal:81/…`, which only works on the Mac: the web tools' download links would be broken). Change it on the server only:
+  ```bash
+  sed -i "s|^define('WEB_ROOT', 'http://host.docker.internal:81/eol_php8_code/');|define('WEB_ROOT', 'https://editors.eol.org/eol_php8_code/');|" environments/production.php
+  grep -n "^define('WEB_ROOT'" environments/production.php
+  ```
+  The token is replaced after step 6.
 
 ## 6. Build, start, check
 
@@ -298,8 +334,8 @@ grep -A4 '^production:' database.yml | grep -E '^\s+(host|username):'
 ```bash
 cd /extra/eol_docker/docker_eol_connectors
 
-# 1. The relabel from step 3 must be finished
-pgrep restorecon || echo "relabel done"
+# 1. The stack's relabel from step 3 must be finished (the full /extra one may still run)
+tail -n 1 /tmp/restorecon-stack.log
 
 # 2. Build the images from scratch, with fresh base images; keep the log
 docker compose -f docker-compose.yml build --no-cache --pull 2>&1 | tee /tmp/build.log | tail -3
@@ -314,7 +350,9 @@ docker compose -f docker-compose.yml run --rm --no-deps --entrypoint jenkins-plu
   --plugin-file /var/jenkins_home/plugins.txt --plugin-download-directory /var/jenkins_home/plugins 2>&1 | tail -3
 ls /extra/eol_docker/jenkins_home/plugins/*.jpi | wc -l
 
-# 5. Start web, db and jenkins (they also start again at every boot), and show their state
+# 5. Start web, db and jenkins (they also start again at every boot), and show their state.
+#    The first start waits a few minutes for MySQL to set up its new database (db "health: starting");
+#    web and jenkins start once it's healthy.
 docker compose -f docker-compose.yml up -d
 docker compose -f docker-compose.yml ps
 docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' docker_eol_connectors_default
@@ -324,7 +362,7 @@ docker compose -f docker-compose.yml logs web | grep 'HTTPS certificate'
 bash scripts/rhel9-verify.sh
 ```
 
-- [ ] The relabel is done. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` is still about 3 GB used, and `du` shows `/var/lib/docker` and `/var/lib/containerd` as absent or tiny (the images are under `/extra`).
+- [ ] `restorecon-stack.log` ends with `ALL FINISHED`. The build log shows **`PHP 8.4.27`** (or newer). `df -h /` hasn't grown since before the build (on eol-archive about 8.6 GB of 10 GB, all the admins' tools), and `du` shows `/var/lib/docker` and `/var/lib/containerd` as absent or tiny (the images are under `/extra`).
 - [ ] The plugin tool ends with `Done`, and `ls … | wc -l` prints **94**. **STOP** if it's fewer, or the tool can't reach `updates.jenkins.io`: Jenkins can't read its security settings or folders without them. Run the command again (it retries mirrors), or copy the plugins from the Mac instead: `rsync -a /Volumes/OWC_Express/other_files/My_Docker_content/jenkins_home/plugins/ archive:/extra/eol_docker/jenkins_home/plugins/`, then `sudo chown -R 1000:1000 /extra/eol_docker/jenkins_home/plugins`.
 - [ ] `ps`: db `healthy`; web and jenkins `Up`. The stack's network is a **`10.10.x.0/24`** (e.g. `10.10.0.0/24`), from the network team's range. The web log says `HTTPS certificate: created a self-signed one for editors.eol.org (10 years)` (or, on a later start, the certificate's name and end date).
 - [ ] The HTTPS section shows `HTTPS published on 160.111.248.39:443` and `https://editors.eol.org/eol_php8_code/applications/dwc_validator_jenkins/main.php on 160.111.248.39:443 → 200 (plain HTTP 200 too)`.
@@ -341,12 +379,43 @@ Then open **http://localhost:8090** in Safari. (Optional: the `~/.ssh/config` en
 These settings came over from the Mac, so they're changed once here:
 
 - [ ] Manage Jenkins → System → **Jenkins URL** → `http://localhost:8090/` (the copied setting is the Mac's `http://localhost:8081/`), then Save.
-- [ ] Log in, then **change the admin password** (it came from the Mac).
-- [ ] User `web-trigger` → **revoke the copied API token, create a new one** → put it in `production.php` as `JENKINS_USER_TOKEN`.
+- [ ] Log in. Changing the admin password (it came from the Mac) is optional. If Safari crashes on a Jenkins *Save* button, use Chrome.
+- [ ] **A new API token for `web-trigger`**, so the web tools can start Jenkins jobs. Jenkins' page doesn't let an admin make a token for another user, so use the Script Console: Manage Jenkins → **Script Console**, paste this, **Run**. It revokes the copied tokens and prints the new one once:
+  ```groovy
+  import jenkins.security.ApiTokenProperty
+  def u = hudson.model.User.getById('web-trigger', false)
+  def s = u.getProperty(ApiTokenProperty).tokenStore
+  s.getTokenListSortedByName().each { s.revokeToken(it.uuid) }
+  def r = s.generateNewToken('eol-archive web tools')
+  u.save()
+  println r.plainValue
+  ```
+  Copy the token, then on the server put it in `production.php` **as `web-trigger:<token>`** (user name, colon, token; without the `web-trigger:` the web tools get 401). Nothing is shown on screen:
+  ```bash
+  cd /extra/eol_docker/webroot/eol_php8_code/config/environments
+  read -rs -p "Paste the new web-trigger token, then press Enter: " T; echo
+  [[ $T =~ ^[0-9a-f]{32,40}$ ]] && echo "looks like a token" || echo "NOT a token: stop"
+  n=$(grep -n "^define('JENKINS_USER_TOKEN'" production.php | tail -1 | cut -d: -f1); echo "line $n"
+  sed -i "${n}s/'JENKINS_USER_TOKEN', *'[^']*'/'JENKINS_USER_TOKEN', 'web-trigger:$T'/" production.php
+  grep -cF "'web-trigger:$T'" production.php; unset T
+  ```
+  → `looks like a token`, the line number of the active `define` (the last one; earlier ones sit in comment blocks), and **1**.
 - [ ] Security: matrix authorization `eagbayani` = Administer, `web-trigger` = Read + Build. Agents TCP port: **Disabled**.
 - [ ] Manage Jenkins → no "Failed Loading plugin" messages.
 - [ ] **`01 EOL Connectors` → `(0026) WoRMS` → Configure → Post-build Actions:** remove *Build other projects* (`/00 Neo4j_PHP_connectors/01 Prepare DwCAs/005_WoRMS_x`, a Neo4j job that isn't on the server), then Save.
 - [ ] **Update the plugins with known security fixes.** The Mac's versions of 8 plugins have published Jenkins advisories (2026-04 to 2026-09): `credentials-binding`, `email-ext`, `gradle`, `ldap`, `pipeline-build-step`, `pipeline-groovy-lib`, `workflow-cps`, `workflow-multibranch`. Manage Jenkins → Plugins → **Updates** → select them (or all) → Update → tick *Restart Jenkins when installation is complete*. Jenkins offers only versions that work with 2.580.2.
+- [ ] **Remove the timers on the server** (the timed jobs run on the Mac): Manage Jenkins → Script Console, then Run. The jobs stay, for manual runs; the removed schedules are saved in `jenkins_home/timers_removed.tsv`:
+  ```groovy
+  import hudson.triggers.TimerTrigger
+  def out = []
+  Jenkins.instance.getAllItems(hudson.model.AbstractProject).each { j ->
+    def t = j.getTrigger(TimerTrigger)
+    if (t) { out << j.fullName + '\t' + t.spec.readLines().join('\\n'); j.removeTrigger(t.descriptor); j.save() }
+  }
+  new File(Jenkins.instance.rootDir, 'timers_removed.tsv').text = out.join('\n') + '\n'
+  println "removed ${out.size()} timers:"; out.each { println '  ' + it.split('\t')[0] }
+  ```
+  → `removed 21 timers:`. Then start the Mac's Jenkins again.
 - [ ] Run `bash scripts/rhel9-verify.sh` again: `web → Jenkins login as 'web-trigger' works`, and **0 FAIL**.
 
 ## 7. Ports 443 and 8080 belong to the web container
@@ -365,7 +434,7 @@ sudo ss -ltnp | grep -E ':(443|8080) '
 
 ## 8. Nightly database backup
 
-**This step turns on the nightly MySQL backup.** `scripts/mysql-backup.sh` dumps all databases from inside the db container into `/extra/eol_docker/backups` and keeps the newest 14. The password never leaves the container.
+**This step turns on the nightly MySQL backup.** `scripts/mysql-backup.sh` dumps all databases from inside the db container into `/extra/eol_docker/backups` and keeps the newest 10 (each new one beyond 10 deletes the oldest). The password never leaves the container.
 
 ```bash
 # 1. Run one backup now, to check it works
@@ -376,7 +445,7 @@ cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh
 crontab -l
 ```
 
-- [ ] The first run prints `OK /extra/eol_docker/backups/mysql_….sql.gz`. `crontab -l` shows the 2:30 line.
+- [ ] The first run prints `OK /extra/eol_docker/backups/mysql_….sql.gz`. `crontab -l` shows the 2:30 line. If crontab says *You (…) are not allowed to use this program*, the server limits crontab to listed users: ask the admins to allow your login, and don't work around it (e.g. with a file in `/etc/cron.d`). Until then, run the backup by hand when needed. Don't move it into a Jenkins job: that would need Docker access or MySQL's root password inside Jenkins.
 - [ ] Put your copy of the old scheduled jobs back (`crontab -e`), adjusted to the new paths if needed.
 
 ---
@@ -405,6 +474,8 @@ ssh -N -L 8444:160.111.248.39:443 archive
   - submit one job from a web tool (e.g. trait_data_import)
 
 **Meanwhile, through .42:** right after step 6 the old path works again (Cloudflare → .42 → `10.252.248.39:8080`). Open `https://editors.eol.org/…` and `tail /extra/eol_docker/apache2_logs/access.log`: it shows your own IP, or `10.252.248.42` if .42 doesn't send `X-Forwarded-For` (only the log is affected, and only until the switch).
+
+**Through Cloudflare, before the switch:** the network team made a test record, `editors-test.eol.org` (proxied, pointing to eol-archive; 2026-11-06). Open `https://editors-test.eol.org/eol_php8_code/applications/dwc_validator_jenkins/main.php` in Safari and run a test; `access.log` should show your own IP. `curl` to that name gets **403 with `cf-mitigated: challenge`**: that's Cloudflare's bot check on command-line tools, not our server (the request doesn't reach `access.log`).
 
 **The DNS switch** (the firewall is already open). Ask the network team to point Cloudflare's `editors.eol.org` record to **160.111.248.39** (proxied, as now). Then:
 

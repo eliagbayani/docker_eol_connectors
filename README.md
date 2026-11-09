@@ -73,7 +73,7 @@ docker_eol_connectors/
 ├── scripts/
 │   ├── rhel9-init-dirs.sh              ← create /extra/eol_docker host dirs on RHEL
 │   ├── rhel9-verify.sh                 ← read-only OK/WARN/FAIL check of the running production stack
-│   ├── mysql-backup.sh                 ← nightly MySQL dump (gzip, newest 14 kept); RHEL guide step 8
+│   ├── mysql-backup.sh                 ← nightly MySQL dump (gzip, newest 10 kept); RHEL guide step 8
 │   ├── eol-archive-inventory.sh        ← read-only list of the old server's data (sizes, counts, not-in-git, crontabs)
 │   └── eol-inventory-compare.sh        ← check a copy against that list
 ├── apache-php/
