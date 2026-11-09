@@ -69,11 +69,13 @@ docker_eol_connectors/
 ├── .gitignore
 ├── docs/
 │   ├── rhel9_production_env_guide.md
-│   └── deploy_day_checklist.md      ← deploy steps 1–8 as a checklist: commands, expected output, STOP points
+│   ├── deploy_day_checklist.md      ← deploy steps 1–8 as a checklist: commands, expected output, STOP points
+│   └── eol-archive_current_setup.md ← the running setup on eol-archive (live 2026-11-09), every setting beyond the checklist, how to rebuild
 ├── scripts/
 │   ├── rhel9-init-dirs.sh              ← create /extra/eol_docker host dirs on RHEL
 │   ├── rhel9-verify.sh                 ← read-only OK/WARN/FAIL check of the running production stack
 │   ├── mysql-backup.sh                 ← nightly MySQL dump (gzip, newest 10 kept); RHEL guide step 8
+│   ├── rhel9-snapshot.sh               ← one archive of everything not in git (.env, config files, Jenkins config, host settings, newest dump)
 │   ├── eol-archive-inventory.sh        ← read-only list of the old server's data (sizes, counts, not-in-git, crontabs)
 │   └── eol-inventory-compare.sh        ← check a copy against that list
 ├── apache-php/
