@@ -89,6 +89,8 @@ Everything here was set or changed on the running server, and the snapshot captu
 - crontab of `eagbayani`: `30 2 * * * cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh >> /extra/eol_docker/backups/mysql-backup.log 2>&1` (2:30 New York time)
 - the host's own `httpd` disabled (if present)
 
+**Front page** (in git, `apache-php/apache2.conf`, commit `81a8900`, live 2026-11-10): `https://editors.eol.org/` redirects (302) to the DwC-A validator, `/eol_php8_code/applications/dwc_validator/main.php`. Only the bare `/` is redirected; every other address is unchanged. The target is relative, so the visitor's scheme and host are kept (also on editors-test and the Mac). A 302 (temporary), so browsers don't remember it: to change or remove it, edit the `RedirectMatch` line, then rebuild web (section 5).
+
 **Network team (outside the server):** firewall open for 443 to 160.111.248.39 (2026-11-06); Cloudflare's `editors.eol.org` record → 160.111.248.39, proxied (2026-11-09); test record `editors-test.eol.org` (to be removed by them); the old front device 160.111.248.42 is to be retired.
 
 ## 5. Routine operations (on eol-archive, in `/extra/eol_docker/docker_eol_connectors`)
@@ -100,7 +102,9 @@ Everything here was set or changed on the running server, and the snapshot captu
 | Logs | `docker compose -f docker-compose.yml logs --tail 50 web` (or `db`, `jenkins`); Apache: `/extra/eol_docker/apache2_logs/` |
 | Database backup now | `bash scripts/mysql-backup.sh` (nightly at 2:30 anyway; newest 10 kept) |
 | Restore the database | `gunzip -c /extra/eol_docker/backups/<file>.sql.gz \| docker compose -f docker-compose.yml exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot'` |
-| Update the package | `git pull`, then `docker compose -f docker-compose.yml up -d` (a rebuild only if a Dockerfile changed: `build`, then `up -d`) |
+| Update the package | `git pull`, then `docker compose -f docker-compose.yml up -d`. A rebuild is needed if anything under `apache-php/` or `mysql/` changed (Dockerfiles, and the config files they copy into the image, e.g. `apache2.conf`): `docker compose -f docker-compose.yml build web` (or `db`), then `up -d web` (a few seconds' restart of that container only) |
+| Update the PHP code | `cd /extra/eol_docker/webroot/eol_php8_code && git status --short && git pull --ff-only` as yourself, never with `sudo` (root-owned files break the website's and Jenkins' writes). Nothing to restart: PHP reads the new files on the next page load or job run |
+| Test the site from the server | `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' --resolve editors.eol.org:443:160.111.248.39 -k https://editors.eol.org/` → `302 …/dwc_validator/main.php`. HTTPS listens only on 160.111.248.39: `127.0.0.1` gives `000` (no connection), and through Cloudflare curl gets 403 |
 | Change a setting in `.env` | edit `.env`, then `docker compose -f docker-compose.yml up -d` (recreates the containers that use it) |
 | Snapshot of all settings | `sudo bash scripts/rhel9-snapshot.sh`, then copy it off the server (section 6) |
 
