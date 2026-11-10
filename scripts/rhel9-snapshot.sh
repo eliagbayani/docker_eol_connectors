@@ -99,7 +99,7 @@ crontab -l -u "$OWNER" > "$S/host/crontab_$OWNER.txt" 2>&1
 {
   for d in /extra /extra/eol_docker /extra/eol_docker/* /extra/dumps /extra/eol_connector_data_files /extra/ckan_resources \
            /extra/other_files /extra/gnfinder /extra/eol_php_resources /extra/eol_php_resources/cache /extra/FreshData_TSV_files \
-           /extra/eol_php_cache /extra/eol_php_cache2 "$WEB" "$WEB/eol_php8_code/temp"; do
+           /extra/eol_php_cache "$WEB" "$WEB/eol_php8_code/temp"; do
     [ -e "$d" ] || continue
     ls -ldZ "$d"; getfacl -p "$d" 2>/dev/null | grep -E '^(user|group|mask|other|default):'; echo
   done

@@ -52,7 +52,7 @@ Three containers, from the Docker package in `/extra/eol_docker/docker_eol_conne
 | `/extra/eol_docker/certs` | HTTPS certificate and key (self-signed, 10 years) | no | **yes** |
 | `/extra/eol_docker/apache2_logs` | Apache's access and error logs | no | no |
 | `/extra/eol_docker/snapshots` | the snapshot archives | no | n/a |
-| `/extra/dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files`, `gnfinder`, `eol_php_resources`, `FreshData_TSV_files`, `eol_php_cache`, `eol_php_cache2` | the data (about 3.8 TB) | no | no: it stays on `/extra` (the admins back up the server) |
+| `/extra/dumps`, `eol_connector_data_files`, `ckan_resources`, `other_files`, `gnfinder`, `eol_php_resources`, `FreshData_TSV_files`, `eol_php_cache` | the data (about 3.8 TB) | no | no: it stays on `/extra` (the admins back up the server) |
 
 ## 4. Settings beyond the deployment checklist
 
@@ -84,7 +84,7 @@ Everything here was set or changed on the running server, and the snapshot captu
 - `/etc/containerd/config.toml`: first line `root = "/extra/containerd"`
 - systemd drop-ins `/etc/systemd/system/{docker,containerd}.service.d/extra.conf`: `RequiresMountsFor=/extra`
 - SELinux rules (`semanage fcontext`): `/extra(/.*)?` → `container_file_t`; `/extra/docker` and `/extra/containerd` equal to `/var/lib/docker` and `/var/lib/containerd`
-- ACLs for uid 33 (website) and uid 1000 (Jenkins), rwX with defaults, on: `dumps`, `eol_connector_data_files`, `ckan_resources`, `eol_php_resources` (incl. `cache`), `FreshData_TSV_files`, `gnfinder`, `other_files` (the 3 hashed caches on their folders only), `eol_php_cache`, `eol_php_cache2`; read access on the webroot; rwX on the code's work folders; the deploying login can read `apache2_logs`
+- ACLs for uid 33 (website) and uid 1000 (Jenkins), rwX with defaults, on: `dumps`, `eol_connector_data_files`, `ckan_resources`, `eol_php_resources` (incl. `cache`), `FreshData_TSV_files`, `gnfinder`, `other_files` (the 3 hashed caches on their folders only), `eol_php_cache`; read access on the webroot; rwX on the code's work folders; the deploying login can read `apache2_logs`
 - `/etc/cron.allow` lists `eagbayani` (2026-11-10, with the admins' OK)
 - crontab of `eagbayani`: `30 2 * * * cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh >> /extra/eol_docker/backups/mysql-backup.log 2>&1` (2:30 New York time)
 - the host's own `httpd` disabled (if present)
