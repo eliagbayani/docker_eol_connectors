@@ -108,6 +108,16 @@ Everything here was set or changed on the running server, and the snapshot captu
 
 The admins restart eol-archive now and then for system updates (2026-11-04, and 2026-11-09 at 14:16 New York time for a new kernel). **The stack needs nothing:** Docker starts after `/extra` is mounted, and the three containers come back by themselves (`restart: unless-stopped`). The nightly backup (crontab) and Jenkins' settings are unaffected.
 
+**Will the containers come back after a reboot?** Yes, with no `docker compose` needed, because of two settings:
+- **Docker starts at boot:** the `docker` service is enabled in systemd (`systemctl is-enabled docker` → `enabled`).
+- **`restart: unless-stopped`** on each container: once Docker is up, it starts every container that was running before the reboot.
+
+They **don't** come back by themselves in two cases:
+- **Someone stopped them on purpose before the reboot,** with `docker compose stop` or `docker stop`. "Unless stopped" respects that. After `docker compose down` they are removed, so there's nothing to restart.
+- **Docker itself doesn't start,** for example if it was disabled or broke in an OS upgrade.
+
+Either way, start them with `cd /extra/eol_docker/docker_eol_connectors && docker compose up -d`. On 2026-11-09 the containers came back by themselves, and verify passed 81 OK.
+
 1. **Did it restart, and cleanly?**
    ```bash
    uptime -s
