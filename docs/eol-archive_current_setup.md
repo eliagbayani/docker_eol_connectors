@@ -1,6 +1,6 @@
 # eol-archive: the current setup, and how to rebuild it
 
-**As of 2026-11-10** (after the server restart of 2026-11-09). editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **81 OK, 0 WARN, 0 FAIL**.
+**As of 2026-11-10** (after the server restart of 2026-11-09). editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **81 OK, 0 WARN, 0 FAIL**. Since 2026-11-10 it has two more checks (IP forwarding, the containers' internet access), so expect **83 OK**.
 
 This document records everything that makes up the running setup: what is in git, what is not, and every setting changed after the deployment checklist (`docs/deploy_day_checklist.md`). With the checklist, this document and a snapshot archive (section 6), the stack can be rebuilt on another machine.
 
@@ -89,6 +89,7 @@ Everything here was set or changed on the running server, and the snapshot captu
 - crontab of `eagbayani`: `30 2 * * * cd /extra/eol_docker/docker_eol_connectors && bash scripts/mysql-backup.sh >> /extra/eol_docker/backups/mysql-backup.log 2>&1` (2:30 New York time)
 - the host's own `httpd` disabled (if present)
 - `/etc/sysctl.conf` line 54: `net.ipv4.ip_forward = 1` (changed by the admins on 2026-11-10, from the security baseline's `0`, rule `CCE-83998-5`; their comment above it unchanged). `/etc/sysctl.d/99-sysctl.conf` is a link to the same file. Docker needs it: see section 8
+- firewalld `public` zone: `forward: no`, runtime and permanent (set by the network team on 2026-11-10, along with `ip_forward = 1`; it was `yes`). It blocks forwarding between `eno1` and `eno2`, so the server isn't a router between the internal and public networks. Docker's traffic (`public` ↔ `docker` zone, Docker's own rules) is unaffected: incoming 443 and the containers' downloads both work
 
 **Front page** (in git, `apache-php/apache2.conf`, commit `81a8900`, live 2026-11-10): `https://editors.eol.org/` redirects (302) to the DwC-A validator, `/eol_php8_code/applications/dwc_validator/main.php`. Only the bare `/` is redirected; every other address is unchanged. The target is relative, so the visitor's scheme and host are kept (also on editors-test and the Mac). A 302 (temporary), so browsers don't remember it: to change or remove it, edit the `RedirectMatch` line, then rebuild web (section 5).
 
@@ -196,12 +197,12 @@ Make a new snapshot after any change to the settings, Jenkins' jobs or the host.
 - SELinux's old labels come in two kinds on this volume: `default_t` and `unlabeled_t`. A check for unlabelled folders must look for both (on 2026-11-08 only `default_t` was checked, and 31 folders in `other_files` were missed).
 - A server restart stops long background jobs, but not the stack: restart the jobs from the current state (section 5, *After a server restart*).
 - Long pastes through the two SSH hops can arrive garbled. Paste long commands in short pieces, and run `sudo -v` on its own first.
-- **Docker needs IP forwarding on (`net.ipv4.ip_forward = 1`), and the RHEL security baseline turns it off** (rule `CCE-83998-5` in `/etc/sysctl.conf`). On 2026-11-10 the site was down from about 06:20 to 07:50 New York time. Docker had switched forwarding on at the 04:45 restart, and a re-apply of the baseline around 06:17 switched it off again. The admins then set it to `1` in `/etc/sysctl.conf`. Forwarding carries the visitors' traffic to the web container and the containers' own downloads, so with it off, both stop.
+- **Docker needs IP forwarding on (`net.ipv4.ip_forward = 1`), and the RHEL security baseline turns it off** (rule `CCE-83998-5` in `/etc/sysctl.conf`). On 2026-11-10 the site was down from about 06:20 to 07:50 New York time. Docker had switched forwarding on at the 04:45 restart, and a re-apply of the baseline around 06:17 switched it off again. The network team then set it to `1` in `/etc/sysctl.conf`, and the `public` zone to `forward: no` (section 4). Whether a security exception is needed, or a playbook could reset it, is open with them. Forwarding carries the visitors' traffic to the web container and the containers' own downloads, so with it off, both stop.
   - **How it looks:**
     - Cloudflare shows **error 525** (SSL handshake failed).
     - Apache's access log has no visitor requests.
-    - From the server itself, HTTPS works, and `rhel9-verify.sh` passes, because local requests don't need forwarding.
+    - From the server itself, HTTPS works, and `rhel9-verify.sh` passed, because local requests don't need forwarding. It now checks forwarding and the containers' internet access directly.
     - From outside, the connection is reset after the TLS hello.
-  - **Check:** `sysctl net.ipv4.ip_forward` → `1`. With `0`, `sudo tcpdump -ni any 'tcp port 443'` shows `SYN`s arriving on `eno2` with no reply, and the `dnat to 10.10.0.x:443` counter in `sudo nft list ruleset` rises while the forward `accept` counter doesn't.
+  - **Check:** `sysctl net.ipv4.ip_forward` → `1`. Containers' downloads: `docker exec docker_eol_connectors-jenkins-1 curl -s -m 10 -o /dev/null -w '%{http_code}\n' https://github.com` → `200`. With `0`, `sudo tcpdump -ni any 'tcp port 443'` shows `SYN`s arriving on `eno2` with no reply, and the `dnat to 10.10.0.x:443` counter in `sudo nft list ruleset` rises while the forward `accept` counter doesn't.
   - **Fix:** `/etc/sysctl.conf` belongs to the admins' baseline. Ask them; don't override it. `sudo sysctl -w net.ipv4.ip_forward=1` works at once and changes no file, but only with their OK.
 - Apache's log times are UTC; the server's (`date`, `uptime`, the job logs) are New York time.

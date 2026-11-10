@@ -54,6 +54,17 @@ for n in $(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}
 done
 br=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' bridge 2>/dev/null)
 [ "$br" = 10.10.1.0/24 ] && OK "Docker's default bridge: $br" || FAIL "Docker's default bridge: ${br:-unknown} (expected 10.10.1.0/24: \"bip\" in daemon.json, then restart docker)"
+# Docker needs IP forwarding for visitors' traffic to the web container and for the containers' downloads.
+# The RHEL security baseline (CCE-83998-5, /etc/sysctl.conf) sets it to 0: then the site is down (Cloudflare 525)
+# while every request from this server still works, so the HTTPS checks below can't see it (2026-11-10).
+if [ -r /proc/sys/net/ipv4/ip_forward ]; then
+    fw=$(cat /proc/sys/net/ipv4/ip_forward)
+    [ "$fw" = 1 ] && OK "IP forwarding on (net.ipv4.ip_forward = 1)" \
+        || FAIL "IP forwarding off (net.ipv4.ip_forward = $fw): visitors can't reach the site (Cloudflare 525) and containers can't download. /etc/sysctl.conf belongs to the admins' baseline: ask them (docs/eol-archive_current_setup.md, section 8)"
+fi
+c=$(docker exec "$JEN" curl -s -m 10 -o /dev/null -w '%{http_code}' https://github.com 2>/dev/null)
+case "$c" in 2??|3??) OK "containers reach the internet (jenkins → https://github.com: $c)" ;;
+    *) WARN "jenkins → https://github.com: ${c:-no answer} (connector downloads will fail; check IP forwarding above, then the network)" ;; esac
 
 echo "== Web: headers and blocked files (H1, H2, B3, B4, N11)"
 ADDR=$(dc port web 80 2>/dev/null | head -1); ADDR=${ADDR/0.0.0.0/127.0.0.1}
