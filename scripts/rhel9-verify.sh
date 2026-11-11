@@ -179,6 +179,12 @@ IFS='|' read -r _ jd gp gx dp dx <<< "$(docker exec -w /var/www/html/eol_php8_co
 PHPTOK='include "config/environment.php"; $c=curl_init("http://".JENKINS_USER_TOKEN."@".JENKINS_DOMAIN."/api/json"); curl_setopt_array($c,[CURLOPT_RETURNTRANSFER=>1,CURLOPT_TIMEOUT=>10]); curl_exec($c); $t=JENKINS_USER_TOKEN; echo "\nRESULT ",curl_getinfo($c,CURLINFO_HTTP_CODE)," ",(strpos($t,":")>0?strstr($t,":",true):"(no-user-prefix)"),"\n";'
 read -r _ hc tu <<< "$(docker exec -w /var/www/html/eol_php8_code "$WEB" php -r "$PHPTOK" 2>&1 | grep '^RESULT')"
 [ "$hc" = 200 ] && OK "web → Jenkins login as '$tu' works (H3, N12)" || FAIL "web → Jenkins as '$tu' → HTTP $hc: JENKINS_USER_TOKEN in production.php must be 'web-trigger:<token>' (user name, colon, token)"
+# Terms maintenance page (applications/terms_maintenance/main.php): its [Upload to Zenodo] needs TERMS_MTCE_PASSWORD.
+# Prints only whether it is set, never the value.
+PHPTMP='include "config/environment.php"; echo "\nRESULT ",(defined("TERMS_MTCE_PASSWORD") && TERMS_MTCE_PASSWORD !== "")?1:0,"\n";'
+tm=$(docker exec -w /var/www/html/eol_php8_code "$WEB" php -r "$PHPTMP" 2>&1 | grep '^RESULT' | cut -d' ' -f2)
+[ "$tm" = 1 ] && OK "TERMS_MTCE_PASSWORD is set (Terms maintenance page can upload to Zenodo)" \
+    || WARN "TERMS_MTCE_PASSWORD isn't set in production.php: the Terms maintenance page's [Upload to Zenodo] is disabled"
 
 echo "== Work folders the code writes to (not in git: a fresh clone lacks them)"
 # A missing or broken folder doesn't stop the code: writes fail with a PHP warning and the Jenkins build still shows SUCCESS.

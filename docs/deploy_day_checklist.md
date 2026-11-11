@@ -326,6 +326,7 @@ grep -A4 '^production:' database.yml | grep -E '^\s+(host|username):'
   grep -n "^define('WEB_ROOT'" environments/production.php
   ```
   The token is replaced after step 6.
+- [ ] `production.php` has `TERMS_MTCE_PASSWORD` set (the password for [Upload to Zenodo] on the Terms maintenance page, `applications/terms_maintenance/main.php`; without it, uploading from the page is disabled). Check without showing it: `grep -c "^define('TERMS_MTCE_PASSWORD', *'[^']\+')" environments/production.php` prints **1**.
 
 ## 6. Build, start, check
 

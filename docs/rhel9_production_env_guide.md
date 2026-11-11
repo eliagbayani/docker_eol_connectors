@@ -340,7 +340,8 @@ chmod 640 database.yml environments/production.php
 # database.yml: production → host: db, port: 3306, username: eol_app,
 #   password: the MYSQL_PASSWORD from .env (step 4), quoted (see "eol_php8_code config/database.yml" below)
 # production.php: JENKINS_DOMAIN 'jenkins:8080'; WEB_ROOT 'https://editors.eol.org/eol_php8_code/' (the Mac's
-#   host.docker.internal:81 breaks the web tools' download links here); JENKINS_USER_TOKEN replaced after step 6.
+#   host.docker.internal:81 breaks the web tools' download links here); JENKINS_USER_TOKEN replaced after step 6;
+#   TERMS_MTCE_PASSWORD set (the Terms maintenance page's [Upload to Zenodo]; unset = upload disabled).
 #   Self-fetches through WEB_ROOT skip Cloudflare (its bot check answers 403): SELF_FETCH_HOST/SELF_FETCH_IP in .env
 
 # 6. Build and start (fresh: picks up current base images and sury PHP)
