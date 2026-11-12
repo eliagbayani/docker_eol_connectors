@@ -14,4 +14,7 @@
 # latest version OK
 # used for development for the longest time
 
-FROM neo4j:5.26.29-community-ubi10
+# FROM neo4j:5.26.29-community-ubi10
+# used until 2026-11-12
+
+FROM neo4j:5.26.30-community-ubi10

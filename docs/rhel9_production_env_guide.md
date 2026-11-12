@@ -52,7 +52,7 @@ The `docker` group is **root-equivalent** (a member can start a container that m
 | web | `php:8.4.27-apache` | PHP 8.4.27 fixes PHP2Shell (CVE-2026-109618 / CVE-2026-109619) |
 | jenkins | `jenkins/jenkins:2.580.2-jdk21` | LTS; PHP 8.4.27 from packages.sury.org, build fails if older than `PHP_MIN_VERSION` |
 | db | `mysql:8.4.13-oraclelinux9` | |
-| neo4j | `neo4j:5.26.29-community-ubi10` | Mac dev only (override file) |
+| neo4j | `neo4j:5.26.30-community-ubi10` | Mac dev only (override file) |
 
 Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgrading Jenkins*.
 
@@ -69,7 +69,7 @@ Details: repo **`README.md`** → *Recent updates*, *PHP version pins*, *Upgradi
 | `scripts/eol-archive-inventory.sh` | Read-only inventory of the old server's data (webroot, `/extra`): sizes, file counts, newest files, symlinks leaving the tree, files not in git, crontabs. Runs on RHEL 7 and macOS |
 | `scripts/eol-inventory-compare.sh` | Compares two inventories (old server vs a copy): missing folders, fewer files, smaller, newer on the source |
 | `docker-compose.yml` | Main compose file — **three services: web, db, jenkins** |
-| `neo4j/Dockerfile` | `FROM neo4j:5.26.29-community-ubi10` — used only by the Mac override file |
+| `neo4j/Dockerfile` | `FROM neo4j:5.26.30-community-ubi10` — used only by the Mac override file |
 | `.gitignore` | Excludes `docker-compose.override.yml`, `.env`, Mac-only files |
 
 **Not in repo (Mac dev only):** `docker-compose.override.yml`
@@ -82,7 +82,7 @@ _Neo4j is **not** part of the RHEL production stack: `docker-compose.yml` has no
 
 | | Previous | Current |
 |--|----------|---------|
-| Image | `neo4j:5.26.12-enterprise-ubi9` | **`neo4j:5.26.29-community-ubi10`** |
+| Image | `neo4j:5.26.12-enterprise-ubi9` | **`neo4j:5.26.30-community-ubi10`** (5.26.29 until 2026-11-12) |
 | Edition | Enterprise (license required) | **Community** (no license) |
 | Base OS | UBI9 | **UBI10** (runs on RHEL 9 hosts in Docker) |
 | User database | Named DBs (e.g. `db.eol`) | **Single DB: `neo4j`** |
@@ -588,7 +588,7 @@ Routine:
 | Symlinks | `/Volumes/AKiTiO4/...` (dev entrypoint) | `/extra/...` (prod entrypoint) |
 | Base path | `/Volumes/OWC_Express/...` | `/extra/eol_docker/...` |
 | Env template | `.env.development.sample` | `.env.production.sample` |
-| Neo4j | Community 5.26.29 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
+| Neo4j | Community 5.26.30 UBI10 (override) | **not running** (no service in `docker-compose.yml`) |
 | `NEO_DATABASE` | **`neo4j`** | *(not set: no Neo4j)* |
 | Admin ports (MySQL, Jenkins, Neo4j) | `127.0.0.1` only | `127.0.0.1` only — SSH tunnel |
 | Web port | `127.0.0.1:81`, HTTPS `127.0.0.1:8443` (Mac only) | HTTPS `160.111.248.39:443` (Cloudflare only); plain HTTP `10.252.248.39:8080` (internal) |

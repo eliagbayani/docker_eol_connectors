@@ -443,7 +443,7 @@ cp docker-compose.override.sample.yml docker-compose.override.yml
 The override adds:
 
 1. **`/Volumes:/Volumes`** mount on web + jenkins (dev symlinks)
-2. **`neo4j`** service — builds from `neo4j/Dockerfile` (`neo4j:5.26.29-community-ubi10`)
+2. **`neo4j`** service — builds from `neo4j/Dockerfile` (`neo4j:5.26.30-community-ubi10`)
 
 Jenkins receives `NEO_URI=bolt://neo4j:7687` from `.env` so Python jobs can reach the graph DB on Mac. On production (eol-archive) these are empty: there's no Neo4j, and no job there uses it.
 
