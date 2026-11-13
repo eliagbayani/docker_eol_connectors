@@ -1,6 +1,6 @@
 # eol-archive: the current setup, and how to rebuild it
 
-**As of 2026-11-10** (after the server restart of 2026-11-09). editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **81 OK, 0 WARN, 0 FAIL**. Since 2026-11-10 it has two more checks (IP forwarding, the containers' internet access), and since 2026-11-11 one more (`TERMS_MTCE_PASSWORD` is set), so expect **84 OK**.
+**As of 2026-11-12.** editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **84 OK, 0 WARN, 0 FAIL** (2026-11-11; 81 before the IP forwarding and internet access checks of 2026-11-10 and the `TERMS_MTCE_PASSWORD` check of 2026-11-11).
 
 This document records everything that makes up the running setup: what is in git, what is not, and every setting changed after the deployment checklist (`docs/deploy_day_checklist.md`). With the checklist, this document and a snapshot archive (section 6), the stack can be rebuilt on another machine.
 
