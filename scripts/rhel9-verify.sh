@@ -185,6 +185,12 @@ PHPTMP='include "config/environment.php"; echo "\nRESULT ",(defined("TERMS_MTCE_
 tm=$(docker exec -w /var/www/html/eol_php8_code "$WEB" php -r "$PHPTMP" 2>&1 | grep '^RESULT' | cut -d' ' -f2)
 [ "$tm" = 1 ] && OK "TERMS_MTCE_PASSWORD is set (Terms maintenance page can upload to Zenodo)" \
     || WARN "TERMS_MTCE_PASSWORD isn't set in production.php: the Terms maintenance page's [Upload to Zenodo] is disabled"
+# CrossRef (FullReferenceSearchAPI.php): CROSSREF_MAILTO is the contact email sent with every call, as CrossRef asks
+# ("polite pool"). Without it the calls still work, at the lower public rate limit. Not a secret, but only its shape is checked.
+PHPCR='include "config/environment.php"; echo "\nRESULT ",(defined("CROSSREF_MAILTO") && filter_var(CROSSREF_MAILTO, FILTER_VALIDATE_EMAIL))?1:0,"\n";'
+cr=$(docker exec -w /var/www/html/eol_php8_code "$JEN" php -r "$PHPCR" 2>&1 | grep '^RESULT' | cut -d' ' -f2)
+[ "$cr" = 1 ] && OK "CROSSREF_MAILTO is set to an email address (CrossRef polite pool)" \
+    || WARN "CROSSREF_MAILTO isn't set (or isn't an email address) in production.php: CrossRef calls work, but at the lower public rate limit"
 
 echo "== Work folders the code writes to (not in git: a fresh clone lacks them)"
 # A missing or broken folder doesn't stop the code: writes fail with a PHP warning and the Jenkins build still shows SUCCESS.

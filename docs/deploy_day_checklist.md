@@ -327,6 +327,7 @@ grep -A4 '^production:' database.yml | grep -E '^\s+(host|username):'
   ```
   The token is replaced after step 6.
 - [ ] `production.php` has `TERMS_MTCE_PASSWORD` set (the password for [Upload to Zenodo] on the Terms maintenance page, `applications/terms_maintenance/main.php`; without it, uploading from the page is disabled). Check without showing it: `grep -c "^define('TERMS_MTCE_PASSWORD', *'[^']\+')" environments/production.php` prints **1**.
+- [ ] `production.php` has `CROSSREF_MAILTO` set to the team's contact email (sent to CrossRef with every call, for its "polite pool"; without it CrossRef calls still work, at the lower public rate): `grep -n "^define('CROSSREF_MAILTO'" environments/production.php` shows one line.
 
 ## 6. Build, start, check
 

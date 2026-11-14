@@ -1,6 +1,6 @@
 # eol-archive: the current setup, and how to rebuild it
 
-**As of 2026-11-12.** editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **84 OK, 0 WARN, 0 FAIL** (2026-11-11; 81 before the IP forwarding and internet access checks of 2026-11-10 and the `TERMS_MTCE_PASSWORD` check of 2026-11-11).
+**As of 2026-11-12.** editors.eol.org runs on eol-archive since **2026-11-09** (DNS switch). The server check `scripts/rhel9-verify.sh` gives **84 OK, 0 WARN, 0 FAIL** (2026-11-11; 81 before the IP forwarding and internet access checks of 2026-11-10 and the `TERMS_MTCE_PASSWORD` check of 2026-11-11). Since 2026-11-14 it also checks `CROSSREF_MAILTO`, so expect **85 OK**.
 
 This document records everything that makes up the running setup: what is in git, what is not, and every setting changed after the deployment checklist (`docs/deploy_day_checklist.md`). With the checklist, this document and a snapshot archive (section 6), the stack can be rebuilt on another machine.
 
@@ -43,7 +43,7 @@ Three containers, from the Docker package in `/extra/eol_docker/docker_eol_conne
 | `…/docker_eol_connectors/.env` | settings: passwords, ports, paths, limits | no | **yes** |
 | `/extra/eol_docker/webroot/eol_php8_code`, `FreshData_min`, `LiteratureEditor_min` | the PHP code (3 GitHub repos) | **yes** | the 2 config files and the links |
 | `…/eol_php8_code/config/database.yml` | database logins (production section: `db`, `eol_app`) | no | **yes** |
-| `…/eol_php8_code/config/environments/production.php` | code settings (`WEB_ROOT`, `JENKINS_DOMAIN`, `JENKINS_USER_TOKEN`, `TERMS_MTCE_PASSWORD`, …) | no | **yes** |
+| `…/eol_php8_code/config/environments/production.php` | code settings (`WEB_ROOT`, `JENKINS_DOMAIN`, `JENKINS_USER_TOKEN`, `TERMS_MTCE_PASSWORD`, `CROSSREF_MAILTO`, …) | no | **yes** |
 | `…/eol_php8_code/applications/content_server/resources` | link to `/extra/eol_php_resources/` | no | the link |
 | `…/FreshData_min/TSV_files` | link to `/extra/FreshData_TSV_files` | no | the link |
 | `/extra/eol_docker/jenkins_home` | Jenkins: jobs, settings, users, credentials, secrets, plugins | no | **yes**, without build history, workspaces and plugin files (`plugins_current.txt` lists them) |
@@ -68,6 +68,7 @@ Everything here was set or changed on the running server, and the snapshot captu
 - `JENKINS_DOMAIN` = `jenkins:8080`
 - `JENKINS_USER_TOKEN` = `'web-trigger:<token>'` (user name, colon, token)
 - `TERMS_MTCE_PASSWORD` (added 2026-11-11, by hand on the server): the password for **[Upload to Zenodo]** on the Terms maintenance page, `applications/terms_maintenance/main.php`. Without it, uploading from that page is disabled. It's a page password only, not a Zenodo token. The `*_sample.php` files show the line, commented out.
+- `CROSSREF_MAILTO` (added 2026-11-14): the contact email sent with every CrossRef call in the User-Agent (`FullReferenceSearchAPI.php`), as CrossRef asks. It puts our calls in CrossRef's "polite pool" (a higher rate limit). Without it, the calls still work at the public rate. Not a secret.
 
 **`database.yml`:** the production section uses host `db`, port 3306, user `eol_app`, and the `MYSQL_PASSWORD` from `.env` (quoted).
 
